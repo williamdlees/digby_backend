@@ -1,0 +1,7 @@
+/.idea
+/temp
+*.pyc
+__pycache__
+secret.cfg
+secret*.cfg
+app.log
