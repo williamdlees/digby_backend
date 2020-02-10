@@ -1,5 +1,6 @@
 /.idea
 /temp
+/migrations
 *.pyc
 __pycache__
 secret.cfg
