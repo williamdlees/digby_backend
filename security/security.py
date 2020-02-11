@@ -1,7 +1,7 @@
 # Form definitions for user with flask-security
 
 from flask_security import RegisterForm
-from wtforms import StringField
+from wtforms import StringField, BooleanField
 from wtforms.validators import DataRequired
 from flask_wtf import FlaskForm
 
@@ -9,6 +9,7 @@ class ExtendedRegisterForm(RegisterForm):
     name = StringField('Full Name', [DataRequired()])
     address = StringField('Institutional Address', [DataRequired()])
     phone = StringField('Preferred telephone number', [DataRequired()])
+    accepted_terms = BooleanField('I accept the <a href="/render_page/privacy_statement.html" target="_blank">Privacy</a> and <a href="/render_page/licensing_statement.html" target="_blank">Licensing</a> statements')
 
 class ProfileForm(FlaskForm):
     name = StringField('Full Name', [DataRequired()])
