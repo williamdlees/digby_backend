@@ -35,7 +35,6 @@
                     {%  endif %}
                     <a href="{{ url_for_security('logout') }}" class="m-item">{{ current_user.name }} - Logout</a>
                     {% else %}
-                    <a href="{{ url_for_security('register') }}" class="m-item">Register</a> |
                     <a href="{{ url_for_security('login') }}" class="m-item">Login</a>
                     {% endif %}
                 </div>

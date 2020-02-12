@@ -26,14 +26,6 @@
             <div class="form-group">
                 {{ render_field(login_user_form.submit, class="btn btn-primary") }}
             </div>
-
-            <div class="row">
-                <div class="col-sm-12">
-                      <a href="{{ url_for_security('register') }}{% if 'next' in request.args %}?next={{ request.args.next|urlencode }}{% endif %}"  class="btn btn-link"><i class="glyphicon glyphicon-plus-sign"></i> Register</a>
-                      <a href="{{ url_for_security('forgot_password') }}" class="btn btn-link"><i class="glyphicon glyphicon-plus-sign"></i> Recover password</a>
-                      <a href="{{ url_for_security('send_confirmation') }}" class="btn btn-link"><i class="glyphicon glyphicon-plus-sign"></i> Resend confirmation</a>
-                </div>
-            </div>
         </form>
     </div>
 </div>

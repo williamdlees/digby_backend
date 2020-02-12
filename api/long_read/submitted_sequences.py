@@ -17,7 +17,7 @@ class SubmittedSequences(Resource):
         """
         data = []
 
-        for row in csv.DictReader(open('db/submitted.csv', 'r')):
+        for row in csv.DictReader(open('db/submitted.csv', 'r', encoding='ISO-8859-1')):
             data.append(row)
 
         return json.dumps(data)
