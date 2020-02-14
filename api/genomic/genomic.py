@@ -3,10 +3,16 @@
 from flask import request
 from flask_restplus import Resource, reqparse
 from api.restplus import api
-import json
+from sqlalchemy import inspect
 
 from app import db
-from db.feature_db import Species, RefSeq, Feature
+from db.feature_db import Species, RefSeq, Feature, Sequence
+
+# Return SqlAlchemy row as a dict, using correct column names
+def object_as_dict(obj):
+    return {c.key: getattr(obj, c.key)
+            for c in inspect(obj).mapper.column_attrs}
+
 
 ns = api.namespace('genomic', description='Genomic data and annotations')
 
@@ -128,3 +134,40 @@ class JbrowseRegionalStatsAPI(Resource):
 
         n_features = db.session.query(Feature).filter(Species.name == species, RefSeq.name == seq.name, Feature.end >= start, Feature.start <= end).count()
         return {'featureDensity': float(n_features)/seq.length, 'featureCount': n_features}
+
+
+@ns.route('/sequences/<string:species>/<string:ref_seq>')
+@api.response(404, 'Reference sequence not found.')
+class SequencesAPI(Resource):
+    def get(self, species, ref_seq):
+        """ Returns nucleotide sequences from selected references. Use 'all' to wildcard species or ref_seq """
+
+        ref_seqs = db.session.query(RefSeq)
+
+        if species != 'all':
+            ref_seqs = ref_seqs.filter(Species.name == species)
+
+        if ref_seq != 'all':
+            ref_seqs = ref_seqs.filter(RefSeq.name == ref_seq)
+
+        if not ref_seqs.count():
+            return None, 404
+
+        sequences = []
+
+        for ref in ref_seqs.all():
+            x_keys = {}
+            if species == 'all':
+                x_keys['species'] = ref.species.name
+            if ref_seq == 'all':
+                x_keys['ref_seq'] = ref.name
+            seqs = [object_as_dict(sequence) for sequence in ref.sequences]
+            for seq in seqs:
+                del seq['refseq_id']
+                del seq['id']
+                if len(x_keys):
+                    seq.update(x_keys)
+
+            sequences.extend(seqs)
+
+        return {'sequences': sequences}
