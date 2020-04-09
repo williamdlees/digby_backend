@@ -1,0 +1,29 @@
+# the species of interest
+
+species:
+  Homo sapiens:
+    alias: Human
+
+# location of the file on imgt
+file_url: http://www.imgt.org/download/GENE-DB/IMGTGENEDB-ReferenceSequences.fasta-nt-WithoutGaps-F+ORF+inframeP
+gapped_file_url: http://www.imgt.org/download/GENE-DB/IMGTGENEDB-ReferenceSequences.fasta-nt-WithGaps-F+ORF+inframeP
+
+# prefix for stored versions of IMGT files. Filenames will be of the form <file_prefix>_date.fasta
+file_prefix: imgt_ref
+
+# directory in which to store IMGT files for archival purposes
+file_dir: imgt/imgt_files
+
+# filename of log file
+log_file: imgt/imgt_files/log.txt
+
+# filename of reference file used by ogre. Will be kept up to date by track_imgt_ref.py
+ogre_ref_file: IMGT_REF.fasta
+gapped_ogre_ref_file: IMGT_REF_GAPPED.fasta
+
+# pickle files created to speed up boot
+imgt_ref_pickle: ref_genes.pickle
+imgt_gapped_ref_pickle: ref_gapped_genes.pickle
+
+#filename of file to touch to restart ogre (eg ogre.wsgi). Or 'none' for none
+ogre_touch: none
