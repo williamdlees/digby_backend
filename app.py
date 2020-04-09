@@ -73,7 +73,18 @@ def profile():
 
     return render_template('profile.html', form=form, current_user=current_user, url='profile')
 
+
 @app.route('/update', methods=['GET', 'POST'])
 @login_required
 def update():
     return db_update()
+
+
+@app.route('/play', methods=['GET', 'POST'])
+@login_required
+def play():
+    feats = db.session.query(Feature).all()
+
+    for feat in feats:
+        for sam in feat.samples:
+            print(sam.sample.type)

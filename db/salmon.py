@@ -1,9 +1,9 @@
 from lxml import html
 import requests
+from db.shared import delete_dependencies
 
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sequence
-from sqlalchemy.types import Text
+from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleFeature
 
 type = {
     "5'UTR": 'five_prime_UTR',
@@ -16,28 +16,12 @@ type = {
     "3'UTR": 'three_prime_UTR',
 }
 
-
-def delete_dependencies(ctg):
-    ref_seqs = db.session.query(RefSeq).filter_by(name=ctg)
-
-    for ref_seq in ref_seqs:
-        for sequence in ref_seq.sequences:
-            for feature in sequence.features:
-                db.session.delete(feature)
-            db.session.delete(sequence)
-
-        for feature in ref_seq.features:        # because not all features are associated with sequences
-            db.session.delete(feature)
-
-        db.session.delete(ref_seq)
-        db.session.commit()
-
-
 def update():
+    delete_dependencies('Atlantic Salmon')
+#    return ""
+
     ctg = 'GU129139'
     ret = "Importing Salmon IGHV from %s\n" % ctg
-
-    delete_dependencies(ctg)
 
     page = requests.get('http://www.imgt.org/ligmdb/view?id=GU129139')
     tree = html.fromstring(page.content)
@@ -57,7 +41,12 @@ def update():
 
     ref_seq = RefSeq(name=ctg, locus='IGH', species=sp, sequence=sequence, length=len(sequence))
     db.session.add(ref_seq)
-    db.session.commit()
+
+    sample = db.session.query(Sample).filter_by(name='GU129139').one_or_none()
+
+    if not sample:
+        sample = Sample(name='GU129139', type='Reference')
+        db.session.add(sample)
 
     features = tree.xpath('//div[@class="features"]/table')[0]
     rows = iter(features)
@@ -120,6 +109,11 @@ def update():
                 ref_seq.features.append(fp)
                 parent_id += 1
 
+                sf = SampleFeature(chromosome='reference')
+                sf.feature = fp
+                sf.sample = sample
+                db.session.add(sf)
+
                 f = Feature(
                     name=name,
                     feature='mRNA',
@@ -131,20 +125,13 @@ def update():
                     parent_id=parent_id-1,
                 )
                 ref_seq.features.append(f)
+                SampleFeature(chromosome='reference', feature=f, sample = sample)
 
         elif state and name:
             if (state == 'V-GENE' and values[0] in ["5'UTR", 'L-PART1', 'V-INTRON', 'L-PART2', 'V-REGION', "3'UTR"]) \
                     or (state == 'D-GENE' and values[0] in ["5'UTR", 'D-REGION', "3'UTR"]) \
                     or (state == 'J-GENE' and values[0] in ["5'UTR", 'D-REGION', "3'UTR"]):
                 gene_range, strand = get_range(values[2])
-
-                s = Sequence(
-                    name=name + '_' + values[0],
-                    imgt_name=name,
-                    type=values[0],
-                    sequence=ref_seq.sequence[int(gene_range[0]):int(gene_range[1])],
-                )
-                ref_seq.sequences.append(s)
 
                 f = Feature(
                     name=name + '_' + values[0],
@@ -155,8 +142,18 @@ def update():
                     attribute='Name=%s;Parent=%s' % (name + '_' + values[0], parent_id),
                     parent_id=parent_id,
                 )
+
                 ref_seq.features.append(f)
+
+                s = Sequence(
+                    name=name + '_' + values[0],
+                    imgt_name=name,
+                    type=values[0],
+                    sequence=ref_seq.sequence[int(gene_range[0]):int(gene_range[1])],
+                )
+
                 s.features.append(f)
+                SampleFeature(chromosome='reference', feature=f, sample = sample)
 
         if state and name and values[0] == "3'UTR":
             state = None

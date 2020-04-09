@@ -90,7 +90,7 @@ class JbrowseFeatureAPI(Resource):
         start = args.get('start')
         end = args.get('end')
 
-        fq = db.session.query(Feature).filter(Species.name == species, RefSeq.name == ref_seq, Feature.end >= start, Feature.start <= end)
+        fq = db.session.query(Feature).join(RefSeq).join(Species).filter(RefSeq.locus == ref_seq, Species.name == species, Feature.end >= start, Feature.start <= end)
 
         features = []
 
@@ -110,8 +110,8 @@ class JbrowseGLobalStatsAPI(Resource):
         n_features = 0
         seq_bps = 0
 
-        for ref_seq in db.session.query(RefSeq).filter(Species.name == species).all():
-            n_features = db.session.query(Feature).filter(Species.name == species, RefSeq.name == ref_seq.name).count()
+        for ref_seq in db.session.query(RefSeq).join(Species).filter(Species.name == species).all():
+            n_features = db.session.query(Feature).join(RefSeq).join(Species).filter(Species.name == species, RefSeq.name == ref_seq.name).count()
             seq_bps += ref_seq.length
 
         return {'featureDensity': float(n_features)/seq_bps, 'featureCount': n_features}
@@ -127,12 +127,12 @@ class JbrowseRegionalStatsAPI(Resource):
         start = args.get('start')
         end = args.get('end')
 
-        seq = db.session.query(RefSeq).filter(Species.name == species, RefSeq.name == ref_seq).one_or_none()
+        seq = db.session.query(RefSeq).join(Species).filter(Species.name == species, RefSeq.name == ref_seq).one_or_none()
 
         if not seq:
             return None, 404
 
-        n_features = db.session.query(Feature).filter(Species.name == species, RefSeq.name == seq.name, Feature.end >= start, Feature.start <= end).count()
+        n_features = db.session.query(Feature).join(RefSeq).join(Species).filter(Species.name == species, RefSeq.name == seq.name, Feature.end >= start, Feature.start <= end).count()
         return {'featureDensity': float(n_features)/seq.length, 'featureCount': n_features}
 
 
@@ -161,13 +161,13 @@ class SequencesAPI(Resource):
                 x_keys['species'] = ref.species.name
             if ref_seq == 'all':
                 x_keys['ref_seq'] = ref.name
-            seqs = [object_as_dict(sequence) for sequence in ref.sequences]
-            for seq in seqs:
-                del seq['refseq_id']
-                del seq['id']
-                if len(x_keys):
-                    seq.update(x_keys)
-
-            sequences.extend(seqs)
+            for f in ref.features:
+                if f.sequence:
+                    seq = object_as_dict(f.sequence)
+                    del seq['id']
+                    del seq['species_id']
+                    if len(x_keys):
+                        seq.update(x_keys)
+                    sequences.append(seq)
 
         return {'sequences': sequences}
