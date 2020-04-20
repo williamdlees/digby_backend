@@ -7,6 +7,4 @@ secret.cfg
 secret*.cfg
 app.log
 /database model.pdf
-/IMGT_REF.fasta
-/IMGT_REF_GAPPED.fasta
 *.pickle
