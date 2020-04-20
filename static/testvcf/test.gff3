@@ -1,5 +1,0 @@
-##gff-version	3
-TESTCHROM	varclass	gene	10	18	33	.	.	Var=A->G;AA=S->S;depth=9;frame=+1;gene=IGHV1-1;ref=novel;InRegion;color=#0000EE
-TESTCHROM	varclass	gene	20	28	33	.	.	Var=A->G;AA=S->S;depth=9;frame=+1;gene=IGHV1-2;ref=novel;InRegion;color=#0000EE
-TESTCHROM	varclass	gene	35	42	33	.	.	Var=A->G;AA=S->S;depth=9;frame=+1;gene=IGHV1-3;ref=novel;InRegion;color=#0000EE
-TESTCHROM	varclass	gene	50	58	33	.	.	Var=A->G;AA=S->S;depth=9;frame=+1;gene=IGHV1-4;ref=novel;InRegion;color=#0000EE

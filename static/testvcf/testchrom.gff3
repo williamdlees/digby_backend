@@ -1,4 +1,0 @@
-##gff-version	3.2.1
-TESTCHROM	.	CDS	10	90	.	+	.	ID=gene00001;Name=IGHV1-60*01
-TESTCHROM	.	CDS	10	90	.	+	.	ID=gene00002;Name=IGHV1-60*03
-TESTCHROM	.	CDS	10	90	.	+	.	ID=gene00003;Name=IGHV1-60*02

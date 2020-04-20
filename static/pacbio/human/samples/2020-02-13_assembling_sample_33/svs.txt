@@ -1,0 +1,8 @@
+chrom	start	end	SV_name	SV	Genotype
+igh	157688	167669	IGHV7-4-1.CH17	IGHV7-4-1 insertion	0/1
+igh	210158	257471	IGHV5-10-1.CH17	IGHV5-10-1/IGHV3-64D haplotype	0/0
+igh	394658	426627	IGHV3-23.region.ABC9	IGHV3-23D duplication	0/1
+igh	484922	559858	IGHV3-30.region.ABC11	IGHV4-28 to IGHV3-33 complex event	haplotypes=;genes=IGHV4-28,IGHV4-30-2,IGHV3-30-3,IGHV4-30-4,IGHV3-30-5,IGHV4-31;gene_haplotypes=NP,NP,NP,NP,NP,NP
+igh	609413	682906	IGHV4-38-2.region.mixFosmids	IGHV4-38-2 to IGHV1-38-4 insertion	0/0
+igh	955770	1033787	IGHV1-69.region.CH17	IGHV1-69D to IGHV2-70D insertion	0/1
+igh	1145165	1194129	IGHV1-8.GRCh37	IGHV1-8/IGHV3-9 haplotype	1/1
