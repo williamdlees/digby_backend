@@ -9,8 +9,8 @@ from sqlalchemy import func, and_
 from db.shared import delete_dependencies
 import traceback
 
-REF_DIR= '../pacbio_ig/human/ref'
-SAMPLE_DIR = '../pacbio_ig/human/samples'
+REF_DIR= 'static/pacbio/human/ref'
+SAMPLE_DIR = 'static/pacbio/human/samples'
 
 
 

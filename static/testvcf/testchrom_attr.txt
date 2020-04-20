@@ -1,2 +1,0 @@
-TRACK_ID	Data_Type	PARTICIPANT_ID	SAMPLE_ID	GENDER	T/N	Tumor_type	Treated	Primary/Secondary	Hypermutated
-TESTCHROM_1	Expression	P-01-P001	P-01-S001	M	Tumor	GBM	Y	Primary	Y
