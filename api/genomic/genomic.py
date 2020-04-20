@@ -1,7 +1,7 @@
 # Services related to genomic sequences and features
 
 from flask import request
-from flask_restplus import Resource, reqparse
+from flask_restplus import Resource, reqparse, inputs
 from api.restplus import api
 from sqlalchemy import inspect
 
@@ -136,16 +136,23 @@ class JbrowseRegionalStatsAPI(Resource):
         return {'featureDensity': float(n_features)/seq.length, 'featureCount': n_features}
 
 
+filter_arguments = reqparse.RequestParser()
+filter_arguments.add_argument('imgt', type=inputs.boolean)
+filter_arguments.add_argument('novel', type=inputs.boolean)
+filter_arguments.add_argument('full', type=inputs.boolean)
+
 @ns.route('/sequences/<string:species>/<string:ref_seq>')
 @api.response(404, 'Reference sequence not found.')
 class SequencesAPI(Resource):
+    @api.expect(filter_arguments, validate=True)
     def get(self, species, ref_seq):
         """ Returns nucleotide sequences from selected references. Use 'all' to wildcard species or ref_seq """
 
+        args = filter_arguments.parse_args(request)
         ref_seqs = db.session.query(RefSeq)
 
         if species != 'all':
-            ref_seqs = ref_seqs.filter(Species.name == species)
+            ref_seqs = ref_seqs.join(Species).filter(Species.name == species)
 
         if ref_seq != 'all':
             ref_seqs = ref_seqs.filter(RefSeq.name == ref_seq)
@@ -162,8 +169,18 @@ class SequencesAPI(Resource):
             if ref_seq == 'all':
                 x_keys['ref_seq'] = ref.name
             for f in ref.features:
-                if f.sequence:
-                    seq = object_as_dict(f.sequence)
+                for sequence in f.sequences:
+                    if 'imgt' in args and not args['imgt']:
+                        if not sequence.novel:
+                            continue
+                    if 'novel' in args and not args['novel']:
+                        if sequence.novel:
+                            continue
+                    if 'full' in args and not args['full']:
+                        if sequence.type not in ['V-REGION', 'D-REGION', 'J-REGION']:
+                            continue
+
+                    seq = object_as_dict(sequence)
                     del seq['id']
                     del seq['species_id']
                     if len(x_keys):

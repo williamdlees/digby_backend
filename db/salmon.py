@@ -3,7 +3,7 @@ import requests
 from db.shared import delete_dependencies
 
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleFeature
+from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleSequence
 
 type = {
     "5'UTR": 'five_prime_UTR',
@@ -17,7 +17,7 @@ type = {
 }
 
 def update():
-    delete_dependencies('Atlantic Salmon')
+#    delete_dependencies('Atlantic Salmon')
 #    return ""
 
     ctg = 'GU129139'
@@ -95,7 +95,7 @@ def update():
 
         elif state and not name:
             if values[1] == 'IMGT_allele':
-                name = values[2]
+                name = values[2].split('*')[0]
                 parent_id += 1
                 fp = Feature(
                     name=name,
@@ -109,11 +109,6 @@ def update():
                 ref_seq.features.append(fp)
                 parent_id += 1
 
-                sf = SampleFeature(chromosome='reference')
-                sf.feature = fp
-                sf.sample = sample
-                db.session.add(sf)
-
                 f = Feature(
                     name=name,
                     feature='mRNA',
@@ -125,7 +120,6 @@ def update():
                     parent_id=parent_id-1,
                 )
                 ref_seq.features.append(f)
-                SampleFeature(chromosome='reference', feature=f, sample = sample)
 
         elif state and name:
             if (state == 'V-GENE' and values[0] in ["5'UTR", 'L-PART1', 'V-INTRON', 'L-PART2', 'V-REGION', "3'UTR"]) \
@@ -149,11 +143,13 @@ def update():
                     name=name + '_' + values[0],
                     imgt_name=name,
                     type=values[0],
-                    sequence=ref_seq.sequence[int(gene_range[0]):int(gene_range[1])],
+                    sequence=ref_seq.sequence[int(gene_range[0])-1:int(gene_range[1])],
+                    species=sp,
+                    novel=False,
                 )
 
                 s.features.append(f)
-                SampleFeature(chromosome='reference', feature=f, sample = sample)
+                SampleSequence(sample=sample, sequence=s, chromosome='h1,h2')
 
         if state and name and values[0] == "3'UTR":
             state = None

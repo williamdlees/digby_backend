@@ -1,0 +1,15 @@
+samtools view -S -b Human_Human_IGH.sam > x.bam
+samtools sort x.bam -o Human_Human_IGH.bam
+samtools index Human_Human_IGH.bam
+
+samtools view -S -b Human_Human_IGH_imgt.sam > x.bam
+samtools sort x.bam -o Human_Human_IGH_imgt.bam
+samtools index Human_Human_IGH_imgt.bam
+
+samtools view -S -b Atlantic_Salmon_GU129139.sam > x.bam
+samtools sort x.bam -o Atlantic_Salmon_GU129139.bam
+samtools index Atlantic_Salmon_GU129139.bam
+
+samtools view -S -b Atlantic_Salmon_GU129139_imgt.sam > x.bam
+samtools sort x.bam -o Atlantic_Salmon_GU129139_imgt.bam
+samtools index Atlantic_Salmon_GU129139_imgt.bam

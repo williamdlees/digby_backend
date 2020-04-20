@@ -39,8 +39,8 @@ from api.imgt.imgt_alleles import ns as imgt_alleles
 from api.genomic.genomic import ns as genomic
 
 from db.feature_db import *
-
 from db.update import db_update
+from db.build_gff import build_gffs
 
 migrate = Migrate(app, db)
 
@@ -78,6 +78,11 @@ def profile():
 @login_required
 def update():
     return db_update()
+
+@app.route('/build', methods=['GET', 'POST'])
+@login_required
+def build():
+    return build_gffs()
 
 
 @app.route('/play', methods=['GET', 'POST'])

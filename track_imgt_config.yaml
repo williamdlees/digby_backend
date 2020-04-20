@@ -3,6 +3,8 @@
 species:
   Homo sapiens:
     alias: Human
+  Salmo salar:
+    alias: Atlantic Salmon
 
 # location of the file on imgt
 file_url: http://www.imgt.org/download/GENE-DB/IMGTGENEDB-ReferenceSequences.fasta-nt-WithoutGaps-F+ORF+inframeP

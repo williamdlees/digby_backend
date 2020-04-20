@@ -1,0 +1,45 @@
+<html>
+
+<head>
+  <title>Embedded JBrowse</title>
+  <style>
+    body {
+		margin: 0px 5px 0px 5px;
+		padding: 0;
+		height: 100%;
+		width: 99%
+    }
+
+    .jbrowse {
+      height: 90%;
+      width: 100%;
+      padding: 0;
+      border: 1px solid #ccc
+    }
+  </style>
+</head>
+
+<body>
+	<h1>Human</h1>
+    <div
+      class="jbrowse"
+      id="GenomeBrowser"
+      data-config='
+        "baseUrl": "http://localhost:5000/static/jbrowse/human/conf",
+        "dataRoot": "http://localhost:5000/static/jbrowse/human/conf",
+        "show_nav": true,
+        "show_tracklist": true,
+        "show_overview": true,
+        "update_browser_title": false,
+        "updateBrowserURL": false,
+		"cacheBuster": false
+	  '
+    >
+      <div id="LoadingScreen" style="padding: 50px;">
+        <h1>Loading...</h1>
+      </div>
+    </div>
+  <script type="text/javascript" src="dist/main.bundle.js" charset="utf-8"></script>
+</body>
+
+</html>

@@ -1,0 +1,22 @@
+{
+   "dataset_id" : "Human_IGH",
+   "formatVersion" : 1,
+   "refSeqs" : "http://localhost:5000/static/jbrowse/human/conf/igh.fa.fai",
+   "tracks" : [
+		{
+			"label" : "refseqs",
+			"key" : "Reference Sequence",
+			"urlTemplate" : "http://localhost:5000/static/jbrowse/human/conf/igh.fa",
+			"storeClass" : "JBrowse/Store/SeqFeature/IndexedFasta",
+			"useAsRefSeqStore" : "True",
+			"type" : "Sequence",
+		},
+		{
+			"label" : "my_rest_track",
+			"key" : "IMGT Annotations",
+			"type" : "CanvasFeatures",
+			"storeClass" : "JBrowse/Store/SeqFeature/REST",
+			"baseUrl" : "http://localhost:5000/api/genomic/jbrowse/Human",
+		},
+   ]
+}

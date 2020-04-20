@@ -1,0 +1,2 @@
+#sampleMapping
+TESTCHROM.SAM	TESTCHROM_1

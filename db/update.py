@@ -2,8 +2,6 @@ import db.salmon
 import db.human
 import db.imgt_ref
 
-
-
 def db_update():
     db.imgt_ref.update_imgt()
 

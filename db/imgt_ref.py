@@ -77,7 +77,7 @@ def read_reference(filename, species):
     for rec in SeqIO.parse(filename, 'fasta'):
         rd = rec.description.split('|')
         if rd[2] in species.keys() and (rd[4] in ['V-REGION', 'D-REGION', 'J-REGION']) and (rec.seq is not None):
-            records[species[rd[2]]['alias']][rd[1]] = (rec.seq.lower(), rd[4].replace('REGION', 'GENE'))
+            records[species[rd[2]]['alias']][rd[1]] = (rec.seq.lower(), rd[4])
 
     return records
 
