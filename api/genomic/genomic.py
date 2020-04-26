@@ -69,73 +69,6 @@ def enumerate_feature(f):
     return ret
 
 
-@ns.route('/jbrowse/<string:species>/features/<string:ref_seq>')
-class JbrowseFeatureAPI(Resource):
-    def add_subfeatures(self, feature, fq):
-        if 'uniqueID' in feature:
-            subs = fq.filter(Feature.parent_id == int(feature['uniqueID'])).all()
-
-            if subs:
-                feature['subfeatures'] = []
-                for sub in subs:
-                    en_sub = enumerate_feature(sub)
-                    self.add_subfeatures(en_sub, fq)
-                    feature['subfeatures'].append(en_sub)
-
-    @api.expect(range_arguments, validate=True)
-    @api.response(404, 'No features.')
-    def get(self, species, ref_seq):
-        """ Returns the list of features within the specified reference sequence and range """
-        args = range_arguments.parse_args(request)
-        start = args.get('start')
-        end = args.get('end')
-
-        fq = db.session.query(Feature).join(RefSeq).join(Species).filter(RefSeq.locus == ref_seq, Species.name == species, Feature.end >= start, Feature.start <= end)
-
-        features = []
-
-        for gene in fq.filter(Feature.feature == 'gene').all():
-            gene_feature = enumerate_feature(gene)
-            self.add_subfeatures(gene_feature, fq)
-            features.append(gene_feature)
-
-        return {'features': features}
-
-
-@ns.route('/jbrowse/<string:species>/stats/global')
-class JbrowseGLobalStatsAPI(Resource):
-    def get(self, species):
-        """ Returns global statistics about features served from this store """
-
-        n_features = 0
-        seq_bps = 0
-
-        for ref_seq in db.session.query(RefSeq).join(Species).filter(Species.name == species).all():
-            n_features = db.session.query(Feature).join(RefSeq).join(Species).filter(Species.name == species, RefSeq.name == ref_seq.name).count()
-            seq_bps += ref_seq.length
-
-        return {'featureDensity': float(n_features)/seq_bps, 'featureCount': n_features}
-
-
-@ns.route('/jbrowse/<string:species>/stats/region/<string:ref_seq>')
-@api.response(404, 'Reference sequence not found.')
-class JbrowseRegionalStatsAPI(Resource):
-    @api.expect(range_arguments, validate=True)
-    def get(self, species, ref_seq):
-        """ Returns statistics for a particular region """
-        args = range_arguments.parse_args(request)
-        start = args.get('start')
-        end = args.get('end')
-
-        seq = db.session.query(RefSeq).join(Species).filter(Species.name == species, RefSeq.name == ref_seq).one_or_none()
-
-        if not seq:
-            return None, 404
-
-        n_features = db.session.query(Feature).join(RefSeq).join(Species).filter(Species.name == species, RefSeq.name == seq.name, Feature.end >= start, Feature.start <= end).count()
-        return {'featureDensity': float(n_features)/seq.length, 'featureCount': n_features}
-
-
 filter_arguments = reqparse.RequestParser()
 filter_arguments.add_argument('imgt', type=inputs.boolean)
 filter_arguments.add_argument('novel', type=inputs.boolean)
@@ -188,3 +121,29 @@ class SequencesAPI(Resource):
                     sequences.append(seq)
 
         return {'sequences': sequences}
+
+
+@ns.route('/feature_pos/<string:species>/<string:ref_seq_name>/<string:feature_string>')
+@api.response(404, 'Reference sequence not found.')
+class FeaturePosAPI(Resource):
+    def get(self, species, ref_seq_name, feature_string):
+        """ Returns the position of the first feature matching the specified string """
+
+        ref_seqs = db.session.query(RefSeq).join(Species).filter(Species.name == species.replace('_', ' ')).filter(RefSeq.name == ref_seq_name).all()       # fudge for space in species name
+
+        if len(ref_seqs) != 1:
+            return None, 404
+
+        ref_seq = ref_seqs[0]
+        q = db.session.query(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id)
+        features = db.session.query(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id).filter(Feature.name.contains(feature_string)).all()
+
+        start = 99999999
+        end = 0
+
+        for feature in features:
+            start = min(start, feature.start)
+            end = max(end, feature.end)
+
+        return[{'chromosome': ref_seq_name, 'start': start, 'end': end}]
+
