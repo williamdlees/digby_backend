@@ -33,7 +33,12 @@ def build_gff(species):
             for feature in features:
                 if feature.feature != 'gene':
                     for sequence in feature.sequences:
-                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence))
+                        if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION') and '_' not in sequence.name:  # '_' is a fudge for salmon line-bred, no alleles
+                            legend = 'novel ' if sequence.novel else ''
+                            legend = legend + ('*' + sequence.name.split('*')[1] if '*' in sequence.name else sequence.name)
+                            fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tNM:Z:%s\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, legend))
+                        else:
+                            fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence))
 
         # Alignment file of all alleles within IMGT, plus novel alleles from samples aligned to this reference (SAM, needs external conversion to BAM)
         with open('static/gff/%s_%s_imgt.sam' % (species.replace(' ', '_'), ref_seq.name), 'w') as fo:
@@ -42,19 +47,40 @@ def build_gff(species):
 
             features = db.session.query(Feature).filter(Feature.refseq == ref_seq).filter(Feature.name.like('%REGION')).order_by(Feature.start).all()
 
+            order = 1
             for feature in features:
-                imgts = db.session.query(Sequence).join(Species).join(RefSeq).filter(RefSeq.name == ref_seq.name).\
-                    filter(Sequence.name.like(feature.name.split('_')[0] + '*%')).filter(Sequence.novel == False).order_by(Sequence.name).all()
-
-                order = 1
-                for imgt in imgts:
-                    fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' %(imgt.name, ref_seq.name, feature.start, len(imgt.sequence), imgt.sequence, order))
-                    order += 1
-
-                order = 100
                 for sequence in feature.sequences:
                     if sequence.novel:
-                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order))
+                        if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION'):
+                            fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' %
+                                     (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order, 'novel *' + sequence.name.split('*')[1]))
+                        else:
+                            fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' %
+                                     (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order))
+                        order += 1
+
+                imgts = db.session.query(Sequence).join(Species).join(RefSeq).filter(RefSeq.name == ref_seq.name).\
+                    filter(Sequence.name.like(feature.name.split('_')[0] + '*%')).filter(Sequence.novel == False).order_by(Sequence.name.desc()).all()
+
+                for imgt in imgts:
+                    nt_sequence = imgt.sequence
+
+                    if imgt.gapped_sequence and imgt.gapped_sequence[0] == '.' and imgt.type == 'V-REGION':
+                        i = 0
+                        pad = ''
+                        while imgt.gapped_sequence[i] == '.':
+                            if imgts[-1].gapped_sequence[i] != '.':              # let's just assume that *01 is never truncated
+                                pad += 'x'
+                            i += 1
+                        nt_sequence = pad + nt_sequence
+
+                    if imgt.type in ('V-REGION', 'D-REGION', 'J-REGION'):
+                        legend = ('*' + imgt.name.split('*')[1]) if '*' in imgt.name else imgt.name
+                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' %(imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order, legend))
+                    else:
+                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' %(imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order))
+                    order += 1
+
 
 
 def build_fake_human_ref():

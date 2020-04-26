@@ -190,7 +190,7 @@ def process_sample(path, sample_name):
                                 ref.features.append(gene_VDJ)
                                 gene_id += 1
 
-                            sequence.features.append(gene)
+                            # sequence.features.append(gene)
                             sequence.features.append(gene_VDJ)
                             db.session.commit()
 
