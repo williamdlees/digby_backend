@@ -73,6 +73,9 @@ filter_arguments = reqparse.RequestParser()
 filter_arguments.add_argument('imgt', type=inputs.boolean)
 filter_arguments.add_argument('novel', type=inputs.boolean)
 filter_arguments.add_argument('full', type=inputs.boolean)
+filter_arguments.add_argument('filter', type=str)
+filter_arguments.add_argument('page_number', type=int)
+filter_arguments.add_argument('page_size', type=int)
 
 @ns.route('/sequences/<string:species>/<string:ref_seq>')
 @api.response(404, 'Reference sequence not found.')
@@ -91,6 +94,9 @@ class SequencesAPI(Resource):
             ref_seqs = ref_seqs.filter(RefSeq.name == ref_seq)
 
         if not ref_seqs.count():
+            return None, 404
+
+        if ('page_size' in args and args['page_size'] <= 0) or ('page_number' in args and args['page_number'] < 0):
             return None, 404
 
         sequences = []
@@ -112,6 +118,9 @@ class SequencesAPI(Resource):
                     if 'full' in args and not args['full']:
                         if sequence.type not in ['V-REGION', 'D-REGION', 'J-REGION']:
                             continue
+                    if 'filter' in args and args['filter']:
+                        if args['filter'] not in sequence.name:
+                            continue
 
                     seq = object_as_dict(sequence)
                     del seq['id']
@@ -119,6 +128,10 @@ class SequencesAPI(Resource):
                     if len(x_keys):
                         seq.update(x_keys)
                     sequences.append(seq)
+
+        if 'page_size' in args and 'page_number' in args:
+            first = args['page_number'] * args['page_size']
+            sequences = sequences[first : first + args['page_size']]
 
         return {'sequences': sequences}
 

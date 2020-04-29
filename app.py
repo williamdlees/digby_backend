@@ -34,8 +34,6 @@ user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore, confirm_register_form=ExtendedRegisterForm)
 
 from api.restplus import api
-from api.long_read.submitted_sequences import ns as long_read_submitted
-from api.imgt.imgt_alleles import ns as imgt_alleles
 from api.genomic.genomic import ns as genomic
 
 from db.feature_db import *
@@ -46,8 +44,6 @@ migrate = Migrate(app, db)
 
 blueprint = Blueprint('api', __name__, url_prefix='/api')
 api.init_app(blueprint)
-api.add_namespace(long_read_submitted)
-api.add_namespace(imgt_alleles)
 api.add_namespace(genomic)
 app.register_blueprint(blueprint)
 
