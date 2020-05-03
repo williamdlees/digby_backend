@@ -4,9 +4,10 @@ from flask import request
 from flask_restplus import Resource, reqparse, inputs
 from api.restplus import api
 from sqlalchemy import inspect
+from math import ceil
 
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sequence
+from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature
 
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
@@ -74,6 +75,7 @@ filter_arguments.add_argument('imgt', type=inputs.boolean)
 filter_arguments.add_argument('novel', type=inputs.boolean)
 filter_arguments.add_argument('full', type=inputs.boolean)
 filter_arguments.add_argument('filter', type=str)
+filter_arguments.add_argument('sortdirection', type=str)
 filter_arguments.add_argument('page_number', type=int)
 filter_arguments.add_argument('page_size', type=int)
 
@@ -82,58 +84,49 @@ filter_arguments.add_argument('page_size', type=int)
 class SequencesAPI(Resource):
     @api.expect(filter_arguments, validate=True)
     def get(self, species, ref_seq):
-        """ Returns nucleotide sequences from selected references. Use 'all' to wildcard species or ref_seq """
+        """ Returns nucleotide sequences from selected reference """
 
         args = filter_arguments.parse_args(request)
-        ref_seqs = db.session.query(RefSeq)
+        ref_seq = db.session.query(RefSeq).join(Species).filter(Species.name == species).one_or_none()
 
-        if species != 'all':
-            ref_seqs = ref_seqs.join(Species).filter(Species.name == species)
-
-        if ref_seq != 'all':
-            ref_seqs = ref_seqs.filter(RefSeq.name == ref_seq)
-
-        if not ref_seqs.count():
+        if not ref_seq:
             return None, 404
 
         if ('page_size' in args and args['page_size'] <= 0) or ('page_number' in args and args['page_number'] < 0):
             return None, 404
 
+        if args['sortdirection'] and args['sortdirection'] == 'desc':
+            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name.desc()).all()
+        else:
+            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name).all()
+
         sequences = []
 
-        for ref in ref_seqs.all():
-            x_keys = {}
-            if species == 'all':
-                x_keys['species'] = ref.species.name
-            if ref_seq == 'all':
-                x_keys['ref_seq'] = ref.name
-            for f in ref.features:
-                for sequence in f.sequences:
-                    if 'imgt' in args and not args['imgt']:
-                        if not sequence.novel:
-                            continue
-                    if 'novel' in args and not args['novel']:
-                        if sequence.novel:
-                            continue
-                    if 'full' in args and not args['full']:
-                        if sequence.type not in ['V-REGION', 'D-REGION', 'J-REGION']:
-                            continue
-                    if 'filter' in args and args['filter']:
-                        if args['filter'] not in sequence.name:
-                            continue
+        for sequence in seqs:
+            if 'imgt' in args and not args['imgt']:
+                if not sequence.novel:
+                    continue
+            if 'novel' in args and not args['novel']:
+                if sequence.novel:
+                    continue
+            if 'full' in args and not args['full']:
+                if sequence.type not in ['V-REGION', 'D-REGION', 'J-REGION']:
+                    continue
+            if 'filter' in args and args['filter']:
+                if args['filter'] not in sequence.name:
+                    continue
 
-                    seq = object_as_dict(sequence)
-                    del seq['id']
-                    del seq['species_id']
-                    if len(x_keys):
-                        seq.update(x_keys)
-                    sequences.append(seq)
+            seq = object_as_dict(sequence)
+            del seq['id']
+            del seq['species_id']
+            sequences.append(seq)
 
         if 'page_size' in args and 'page_number' in args:
             first = args['page_number'] * args['page_size']
+            total_items = len(sequences)
             sequences = sequences[first : first + args['page_size']]
 
-        return {'sequences': sequences}
+        return {'sequences': sequences, 'total_items': total_items, 'page_size': args['page_size'], 'pages': ceil((total_items*1.0)/args['page_size'])}
 
 
 @ns.route('/feature_pos/<string:species>/<string:ref_seq_name>/<string:feature_string>')
@@ -148,15 +141,16 @@ class FeaturePosAPI(Resource):
             return None, 404
 
         ref_seq = ref_seqs[0]
-        q = db.session.query(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id)
-        features = db.session.query(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id).filter(Feature.name.contains(feature_string)).all()
+        features = db.session.query(Feature).join(RefSeq).join(Species).filter(Species.name == species.replace('_', ' ')).filter(RefSeq.id == ref_seq.id).filter(Feature.name.contains(feature_string)).all()
 
-        start = 99999999
-        end = 0
+        if features:
+            start = 99999999
+            end = 0
 
-        for feature in features:
-            start = min(start, feature.start)
-            end = max(end, feature.end)
+            for feature in features:
+                start = min(start, feature.start)
+                end = max(end, feature.end)
 
-        return[{'chromosome': ref_seq_name, 'start': start, 'end': end}]
-
+            return[{'chromosome': ref_seq_name, 'start': start, 'end': end}]
+        else:
+            return []
