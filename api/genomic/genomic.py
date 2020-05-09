@@ -92,7 +92,7 @@ class SequencesAPI(Resource):
         if not ref_seq:
             return None, 404
 
-        if ('page_size' in args and args['page_size'] <= 0) or ('page_number' in args and args['page_number'] < 0):
+        if (args['page_size'] and args['page_size'] <= 0) or (args['page_number'] and args['page_number'] < 0):
             return None, 404
 
         if args['sortdirection'] and args['sortdirection'] == 'desc':
@@ -121,10 +121,13 @@ class SequencesAPI(Resource):
             del seq['species_id']
             sequences.append(seq)
 
-        if 'page_size' in args and 'page_number' in args:
+        if args['page_size'] and args['page_number']:
             first = args['page_number'] * args['page_size']
-            total_items = len(sequences)
             sequences = sequences[first : first + args['page_size']]
+        else:
+            args['page size'] = len(sequences)
+
+        total_items = len(sequences)
 
         return {'sequences': sequences, 'total_items': total_items, 'page_size': args['page_size'], 'pages': ceil((total_items*1.0)/args['page_size'])}
 
