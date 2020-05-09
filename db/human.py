@@ -6,7 +6,6 @@ from os import listdir
 from os.path import isfile, join, splitext, isdir
 import csv
 from sqlalchemy import func, and_
-from db.shared import delete_dependencies
 import traceback
 
 REF_DIR= 'static/pacbio/human/ref'

@@ -7,6 +7,8 @@ from flask_bootstrap import Bootstrap
 from flask_admin import Admin
 from flask_cors import CORS
 
+from db.vdjbase_db import vdjbase_db_init
+
 import logging.handlers
 
 print("app name: %s" % __name__)
@@ -24,6 +26,7 @@ app.logger.addHandler(handler)
 mail = Mail(app)
 
 db = SQLAlchemy(app)
+vdjbase_dbs = vdjbase_db_init()
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 
@@ -35,6 +38,7 @@ security = Security(app, user_datastore, confirm_register_form=ExtendedRegisterF
 
 from api.restplus import api
 from api.genomic.genomic import ns as genomic
+from api.vdjbase.vdjbase import ns as vdjbase
 
 from db.feature_db import *
 from db.update import db_update
@@ -45,7 +49,9 @@ migrate = Migrate(app, db)
 blueprint = Blueprint('api', __name__, url_prefix='/api')
 api.init_app(blueprint)
 api.add_namespace(genomic)
+api.add_namespace(vdjbase)
 app.register_blueprint(blueprint)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
