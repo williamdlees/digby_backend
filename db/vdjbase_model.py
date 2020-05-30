@@ -1,7 +1,8 @@
 # coding: utf-8
-from sqlalchemy import Boolean, Column, DECIMAL, DateTime, ForeignKey, Index, Integer, String, Table, Text
+from sqlalchemy import Boolean, Column, DECIMAL, DateTime, ForeignKey, Index, Integer, String, Table, Text, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -43,6 +44,14 @@ class HaplotypesFile(Base):
     allele_col2 = Column(String(50), nullable=False)
     file = Column(String(100))
 
+    @hybrid_property
+    def by_gene_s(self):
+        return self.by_gene[4:]
+
+    @by_gene_s.expression
+    def by_gene_s(cls):
+        return func.substr(cls.by_gene, 4)
+
 
 class SeqProtocol(Base):
     __tablename__ = 'database_seq_protocols'
@@ -83,6 +92,9 @@ class TissuePro(Base):
     sub_cell_type = Column(String(30), nullable=False)
     isotype = Column(String(30), nullable=False)
 
+    @hybrid_property
+    def combined_cell_type(self):
+        return self.cell_type + '/' + self.sub_cell_type
 
 
 class Allele(Base):
