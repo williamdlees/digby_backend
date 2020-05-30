@@ -84,21 +84,21 @@ filter_arguments.add_argument('page_size', type=int)
 class SequencesAPI(Resource):
     @api.expect(filter_arguments, validate=True)
     def get(self, species, ref_seq):
-        """ Returns nucleotide sequences from selected reference """
+        """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
 
         args = filter_arguments.parse_args(request)
-        ref_seq = db.session.query(RefSeq).join(Species).filter(Species.name == species).one_or_none()
+        refs = db.session.query(RefSeq.id).join(Species).filter(Species.name == species).filter(RefSeq.name.in_(ref_seq.split(','))).all()
 
-        if not ref_seq:
+        if not refs:
             return None, 404
 
         if (args['page_size'] and args['page_size'] <= 0) or (args['page_number'] and args['page_number'] < 0):
             return None, 404
 
         if args['sortdirection'] and args['sortdirection'] == 'desc':
-            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name.desc()).all()
+            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id.in_(refs)).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name.desc()).all()
         else:
-            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id == ref_seq.id).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name).all()
+            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id.in_(refs)).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name).all()
 
         sequences = []
 
