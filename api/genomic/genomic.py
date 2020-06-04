@@ -3,11 +3,15 @@
 from flask import request
 from flask_restplus import Resource, reqparse, inputs
 from api.restplus import api
-from sqlalchemy import inspect
+from sqlalchemy import inspect, or_
 from math import ceil
-
+from werkzeug.exceptions import BadRequest
 from app import db
 from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature
+import json
+from datetime import datetime
+from sqlalchemy_filters import apply_filters
+
 
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
@@ -70,66 +74,135 @@ def enumerate_feature(f):
     return ret
 
 
+genomic_filters = {                                                     # TODO: add no_uniques on sequence fields
+    'name': {'model': 'Sequence', 'field': Sequence.name},
+    'imgt_name': {'model': 'Sequence', 'field': Sequence.imgt_name},
+    'type': {'model': 'Sequence', 'field': Sequence.type},
+    'novel': {'model': 'Sequence', 'field': Sequence.novel},
+    'sequence': {'model': 'Sequence', 'field': Sequence.sequence},
+    'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence},
+
+    'feature': {'model': 'Feature', 'field': Feature.feature},
+    'start': {'model': 'Feature', 'field': Feature.start},
+    'end': {'model': 'Feature', 'field': Feature.end},
+    'score': {'model': 'Feature', 'field': Feature.score},
+    'strand': {'model': 'Feature', 'field': Feature.strand},
+    'frame': {'model': 'Feature', 'field': Feature.frame},
+
+    'refseq_name': {'model': 'RefSeq', 'field': RefSeq.name.label('refseq_name'), 'fieldname': 'name'},
+    'refseq_sequence': {'model': 'RefSeq', 'field': RefSeq.sequence.label('refseq_sequence'), 'fieldname': 'sequence'},
+}
+
 filter_arguments = reqparse.RequestParser()
 filter_arguments.add_argument('imgt', type=inputs.boolean)
 filter_arguments.add_argument('novel', type=inputs.boolean)
 filter_arguments.add_argument('full', type=inputs.boolean)
 filter_arguments.add_argument('filter', type=str)
-filter_arguments.add_argument('sortdirection', type=str)
+filter_arguments.add_argument('sort_by', type=str)
+filter_arguments.add_argument('cols', type=str)
 filter_arguments.add_argument('page_number', type=int)
 filter_arguments.add_argument('page_size', type=int)
 
-@ns.route('/sequences/<string:species>/<string:ref_seq>')
+
+@ns.route('/sequences/<string:species>/<string:genomic_datasets>')
 @api.response(404, 'Reference sequence not found.')
 class SequencesAPI(Resource):
     @api.expect(filter_arguments, validate=True)
-    def get(self, species, ref_seq):
+    def get(self, species, genomic_datasets):
         """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
-
         args = filter_arguments.parse_args(request)
-        refs = db.session.query(RefSeq.id).join(Species).filter(Species.name == species).filter(RefSeq.name.in_(ref_seq.split(','))).all()
+
+        refs = db.session.query(RefSeq.id).join(Species).filter(Species.name == species).filter(RefSeq.name.in_(genomic_datasets.split(','))).all()
 
         if not refs:
-            return None, 404
+            raise BadRequest('Bad species name or reference set name %s' % species)
 
-        if (args['page_size'] and args['page_size'] <= 0) or (args['page_number'] and args['page_number'] < 0):
-            return None, 404
+        required_cols = json.loads(args['cols'])
 
-        if args['sortdirection'] and args['sortdirection'] == 'desc':
-            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id.in_(refs)).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name.desc()).all()
-        else:
-            seqs = db.session.query(Sequence).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id.in_(refs)).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id).order_by(Sequence.name).all()
+        for col in required_cols:
+            if col not in genomic_filters.keys():
+                raise BadRequest('Bad filter string %s' % args['filter'])
 
-        sequences = []
+        if 'name' not in required_cols:
+            required_cols = ['name'] + required_cols
 
-        for sequence in seqs:
-            if 'imgt' in args and not args['imgt']:
-                if not sequence.novel:
-                    continue
-            if 'novel' in args and not args['novel']:
-                if sequence.novel:
-                    continue
-            if 'full' in args and not args['full']:
-                if sequence.type not in ['V-REGION', 'D-REGION', 'J-REGION']:
-                    continue
-            if 'filter' in args and args['filter']:
-                if args['filter'] not in sequence.name:
-                    continue
+        attribute_query = []
 
-            seq = object_as_dict(sequence)
-            del seq['id']
-            del seq['species_id']
-            sequences.append(seq)
+        for col in required_cols:
+            if genomic_filters[col]['field'] is not None:
+                attribute_query.append(genomic_filters[col]['field'])
 
-        if args['page_size'] and args['page_number']:
-            first = args['page_number'] * args['page_size']
-            sequences = sequences[first : first + args['page_size']]
-        else:
-            args['page size'] = len(sequences)
+        seq_query = db.session.query(*attribute_query).join(SequenceFeature).join(Feature).join(RefSeq).filter(RefSeq.id.in_(refs)).filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id)
 
-        total_items = len(sequences)
+        if 'imgt' in args and not args['imgt']:
+            seq_query = seq_query.filter(Sequence.novel == True)
 
-        return {'sequences': sequences, 'total_items': total_items, 'page_size': args['page_size'], 'pages': ceil((total_items*1.0)/args['page_size'])}
+        if 'novel' in args and not args['novel']:
+            seq_query = seq_query.filter(Sequence.novel != True)
+
+        if 'full' in args and not args['full']:
+            seq_query = seq_query.filter(or_(Sequence.name == 'V-REGION', Sequence.name == 'D-REGION', Sequence.name == 'J-REGION'))
+
+        seqs = seq_query.all()
+
+        uniques = {}
+        for f in required_cols:
+            uniques[f] = []
+
+        for s in seqs:
+            for f in required_cols:
+                if genomic_filters[f]['field'] is not None:
+                    el = getattr(s, f)
+                    if isinstance(el, datetime):
+                        el = el.date().isoformat()
+                    elif isinstance(el, str) and len(el) == 0:
+                        el = '(blank)'
+                    if el not in uniques[f]:
+                        uniques[f].append(el)
+
+        filter_spec = []
+        if args['filter']:
+            for f in json.loads(args['filter']):
+                try:
+                    f['model'] = genomic_filters[f['field']]['model']
+                    if 'fieldname' in genomic_filters[f['field']]:
+                        f['field'] = genomic_filters[f['field']]['fieldname']
+                    if '(blank)' in f['value']:
+                        f['value'].append('')
+                    filter_spec.append(f)
+                except:
+                    raise BadRequest('Bad filter string %s' % args['filter'])
+
+        seq_query = apply_filters(seq_query, filter_spec)
+        seqs = seq_query.all()
+
+        ret = []
+        for r in seqs:
+            s = r._asdict()
+            for k, v in s.items():
+                if isinstance(v, datetime):
+                    s[k] = v.date().isoformat()
+            ret.append(s)
+
+        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
+
+        for spec in sort_specs:
+            if spec['field'] in genomic_filters.keys():
+                ret = sorted(ret, key=lambda x : (x[spec['field']] is None,  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+
+        total_size = len(ret)
+
+        if args['page_size']:
+            first = (args['page_number']) * args['page_size']
+            ret = ret[first : first + args['page_size']]
+
+        return {
+            'sequences': ret,
+            'uniques': uniques,
+            'total_items': total_size,
+            'page_size': args['page_size'],
+            'pages': ceil((total_size*1.0)/args['page_size'])
+        }
 
 
 @ns.route('/feature_pos/<string:species>/<string:ref_seq_name>/<string:feature_string>')
