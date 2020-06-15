@@ -1,5 +1,5 @@
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sample, SampleSequence, Sequence
+from db.feature_db import Species, RefSeq, Feature, Sample, SampleSequence, Sequence, Study
 from Bio import SeqIO
 from Bio.Seq import Seq
 from os import listdir
@@ -8,52 +8,88 @@ import csv
 from sqlalchemy import func, and_
 import traceback
 
-REF_DIR= 'static/pacbio/human/ref'
-SAMPLE_DIR = 'static/pacbio/human/samples'
+
+IGENOTYPER_DIR = 'study_data/igenotyper'
 
 
 
 def update():
-#    delete_dependencies('Human')
-#    return ""
-
-    sp = db.session.query(Species).filter_by(name='Human').one_or_none()
-
-    if not sp:
-        sp = Species(name='Human')
-        db.session.add(sp)
-
-    for f in listdir(REF_DIR):
-        chrom = splitext(f)[0]
-        f = join(REF_DIR, f)
-        if isfile(f):
-            records = list(SeqIO.parse(f, 'fasta'))
-            ref_seq = RefSeq(name=chrom, locus='IGH', species=sp, sequence=records[0].seq.lower(), length=len(records[0].seq))
-            db.session.add(ref_seq)
-            db.session.commit()
-
-    for f in listdir(SAMPLE_DIR):
-        p = join(SAMPLE_DIR, f)
-        if isdir(p) and f[0] != '.':
-            process_sample(p, f)
-
+    update_refs()
+    update_studies()
     return 'Human samples and reference sequences added'
 
 
-def process_sample(path, sample_name):
-    filename = join(path, 'genes_assigned_to_alleles.txt')
+def update_refs():
+    with open(IGENOTYPER_DIR + '/Ref/ref.txt', 'r') as fo:
+        for row in fo:
+            (species, locus, name, ref_file) = row.split('\t')
+
+            sp = db.session.query(Species).filter_by(name=species).one_or_none()
+
+            if not sp:
+                sp = Species(name=species)
+                db.session.add(sp)
+
+            records = list(SeqIO.parse(IGENOTYPER_DIR + '/Ref/' + ref_file, 'fasta'))
+            ref_seq = RefSeq(name=name, locus=locus, species=sp, sequence=records[0].seq.lower(), length=len(records[0].seq))
+            db.session.add(ref_seq)
+            db.session.commit()
+
+
+def update_studies():
+    for study_dir in listdir(IGENOTYPER_DIR):
+        if study_dir != 'Ref' and study_dir[0] != '.':
+            study_file = join(IGENOTYPER_DIR, study_dir, 'study.tsv')
+
+            sd = {}
+
+            with open(study_file, 'r') as fo:
+                for row in fo:
+                    k, v = row.split('\t')
+                    sd[k] = v
+
+            study = Study(name=sd['name'],
+                          institute=sd['institute'],
+                          researcher=sd['researcher'],
+                          reference=sd['reference'],
+                          contact=sd['contact'],
+                          accession_id=sd['accession_id'],
+                          accession_reference=sd['accession_reference'])
+            db.session.add(study)
+            db.session.commit()
+
+            for sf in listdir(join(IGENOTYPER_DIR, study_dir)):
+                if sf[0] != '.':
+                    sample_dir = join(IGENOTYPER_DIR, study_dir, sf)
+                    if isdir(sample_dir):
+                        process_sample(sample_dir, study)
+
+
+def process_sample(sample_dir, study):
     try:
-        with open(filename, 'r', newline='') as fi:
+        sample_data = {}
+
+        with open(join(sample_dir, 'sample.tsv'), 'r') as fo:
+            for row in fo:
+                k, v = row.split('\t')
+                sample_data[k.strip()] = v.strip()
+
+        species_id = db.session.query(Species.id).filter(Species.name==sample_data['species']).one_or_none()[0]
+        ref_id = db.session.query(RefSeq.id).filter(RefSeq.name==sample_data['ref']).one_or_none()[0]
+
+        with open(join(sample_dir, 'genes_assigned_to_alleles.txt'), 'r', newline='') as fi:
             row_count = 0
             feature_id = 1000
 
-            sample = db.session.query(Sample).filter_by(name=sample_name).one_or_none()
+            sample = db.session.query(Sample).filter_by(name=sample_data['name'], study=study).one_or_none()
 
             if not sample:
-                sample = Sample(name=sample_name, type='Genomic')
+                sample = Sample(name=sample_data['name'], type='Genomic', date=sample_data['date'], study=study, species_id=species_id, ref_seq_id=ref_id)
                 db.session.add(sample)
 
-            gene_id = db.session.query(func.max(Feature.feature_id)).join(RefSeq).join(Species).filter(Species.name == 'Human').filter(Feature.feature == 'gene').count() + 1
+            gene_id = db.session.query(func.max(Feature.feature_id)).join(RefSeq).join(Species).filter(Species.name == 'Human').one_or_none()[0]
+
+            gene_id = 1 if gene_id is None else gene_id+1
 
             try:
                 row_count += 1
@@ -83,7 +119,7 @@ def process_sample(path, sample_name):
 
                     for h in [1, 2]:
                         allele_name = row['haplotype_%1d_allele' % h]
-                        if allele_name != 'ND' and allele_name != 'Deleted':
+                        if allele_name != 'ND' and allele_name != 'NotDetermined' and allele_name != 'Deleted':
                             if allele_name == 'Novel':
                                 if not len(row['haplotype_%1d_novel_sequence' % h]):
                                     print('Warning: no sequence for novel allele in gene %s' % row['gene name'])
@@ -102,18 +138,18 @@ def process_sample(path, sample_name):
                                         allele_name = '%s*i%02d' % (row['gene_name'], novel_num)
 
                                         if 'V' in allele_name:
-                                            type = 'V-REGION'
+                                            allele_type = 'V-REGION'
                                         elif 'D' in allele_name:
-                                            type = 'D-REGION'
+                                            allele_type = 'D-REGION'
                                         elif 'J' in allele_name:
-                                            type = 'J-REGION'
+                                            allele_type = 'J-REGION'
                                         else:
-                                            type = 'UNKNOWN'
+                                            allele_type = 'UNKNOWN'
 
                                         sequence = Sequence(
                                             name=allele_name,
                                             imgt_name='',
-                                            type=type,
+                                            type=allele_type,
                                             novel=True,
                                             sequence=this_ntsequence,
                                             gapped_sequence='',
@@ -131,7 +167,7 @@ def process_sample(path, sample_name):
                                 allele_name = '%s*%02d' % (row['gene_name'], int(allele_name))
                                 sequence = db.session.query(Sequence).filter(and_(Sequence.imgt_name == allele_name, Sequence.species == ref.species)).one_or_none()
                                 if not sequence:
-                                    print('Allele name %s not found in IMGT reference set. Ignoring.' % allele_name)
+                                    print('Human allele name %s not found in IMGT reference set. Ignoring.' % allele_name)
                                     continue
                                 else:
                                     ss = db.session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
@@ -169,21 +205,21 @@ def process_sample(path, sample_name):
                                 gene_id += 1
 
                                 if 'V' in allele_name:
-                                    type = 'V-REGION'
+                                    allele_type = 'V-REGION'
                                 elif 'D' in allele_name:
-                                    type = 'D-REGION'
+                                    allele_type = 'D-REGION'
                                 elif 'J' in allele_name:
-                                    type = 'J-REGION'
+                                    allele_type = 'J-REGION'
                                 else:
-                                    type = 'UNKNOWN'
+                                    allele_type = 'UNKNOWN'
 
                                 gene_VDJ = Feature(
-                                    name=row['gene_name'] + '_' + type,
+                                    name=row['gene_name'] + '_' + allele_type,
                                     feature='CDS',
                                     start=row['start'],
                                     end=row['end'],
                                     strand=strand,
-                                    attribute='Name=%s_%s;ID=%04d' % (row['gene_name'], type, gene_id),
+                                    attribute='Name=%s_%s;ID=%04d' % (row['gene_name'], allele_type, gene_id),
                                     feature_id=gene_id,
                                 )
                                 ref.features.append(gene_VDJ)
@@ -195,11 +231,11 @@ def process_sample(path, sample_name):
 
 
             except Exception as e:
-                print('Unexpected row format: row %d file %s' % (row_count, filename))
+                print('Unexpected row format: row %d file %s' % (row_count, join(sample_dir, 'genes_assigned_to_alleles.txt')))
                 print(e)
                 traceback.print_exc()
     except Exception as e:
-        print("can't open %s." % filename)
+        print("can't open %s." % join(sample_dir, 'genes_assigned_to_alleles.txt'))
         print(e)
 
     db.session.commit()

@@ -1,5 +1,5 @@
 from app import db
-from db.feature_db import RefSeq, Species, Sample, Sequence, Feature, SampleSequence, SequenceFeature
+from db.feature_db import RefSeq, Species, Sample, Sequence, Feature, SampleSequence, SequenceFeature, Study
 
 def delete_dependencies(species):
     db.session.commit()
@@ -22,8 +22,9 @@ def delete_dependencies(species):
         SequenceFeature.query.delete()
         Sequence.query.delete()
         Feature.query.delete()
-        RefSeq.query.delete()
         Sample.query.delete()
+        RefSeq.query.delete()
+        Study.query.delete()
 
 
     db.session.commit()
