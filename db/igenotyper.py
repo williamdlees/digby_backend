@@ -9,7 +9,7 @@ from sqlalchemy import func, and_
 import traceback
 
 
-IGENOTYPER_DIR = 'study_data/igenotyper'
+IGENOTYPER_DIR = 'study_data/IGenotyper'
 
 
 
