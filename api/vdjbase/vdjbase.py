@@ -3,7 +3,7 @@
 from flask import request
 from flask_restplus import Resource, reqparse, fields, marshal, inputs
 from api.restplus import api
-from sqlalchemy import inspect, func, orm
+from sqlalchemy import inspect, func
 from math import ceil
 import json
 from sqlalchemy_filters import apply_filters
@@ -13,7 +13,7 @@ import decimal
 
 
 from app import vdjbase_dbs
-from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele
+from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample
 
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
@@ -103,6 +103,8 @@ valid_filters = {
     'single_assignment': {'model': 'GenoDetection', 'field': GenoDetection.single_assignment},
     'detection': {'model': 'GenoDetection', 'field': GenoDetection.detection},
 
+    'allele': {'model': None, 'field': None},
+
     'haplotypes': {'model': None, 'field': None},
     'genotypes': {'model': None, 'field': None}
 }
@@ -168,61 +170,25 @@ class SamplesApi(Resource):
                 return list(), 404
 
         hap_filters = None
+        allele_filters = None
 
         filter_spec = []
         if args['filter']:
             for f in json.loads(args['filter']):
                 try:
-                    if f['field'] != 'haplotypes':
+                    if f['field'] == 'haplotypes':
+                        hap_filters = f
+                    elif f['field'] == 'allele':
+                        allele_filters = f
+                    else:
                         f['model'] = valid_filters[f['field']]['model']
                         if 'fieldname' in valid_filters[f['field']]:
                             f['field'] = valid_filters[f['field']]['fieldname']
                         if '(blank)' in f['value']:
                             f['value'].append('')
                         filter_spec.append(f)
-                    else:
-                        hap_filters = f
                 except:
                     raise BadRequest('Bad filter string %s' % args['filter'])
-
-        samples = []
-
-        for dset in dataset.split(','):
-            session = vdjbase_dbs[species][dset].session
-
-            attribute_query = []
-
-            for col in required_cols:
-                if valid_filters[col]['field'] is not None:
-                    attribute_query.append(valid_filters[col]['field'])
-
-            query = session.query(*attribute_query).join(GenoDetection).join(Patient).join(SeqProtocol).join(TissuePro).join(Study, Sample.study_id == Study.id)
-            samples.extend(query.all())
-
-        uniques = {}
-        for f in required_cols:
-            uniques[f] = []
-
-        for s in samples:
-            for f in required_cols:
-                if valid_filters[f]['field'] is not None:
-                    el = getattr(s, f)
-                    if isinstance(el, datetime):
-                        el = el.date().isoformat()
-                    elif isinstance(el, str) and len(el) == 0:
-                        el = '(blank)'
-                    if el not in uniques[f]:
-                        uniques[f].append(el)
-
-        for f in required_cols:
-            try:
-                uniques[f].sort(key=lambda x: (x is None or x == '', x))
-            except:
-                pass
-
-        if 'haplotypes' in required_cols:
-            haplotypes = session.query(HaplotypesFile.by_gene_s).distinct().order_by(HaplotypesFile.by_gene_s).all()
-            uniques['haplotypes'] = [(h[0]) for h in haplotypes]
 
         ret = []
 
@@ -236,12 +202,18 @@ class SamplesApi(Resource):
                     attribute_query.append(valid_filters[col]['field'])
 
             query = session.query(*attribute_query).join(GenoDetection).join(Patient).join(SeqProtocol).join(TissuePro).join(Study, Sample.study_id == Study.id)
-
             query = apply_filters(query, filter_spec)
 
             if hap_filters:
                 hap_samples = session.query(Sample.name.distinct()).join(SamplesHaplotype).join(HaplotypesFile).filter(HaplotypesFile.by_gene_s.in_(hap_filters['value']))
                 query = query.filter(Sample.name.in_(hap_samples))
+
+            if allele_filters:
+                allele_samples = session.query(Sample.name.distinct()).join(AllelesSample, Sample.id == AllelesSample.sample_id).join(Allele, Allele.id == AllelesSample.allele_id).filter(Allele.name.in_(allele_filters['value'])).all()
+                if allele_samples is None:
+                    allele_samples = []
+                query = query.filter(Sample.name.in_([s[0] for s in allele_samples]))
+
 
             res = query.all()
 
@@ -254,6 +226,31 @@ class SamplesApi(Resource):
                 ret.append(s)
 
         total_size = len(ret)
+
+        uniques = {}
+        for f in required_cols:
+            uniques[f] = []
+
+        for s in ret:
+            for f in required_cols:
+                if valid_filters[f]['field'] is not None and 'no_uniques' not in valid_filters[f]:
+                    el = s[f]
+                    if isinstance(el, datetime):
+                        s[f] = el.date().isoformat()
+                    elif isinstance(el, str) and len(el) == 0:
+                        s[f] = '(blank)'
+                    if s[f] not in uniques[f]:
+                        uniques[f].append(s[f])
+
+        for f in required_cols:
+            try:
+                uniques[f].sort(key=lambda x: (x is None or x == '', x))
+            except:
+                pass
+
+        if 'haplotypes' in required_cols:
+            haplotypes = session.query(HaplotypesFile.by_gene_s).distinct().order_by(HaplotypesFile.by_gene_s).all()
+            uniques['haplotypes'] = [(h[0]) for h in haplotypes]
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
@@ -318,8 +315,6 @@ class SequencesApi(Resource):
                 print('bad column in request: %s' % col)
                 return list(), 404
 
-        hap_filters = None
-
         filter_spec = []
         if args['filter']:
             for f in json.loads(args['filter']):
@@ -335,43 +330,6 @@ class SequencesApi(Resource):
                         hap_filters = f
                 except:
                     raise BadRequest('Bad filter string %s' % args['filter'])
-
-        samples = []
-
-        for dset in dataset.split(','):
-            session = vdjbase_dbs[species][dset].session
-
-            attribute_query = []
-
-            for col in required_cols:
-                if valid_sequence_cols[col]['field'] is not None:
-                    attribute_query.append(valid_sequence_cols[col]['field'])
-
-            query = session.query(*attribute_query)
-            samples.extend(query.all())
-
-        uniques = {}
-        for f in required_cols:
-            uniques[f] = []
-
-        for s in samples:
-            for f in required_cols:
-                if valid_sequence_cols[f]['field'] is not None and 'no_uniques' not in valid_sequence_cols[f]:
-                    el = getattr(s, f)
-                    if isinstance(el, datetime):
-                        el = el.date().isoformat()
-                    elif isinstance(el, decimal.Decimal):
-                        el = '%0.2f' % el
-                    elif isinstance(el, str) and len(el) == 0:
-                        el = '(blank)'
-                    if el not in uniques[f]:
-                        uniques[f].append(el)
-
-        for f in required_cols:
-            try:
-                uniques[f].sort(key=lambda x: (x is None or x == '', x))
-            except:
-                pass
 
         ret = []
 
@@ -399,6 +357,29 @@ class SequencesApi(Resource):
                 ret.append(s)
 
         total_size = len(ret)
+
+        uniques = {}
+        for f in required_cols:
+            uniques[f] = []
+
+        for s in ret:
+            for f in required_cols:
+                if valid_sequence_cols[f]['field'] is not None and 'no_uniques' not in valid_sequence_cols[f]:
+                    el = s[f]
+                    if isinstance(el, datetime):
+                        s[f] = el.date().isoformat()
+                    elif isinstance(el, decimal.Decimal):
+                        s[f] = '%0.2f' % el
+                    elif isinstance(el, str) and len(el) == 0:
+                        s[f] = '(blank)'
+                    if s[f] not in uniques[f]:
+                        uniques[f].append(s[f])
+
+        for f in required_cols:
+            try:
+                uniques[f].sort(key=lambda x: (x is None or x == '', x))
+            except:
+                pass
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
