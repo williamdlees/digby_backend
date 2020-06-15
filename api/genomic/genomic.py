@@ -48,6 +48,46 @@ class RefSeqAPI(Resource):
         else:
             return None, 404
 
+@ns.route('/sample_info/<string:species>/<string:study_name>/<string:sample>')
+class SampleInfoApi(Resource):
+    def get(self, species, study_name, sample):
+        """ Returns information on the selected sample """
+
+        sample = db.session.query(Sample)\
+            .join(Species)\
+            .join(Study, Study.id == Sample.study_id)\
+            .join(RefSeq, RefSeq.id == Sample.ref_seq_id)\
+            .filter(Species.name == species)\
+            .filter(Study.name == study_name)\
+            .filter(Sample.name == sample).one_or_none()
+
+        if sample is None:
+            raise BadRequest('Bad species name, study ID or sample name')
+
+        attribute_query = []
+
+        for col in genomic_sample_filters.keys():
+            if genomic_sample_filters[col]['field'] is not None:
+                attribute_query.append(genomic_sample_filters[col]['field'])
+
+        info = db.session.query(*attribute_query)\
+            .join(Species)\
+            .join(Study, Study.id == Sample.study_id)\
+            .join(RefSeq, RefSeq.id == Sample.ref_seq_id)\
+            .filter(Species.name == species)\
+            .filter(Study.name == study_name)\
+            .filter(Sample.id == sample.id).one_or_none()
+
+        if info is not None:
+            info = info._asdict()
+            for k, v in info.items():
+                if isinstance(v, datetime):
+                    info[k] = v.date().isoformat()
+
+        return info
+
+
+
 
 range_arguments = reqparse.RequestParser()
 range_arguments.add_argument('start', type=int, required=True)
@@ -90,7 +130,6 @@ genomic_sequence_filters = {
     'frame': {'model': 'Feature', 'field': Feature.frame},
 
     'refseq_name': {'model': 'RefSeq', 'field': RefSeq.name.label('refseq_name'), 'fieldname': 'name'},
-    'refseq_sequence': {'model': 'RefSeq', 'field': RefSeq.sequence.label('refseq_sequence'), 'fieldname': 'sequence'},
 
     'sample_name': {'model': 'Sample', 'field': Sample.name.label('sample_name'), 'fieldname': 'name'},
 }
@@ -263,6 +302,9 @@ class SamplesAPI(Resource):
 
         if 'name' not in required_cols:
             required_cols = ['name'] + required_cols
+
+        if 'study_name' not in required_cols:
+            required_cols = ['study_name'] + required_cols
 
         attribute_query = []
 

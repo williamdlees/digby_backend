@@ -46,7 +46,7 @@ def update_studies():
             with open(study_file, 'r') as fo:
                 for row in fo:
                     k, v = row.split('\t')
-                    sd[k] = v
+                    sd[k] = v.strip()
 
             study = Study(name=sd['name'],
                           institute=sd['institute'],
