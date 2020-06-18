@@ -159,7 +159,7 @@ def update():
                 )
 
                 s.features.append(f)
-                SampleSequence(sample=sample, sequence=s, chromosome='h1,h2')
+                SampleSequence(sample=sample, sequence=s, chromosome='h1,h2', chromo_count=2)
 
         if state and name and values[0] == "3'UTR":
             state = None

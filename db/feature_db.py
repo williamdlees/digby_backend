@@ -24,6 +24,7 @@ class SampleSequence(db.Model):
     sample = db.relationship('Sample', backref='sequence_associations', cascade="all")
     sequence = db.relationship('Sequence', backref='sample_associations', cascade="all")
     chromosome = db.Column(db.String(50))
+    chromo_count = db.Column(db.Integer)
 
 
 class SequenceFeature(db.Model):

@@ -51,6 +51,7 @@ class DataSetAPI(Resource):
 
 valid_filters = {
     'name': {'model': 'Sample', 'field': Sample.name},
+    'id': {'model': 'Sample', 'field': Sample.id},
     'chain': {'model': 'Sample', 'field': Sample.chain},
     'row_reads': {'model': 'Sample', 'field': Sample.row_reads},
     'date': {'model': 'Sample', 'field': Sample.date},
@@ -169,6 +170,9 @@ class SamplesApi(Resource):
                 print('bad column in request: %s' % col)
                 return list(), 404
 
+        if 'id' not in required_cols:
+            required_cols.append('id')
+
         hap_filters = None
         allele_filters = None
 
@@ -223,6 +227,7 @@ class SamplesApi(Resource):
                     if isinstance(v, datetime):
                         s[k] = v.date().isoformat()
                 s['dataset'] = dset
+                s['id'] = '%s.%d' % (dset, s['id'])
                 ret.append(s)
 
         total_size = len(ret)
@@ -290,6 +295,8 @@ valid_sequence_cols = {
     'low_confidence': {'model': 'Allele', 'field': Allele.low_confidence},
     'novel': {'model': 'Allele', 'field': Allele.novel},
     'max_kdiff': {'model': 'Allele', 'field': Allele.max_kdiff},
+
+    'sample_id': {'model': None, 'fieldname': 'sample_id'},
 }
 
 @ns.route('/sequences/<string:species>/<string:dataset>')
@@ -315,19 +322,20 @@ class SequencesApi(Resource):
                 print('bad column in request: %s' % col)
                 return list(), 404
 
+        sample_id_filter = None
         filter_spec = []
         if args['filter']:
             for f in json.loads(args['filter']):
                 try:
-                    if f['field'] != 'haplotypes':
+                    if f['field'] == 'sample_id':
+                        sample_id_filter = f
+                    else:
                         f['model'] = valid_sequence_cols[f['field']]['model']
                         if 'fieldname' in valid_sequence_cols[f['field']]:
                             f['field'] = valid_sequence_cols[f['field']]['fieldname']
                         if '(blank)' in f['value']:
                             f['value'].append('')
                         filter_spec.append(f)
-                    else:
-                        hap_filters = f
                 except:
                     raise BadRequest('Bad filter string %s' % args['filter'])
 
@@ -344,6 +352,23 @@ class SequencesApi(Resource):
 
             query = session.query(*attribute_query)
             query = apply_filters(query, filter_spec)
+
+            if sample_id_filter is not None:
+                required_ids = []
+                for fv in sample_id_filter['value']:
+                    d, id = fv.split('.')
+                    if d == dset:
+                        required_ids.append(id)
+                alleles_with_samples = session.query(Allele.name)\
+                    .join(AllelesSample)\
+                    .join(Sample)\
+                    .filter(Sample.id.in_(required_ids)).all()
+
+                required_names = []
+                for a in alleles_with_samples:
+                    required_names.append(a[0])
+                query = query.filter(Allele.name.in_(required_names))
+
             res = query.all()
 
             for r in res:
