@@ -157,11 +157,12 @@ def process_sample(sample_dir, study):
                                         )
 
                                         db.session.add(sequence)
-                                        SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h)
+                                        SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h, chromo_count=1)
                                         db.session.commit()
                                 else:
                                     ss = db.session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
                                     ss.chromosome = 'h1, h2'
+                                    ss.chromo_count = 2
                                     db.session.commit()
                             else:
                                 allele_name = '%s*%02d' % (row['gene_name'], int(allele_name))
@@ -173,8 +174,9 @@ def process_sample(sample_dir, study):
                                     ss = db.session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
                                     if ss:
                                         ss.chromosome = 'h1, h2'
+                                        ss.chromo_count = 2
                                     else:
-                                        SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h)
+                                        SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h, chromo_count=1)
                                     db.session.commit()
 
                             gene = db.session.query(Feature).filter(and_(Feature.name == row['gene_name'], Feature.refseq == ref, Feature.feature == 'gene')).one_or_none()
@@ -224,9 +226,8 @@ def process_sample(sample_dir, study):
                                 )
                                 ref.features.append(gene_VDJ)
                                 gene_id += 1
+                                sequence.features.append(gene_VDJ)
 
-                            # sequence.features.append(gene)
-                            sequence.features.append(gene_VDJ)
                             db.session.commit()
 
 

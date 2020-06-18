@@ -3,7 +3,7 @@
 from flask import request
 from flask_restplus import Resource, reqparse, inputs
 from api.restplus import api
-from sqlalchemy import inspect, or_
+from sqlalchemy import inspect, or_, func, distinct
 from math import ceil
 from werkzeug.exceptions import BadRequest
 from app import db
@@ -11,6 +11,7 @@ from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, S
 import json
 from datetime import datetime
 from sqlalchemy_filters import apply_filters
+from decimal import Decimal
 
 
 # Return SqlAlchemy row as a dict, using correct column names
@@ -131,7 +132,10 @@ genomic_sequence_filters = {
 
     'refseq_name': {'model': 'RefSeq', 'field': RefSeq.name.label('refseq_name'), 'fieldname': 'name'},
 
-    'sample_name': {'model': 'Sample', 'field': Sample.name.label('sample_name'), 'fieldname': 'name'},
+    'sample_count': {'field': func.count(Sample.name).label('sample_count'), 'fieldname': 'sample_count'},
+    'appearances': {'field': func.sum(SampleSequence.chromo_count).label('appearances'), 'fieldname': 'appearances'},
+
+    'sample_id': {'model': None, 'fieldname': 'sample_id'},
 }
 
 filter_arguments = reqparse.RequestParser()
@@ -140,6 +144,25 @@ filter_arguments.add_argument('page_size', type=int)
 filter_arguments.add_argument('filter', type=str)
 filter_arguments.add_argument('sort_by', type=str)
 filter_arguments.add_argument('cols', type=str)
+
+# borrowed from sqlalchemy-filters
+
+
+OPERATORS = {
+    '==': lambda f, a: f == a,
+    '!=': lambda f, a: f != a,
+    '>': lambda f, a: f > a,
+    '<': lambda f, a: f < a,
+    '>=': lambda f, a: f >= a,
+    '<=': lambda f, a: f <= a,
+    'like': lambda f, a: f.like(a),
+    'ilike': lambda f, a: f.ilike(a),
+    'not_ilike': lambda f, a: ~f.ilike(a),
+    'in': lambda f, a: f.in_(a),
+    'not_in': lambda f, a: ~f.in_(a),
+    'any': lambda f, a: f.any(a),
+    'not_any': lambda f, a: func.not_(f.any(a)),
+}
 
 
 @ns.route('/sequences/<string:species>/<string:genomic_datasets>')
@@ -159,7 +182,7 @@ class SequencesAPI(Resource):
 
         for col in required_cols:
             if col not in genomic_sequence_filters.keys():
-                raise BadRequest('Bad filter string %s' % args['filter'])
+                raise BadRequest('Bad column string %s' % args['cols'])
 
         if 'name' not in required_cols:
             required_cols = ['name'] + required_cols
@@ -174,24 +197,53 @@ class SequencesAPI(Resource):
             .join(SequenceFeature)\
             .join(Feature)\
             .join(RefSeq)\
+            .join(SampleSequence)\
             .join(Sample)\
             .filter(RefSeq.id.in_(refs))\
-            .filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id)
+            .filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id)\
+            .filter(Sequence.id == SampleSequence.sequence_id, Sample.id == SampleSequence.sample_id)\
+            .group_by(Sequence.name)
 
         filter_spec = []
+        sample_count_filters = []
+        sample_id_filter = None
+        appearances_filters = []
         if args['filter']:
             for f in json.loads(args['filter']):
                 try:
-                    f['model'] = genomic_sequence_filters[f['field']]['model']
-                    if 'fieldname' in genomic_sequence_filters[f['field']]:
-                        f['field'] = genomic_sequence_filters[f['field']]['fieldname']
-                    if '(blank)' in f['value']:
-                        f['value'].append('')
-                    filter_spec.append(f)
+                    if 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_count':
+                        sample_count_filters.append(f)
+                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_id':
+                        sample_id_filter = f
+                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'appearances':
+                        appearances_filters.append(f)
+                    else:
+                        f['model'] = genomic_sequence_filters[f['field']]['model']
+                        if 'fieldname' in genomic_sequence_filters[f['field']]:
+                            f['field'] = genomic_sequence_filters[f['field']]['fieldname']
+                        if '(blank)' in f['value']:
+                            f['value'].append('')
+                        filter_spec.append(f)
                 except:
                     raise BadRequest('Bad filter string %s' % args['filter'])
 
         seq_query = apply_filters(seq_query, filter_spec)
+
+        for f in sample_count_filters:
+            if f['op'] in OPERATORS:
+                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Sample.name), f['value']))
+
+        for f in appearances_filters:
+            if f['op'] in OPERATORS:
+                seq_query = seq_query.having(OPERATORS[f['op']](func.sum(SampleSequence.chromo_count), f['value']))
+
+        if sample_id_filter is not None:
+            alleles_with_samples = db.session.query(Sequence.name)\
+                .join(SampleSequence)\
+                .join(Sample)\
+                .filter(Sample.id.in_(sample_id_filter['value'])).all()
+            seq_query = seq_query.filter(Sequence.name.in_(alleles_with_samples))
+
         seqs = seq_query.all()
 
         uniques = {}
@@ -204,6 +256,8 @@ class SequencesAPI(Resource):
                     el = getattr(s, f)
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
+                    elif isinstance(el, Decimal):
+                        el = int(el)
                     elif isinstance(el, str) and len(el) == 0:
                         el = '(blank)'
                     if el not in uniques[f]:
@@ -215,6 +269,9 @@ class SequencesAPI(Resource):
             for k, v in s.items():
                 if isinstance(v, datetime):
                     s[k] = v.date().isoformat()
+                elif isinstance(v, Decimal):
+                    s[k] = int(v)
+
             ret.append(s)
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
@@ -267,6 +324,7 @@ class FeaturePosAPI(Resource):
 
 genomic_sample_filters = {
     'name': {'model': 'Sample', 'field': Sample.name},
+    'id': {'model': 'Sample', 'field': Sample.id},
     'type': {'model': 'Sample', 'field': Sample.type},
     'date': {'model': 'Sample', 'field': Sample.date},
 
@@ -300,8 +358,8 @@ class SamplesAPI(Resource):
             if col not in genomic_sample_filters.keys():
                 raise BadRequest('Bad filter string %s' % args['filter'])
 
-        if 'name' not in required_cols:
-            required_cols = ['name'] + required_cols
+        if 'id' not in required_cols:
+            required_cols = ['id'] + required_cols
 
         if 'study_name' not in required_cols:
             required_cols = ['study_name'] + required_cols
