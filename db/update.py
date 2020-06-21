@@ -1,5 +1,5 @@
 import db.salmon
-import db.human
+import db.igenotyper
 import db.imgt_ref
 
 def db_update():
@@ -7,7 +7,7 @@ def db_update():
 
     status = ""
     status += db.salmon.update()
-    status += db.human.update()
+    status += db.igenotyper.update()
 
     return status
 

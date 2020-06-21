@@ -6,7 +6,7 @@ def build_gffs():
     build_gff('Atlantic Salmon')
     build_gff('Human')
     build_fake_human_ref()
-    return('GFFs built!')
+    return('GFFs built! Now run /mnt/d/Research/digby_backend/static/gff/make_bam')
 
 def build_gff(species):
     ref_seqs = db.session.query(RefSeq).join(Species).filter(Species.name == species).all()
@@ -84,8 +84,8 @@ def build_gff(species):
 
 
 def build_fake_human_ref():
-    with open('static/gff/Human_IMGT_IGH.fasta', 'w') as fo:
-        fo.write('>IMGT_IGH\n')
+    with open('static/gff/Human_Human_IGH.fasta', 'w') as fo:
+        fo.write('>Human_IGH\n')
         feats = db.session.query(Feature).join(RefSeq).join(SequenceFeature).join(Sequence).filter(Sequence.type.like('%REGION')).filter(RefSeq.name == 'Human_IGH').order_by(Feature.start).all()
 
         i = 1
