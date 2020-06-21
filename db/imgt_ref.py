@@ -60,6 +60,7 @@ def init_imgt_ref():
                 type=value[1],
                 sequence=str(str(value[0])),
                 novel=False,
+                deleted=False,
                 gapped_sequence=str(gapped[0]) if gapped else None,
                 species=sp,
             )

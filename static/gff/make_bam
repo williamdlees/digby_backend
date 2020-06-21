@@ -9,3 +9,7 @@ samtools index Atlantic_Salmon_GU129139.bam
 
 samtools view -S -b Atlantic_Salmon_GU129139_imgt.sam > Atlantic_Salmon_GU129139_imgt.bam
 samtools index Atlantic_Salmon_GU129139_imgt.bam
+
+
+for foo in *.fasta; do samtools faidx $foo; done
+

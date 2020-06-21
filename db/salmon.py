@@ -3,7 +3,7 @@ import requests
 from db.shared import delete_dependencies
 
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleSequence
+from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleSequence, Study
 
 type = {
     "5'UTR": 'five_prime_UTR',
@@ -39,13 +39,23 @@ def update():
         sp = Species(name='Atlantic Salmon')
         db.session.add(sp)
 
+    study = Study(name='Salmon',
+                  institute='Virologie et Immunologie Moléculaires (VIM), Institut National de la Recherche Agronomique (INRA), Université Paris-Saclay, Jouy-en-Josas, France',
+                  researcher='Pierre Boudinot',
+                  reference='https://www.frontiersin.org/articles/10.3389/fimmu.2019.02541/full',
+                  contact='smaga@uvigo.es',
+                  accession_id='GU129139',
+                  accession_reference='https://www.ncbi.nlm.nih.gov/nuccore/GU129139')
+    db.session.add(study)
+    db.session.commit()
+
     ref_seq = RefSeq(name=ctg, locus='IGH', species=sp, sequence=sequence, length=len(sequence))
     db.session.add(ref_seq)
 
     sample = db.session.query(Sample).filter_by(name='GU129139').one_or_none()
 
     if not sample:
-        sample = Sample(name='GU129139', type='Reference')
+        sample = Sample(name='GU129139', type='Reference', date='2020-06-10', study=study, species_id=sp.id, ref_seq_id=ref_seq.id, report_link='http://www.imgt.org/ligmdb/view?id=GU129139')
         db.session.add(sample)
 
     features = tree.xpath('//div[@class="features"]/table')[0]
@@ -143,13 +153,14 @@ def update():
                     name=name + '_' + values[0],
                     imgt_name=name,
                     type=values[0],
+                    novel=False,
+                    deleted=False,
                     sequence=ref_seq.sequence[int(gene_range[0])-1:int(gene_range[1])],
                     species=sp,
-                    novel=False,
                 )
 
                 s.features.append(f)
-                SampleSequence(sample=sample, sequence=s, chromosome='h1,h2')
+                SampleSequence(sample=sample, sequence=s, chromosome='h1,h2', chromo_count=2)
 
         if state and name and values[0] == "3'UTR":
             state = None
