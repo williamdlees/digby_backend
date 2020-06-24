@@ -416,7 +416,7 @@ class SamplesAPI(Resource):
                     elif isinstance(el, str) and len(el) == 0:
                         el = '(blank)'
                     elif f == 'report' and 'http' not in el:
-                        el = app.config['STATIC_REPORT_PATH'] + el
+                        el = app.config['STATIC_REPORT_PATH'] + el.replace('\\', '/').replace(' ', '%20')
                     if el not in uniques[f]:
                         uniques[f].append(el)
 

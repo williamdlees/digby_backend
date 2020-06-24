@@ -10,10 +10,13 @@ from sqlalchemy_filters import apply_filters
 from werkzeug.exceptions import BadRequest
 from datetime import datetime
 import decimal
+from os.path import join, isfile
 
 
-from app import vdjbase_dbs
+from app import vdjbase_dbs, app
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample
+
+VDJBASE_DIR = 'static/study_data/VDJbase/samples'
 
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
@@ -173,6 +176,11 @@ class SamplesApi(Resource):
         if 'id' not in required_cols:
             required_cols.append('id')
 
+        if 'genotypes' in required_cols:                # needed to compose paths to files
+            for field in ('name', 'patient_name', 'study_name'):
+                if field not in required_cols:
+                    required_cols.append(field)
+
         hap_filters = None
         allele_filters = None
 
@@ -267,13 +275,31 @@ class SamplesApi(Resource):
             first = (args['page_number']) * args['page_size']
             ret = ret[first : first + args['page_size']]
 
+        if 'genotypes' in required_cols:
+            for r in ret:
+                r['genotypes'] = {}
+                sp = '/'.join([VDJBASE_DIR, r['study_name'], r['patient_name'],r['name'] + '_'])
+                r['genotypes']['path'] = app.config['STATIC_REPORT_PATH']
+                r['genotypes']['analysis_screen'] = ''
+                r['genotypes']['analysis_pdf'] = ''
+                r['genotypes']['tigger'] = sp + 'geno_H_binom.tab' if isfile(sp + 'geno_H_binom.tab') else ''
+                r['genotypes']['ogrdbstats'] = sp + 'genotyped_mut_ogrdb_report.csv' if isfile(sp + 'genotyped_mut_ogrdb_report.csv') else ''
+
         if 'haplotypes' in required_cols:                                   # BUG - this won't work with multiple datasets
             haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s))
 
             for r in ret:
                 h = haplotypes.filter(Sample.name == r['name']).join(SamplesHaplotype).join(HaplotypesFile).one_or_none()
-                if h:
-                    r['haplotypes'] = h[1]
+                if h is not None and h[1] is not None:
+                    r['haplotypes'] = {}
+                    r['haplotypes']['path'] = app.config['STATIC_REPORT_PATH']
+                    for hap in h[1].split(','):
+                        sp = '/'.join([VDJBASE_DIR, r['study_name'], r['patient_name'],r['name'] + '_'])
+                        r['haplotypes'][hap] = {}
+                        r['haplotypes'][hap]['analysis_screen'] = ''
+                        r['haplotypes'][hap]['analysis_pdf'] = ''
+                        hf = sp + 'gene-IGH' + hap + '_haplotype.tab'
+                        r['haplotypes'][hap]['rabhit'] = hf if isfile(hf) else ''
                 else:
                     r['haplotypes'] = ''
 
