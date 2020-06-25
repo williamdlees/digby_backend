@@ -145,7 +145,7 @@ def process_sample(sample_dir, study):
                                             name=allele_name,
                                             imgt_name='',
                                             type=find_allele_type(allele_name),
-                                            novel=False,
+                                            novel=True,
                                             deleted=False,
                                             sequence=this_ntsequence,
                                             gapped_sequence='',
