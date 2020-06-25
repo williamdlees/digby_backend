@@ -87,8 +87,7 @@ def process_sample(sample_dir, study):
                 report_link = join(sample_dir, 'IGenotyper_report.html')
                 if not isfile(report_link):
                     report_link = ''
-                else:
-                    report_link = report_link.replace('static/', '')
+
                 sample = Sample(name=sample_data['name'], type='Genomic', date=sample_data['date'], study=study, species_id=species_id, ref_seq_id=ref_id, report_link=report_link)
                 db.session.add(sample)
 
