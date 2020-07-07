@@ -1,0 +1,17 @@
+{
+  "reports": {
+    "rep_single_genotype": {
+      "title": "Genotype Report",
+      "description": "Genotype report for single genotype sample",
+      "params": {
+      }
+    },
+    "rep_single_haplotype": {
+      "title": "Haplotype Report",
+      "description": "Haplotype report for single sample using the specified haplotyping gene",
+      "params": {
+        "haplo_gene" : "string"
+      }
+    }
+  }
+}

@@ -1,13 +1,13 @@
 # Manage a list of available vdjbase-style databases
 
-from flask_sqlalchemy import SQLAlchemy
-from os.path import isfile, join, splitext, isdir
+from os.path import join, isdir
 from os import listdir
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app import app
+import os.path
 
-VDJBASE_DIR = 'static/vdjbase'
-
+VDJBASE_DB_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db')
 
 Session = sessionmaker()
 
@@ -25,8 +25,8 @@ class ContentProvider():
 def vdjbase_db_init():
     vdjbase_dbs = {}
 
-    for species in listdir(VDJBASE_DIR):
-        p = join(VDJBASE_DIR, species)
+    for species in listdir(VDJBASE_DB_PATH):
+        p = join(VDJBASE_DB_PATH, species)
         if isdir(p) and species[0] != '.':
             for name in listdir(p):
                 if isdir(join(p, name)) and name[0] != '.':
