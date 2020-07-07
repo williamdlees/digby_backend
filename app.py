@@ -27,7 +27,7 @@ if 'STATIC_PATH' not in app.config:
 if 'OUTPUT_PATH' not in app.config:
     app.config['OUTPUT_PATH'] = os.path.join(app.config['STATIC_PATH'], 'output')
 
-app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api/reports/R_Scripts')
+app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api/reports/R_scripts')
 
 if 'R_LIBS' not in os.environ or os.environ['R_LIBS'] is None or len(os.environ['R_LIBS']) < 1:
     os.environ['R_LIBS'] = app.config['R_SCRIPT_PATH']
