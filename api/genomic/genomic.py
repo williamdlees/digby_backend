@@ -185,24 +185,19 @@ class SequencesAPI(Resource):
             if col not in genomic_sequence_filters.keys():
                 raise BadRequest('Bad column string %s' % args['cols'])
 
-        if 'name' not in required_cols:
-            required_cols = ['name'] + required_cols
-
-        attribute_query = []
+        attribute_query = [genomic_sequence_filters['name']['field']]        # the query requires the first field to be from Sequence
 
         for col in required_cols:
-            if genomic_sequence_filters[col]['field'] is not None:
+            if col != 'name' and genomic_sequence_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sequence_filters[col]['field'])
 
         seq_query = db.session.query(*attribute_query)\
-            .join(SequenceFeature)\
+            .join(SequenceFeature, SequenceFeature.sequence_id == Sequence.id)\
             .join(Feature)\
             .join(RefSeq)\
-            .join(SampleSequence)\
+            .join(SampleSequence, SampleSequence.sequence_id == Sequence.id)\
             .join(Sample)\
             .filter(RefSeq.id.in_(refs))\
-            .filter(Sequence.id == SequenceFeature.sequence_id, Feature.id == SequenceFeature.feature_id)\
-            .filter(Sequence.id == SampleSequence.sequence_id, Sample.id == SampleSequence.sample_id)\
             .group_by(Sequence.name)
 
         filter_spec = []
@@ -330,13 +325,13 @@ genomic_sample_filters = {
     'date': {'model': 'Sample', 'field': Sample.date},
     'report': {'model': 'Sample', 'field': Sample.report_link.label('report'), 'fieldname': 'report'},
 
-    'study_name': {'model': 'Sample', 'field': Study.name.label('study_name'), 'fieldname': 'study_name'},
-    'institute': {'model': 'Sample', 'field': Study.institute},
-    'researcher': {'model': 'Sample', 'field': Study.researcher},
-    'reference': {'model': 'Sample', 'field': Study.reference},
-    'contact': {'model': 'Sample', 'field': Study.contact},
-    'accession_id': {'model': 'Sample', 'field': Study.accession_id},
-    'accession_reference': {'model': 'Sample', 'field': Study.accession_reference},
+    'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'study_name'},
+    'institute': {'model': 'Study', 'field': Study.institute},
+    'researcher': {'model': 'Study', 'field': Study.researcher},
+    'reference': {'model': 'Study', 'field': Study.reference},
+    'contact': {'model': 'Study', 'field': Study.contact},
+    'accession_id': {'model': 'Study', 'field': Study.accession_id},
+    'accession_reference': {'model': 'Study', 'field': Study.accession_reference},
 
     'allele': {'model': None, 'field': None},
 }
@@ -349,10 +344,6 @@ class SamplesAPI(Resource):
     def get(self, species, genomic_datasets):
         """ Returns a list of samples that provide results against the selected reference or multiple references (separate multiple reference names with ',')  """
         args = filter_arguments.parse_args(request)
-        refs = db.session.query(RefSeq.id).join(Species).filter(Species.name == species).filter(RefSeq.name.in_(genomic_datasets.split(','))).all()
-
-        if not refs:
-            raise BadRequest('Bad species name or reference set name %s' % species)
 
         required_cols = json.loads(args['cols'])
 
@@ -360,48 +351,16 @@ class SamplesAPI(Resource):
             if col not in genomic_sample_filters.keys():
                 raise BadRequest('Bad filter string %s' % args['filter'])
 
-        if 'id' not in required_cols:
-            required_cols = ['id'] + required_cols
-
         if 'study_name' not in required_cols:
             required_cols = ['study_name'] + required_cols
 
-        attribute_query = []
+        attribute_query = [genomic_sample_filters['id']['field']]        # the query requires the first field to be from Sample
 
         for col in required_cols:
-            if genomic_sample_filters[col]['field'] is not None:
+            if col != 'id' and genomic_sample_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sample_filters[col]['field'])
 
-        ref_ids = [ref[0] for ref in refs]
-        seq_query = db.session.query(*attribute_query).join(Study).filter(Sample.ref_seq_id.in_(ref_ids))
-
-        allele_filters = None
-
-        filter_spec = []
-        if args['filter']:
-            for f in json.loads(args['filter']):
-                try:
-                    if f['field'] == 'allele':
-                        allele_filters = f
-                    else:
-                        f['model'] = genomic_sample_filters[f['field']]['model']
-                        if 'fieldname' in genomic_sample_filters[f['field']]:
-                            f['field'] = genomic_sample_filters[f['field']]['fieldname']
-                        if '(blank)' in f['value']:
-                            f['value'].append('')
-                        filter_spec.append(f)
-                except:
-                    raise BadRequest('Bad filter string %s' % args['filter'])
-
-        seq_query = apply_filters(seq_query, filter_spec)
-
-        if allele_filters is not None:
-            samples_with_alleles = db.session.query(Sample.name)\
-                .join(SampleSequence)\
-                .join(Sequence).filter(Sequence.name.in_(allele_filters['value'])).all()
-            seq_query = seq_query.filter(Sample.name.in_(samples_with_alleles))
-
-        samples = seq_query.all()
+        samples = find_genomic_samples(attribute_query, species, genomic_datasets.split(','), json.loads(args['filter']))
 
         uniques = {}
         for f in required_cols:
@@ -416,7 +375,7 @@ class SamplesAPI(Resource):
                     elif isinstance(el, str) and len(el) == 0:
                         el = '(blank)'
                     elif f == 'report' and 'http' not in el:
-                        el = app.config['STATIC_REPORT_PATH'] + el.replace('\\', '/').replace(' ', '%20')
+                        el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
                     if el not in uniques[f]:
                         uniques[f].append(el)
 
@@ -428,7 +387,7 @@ class SamplesAPI(Resource):
                 if isinstance(v, datetime):
                     s[k] = v.date().isoformat()
                 elif k == 'report' and 'http' not in v:
-                    s[k] = app.config['STATIC_REPORT_PATH'] + s[k]
+                    s[k] = app.config['STATIC_LINK'] + s[k]
                     s['hap_report'] = s[k].replace('IGenotyper_report.html','genes_assigned_to_alleles.txt')
             ret.append(s)
 
@@ -451,4 +410,53 @@ class SamplesAPI(Resource):
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size'])
         }
+
+def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_filters):
+    sp = db.session.query(Species.id).filter(Species.name == species).one_or_none()
+
+    if sp is None:
+        raise BadRequest('No such species')
+
+    ref_ids = []
+
+    for dset in genomic_datasets:
+        ref = db.session.query(RefSeq.id)\
+            .join(Species)\
+            .filter(Species.id == sp.id)\
+            .filter(RefSeq.name == dset)
+        ref = ref.one_or_none()
+        if ref is None:
+            return 'No such genomic dataset %s' % dset, '404'
+        ref_ids.append(ref.id)
+
+    sample_query = db.session.query(*attribute_query)\
+        .join(Study)\
+        .filter(Sample.ref_seq_id.in_(ref_ids))
+
+    allele_filters = None
+
+    filter_spec = []
+    for f in genomic_filters:
+        try:
+            if f['field'] == 'allele':
+                allele_filters = f
+            else:
+                f['model'] = genomic_sample_filters[f['field']]['model']
+                if 'fieldname' in genomic_sample_filters[f['field']]:
+                    f['field'] = genomic_sample_filters[f['field']]['fieldname']
+                if '(blank)' in f['value']:
+                    f['value'].append('')
+                filter_spec.append(f)
+        except:
+            raise BadRequest('Bad filter string %s')
+
+    sample_query = apply_filters(sample_query, filter_spec)
+
+    if allele_filters is not None:
+        samples_with_alleles = db.session.query(Sample.name)\
+            .join(SampleSequence)\
+            .join(Sequence).filter(Sequence.name.in_(allele_filters['value'])).all()
+        sample_query = sample_query.filter(Sample.name.in_(samples_with_alleles))
+
+    return sample_query.all()
 

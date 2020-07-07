@@ -6,12 +6,12 @@ from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_admin import Admin
 from flask_cors import CORS
+import os
+import pretty_errors
 
-from db.vdjbase_db import vdjbase_db_init
 
 import logging.handlers
 
-print("app name: %s" % __name__)
 app = Flask(__name__)
 CORS(app)
 
@@ -19,12 +19,30 @@ bootstrap = Bootstrap(app)
 app.config.from_pyfile('config.cfg')
 app.config.from_pyfile('secret.cfg')
 
+app.config['BASE_PATH'] = os.getcwd()
+
+if 'STATIC_PATH' not in app.config:
+    app.config['STATIC_PATH'] = os.path.join(app.config['BASE_PATH'], 'static')
+
+if 'OUTPUT_PATH' not in app.config:
+    app.config['OUTPUT_PATH'] = os.path.join(app.config['STATIC_PATH'], 'output')
+
+app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api/reports/R_Scripts')
+
+if 'R_LIBS' not in os.environ or os.environ['R_LIBS'] is None or len(os.environ['R_LIBS']) < 1:
+    os.environ['R_LIBS'] = app.config['R_SCRIPT_PATH']
+else:
+    r_libs = os.environ['R_LIBS'].split(':')
+    r_libs = r_libs.append(app.config['R_SCRIPT_PATH'])
+    os.environ['R_LIBS'] = ':'.join(r_libs)
+
 handler = logging.handlers.RotatingFileHandler('app.log', maxBytes=1024 * 1024)
 handler.setLevel(logging.INFO)
 app.logger.addHandler(handler)
 
 mail = Mail(app)
 
+from db.vdjbase_db import vdjbase_db_init
 db = SQLAlchemy(app)
 vdjbase_dbs = vdjbase_db_init()
 
@@ -39,6 +57,7 @@ security = Security(app, user_datastore, confirm_register_form=ExtendedRegisterF
 from api.restplus import api
 from api.genomic.genomic import ns as genomic
 from api.vdjbase.vdjbase import ns as vdjbase
+from api.reports.reports import ns as reports
 
 from db.feature_db import *
 from db.update import db_update
@@ -50,7 +69,11 @@ blueprint = Blueprint('api', __name__, url_prefix='/api')
 api.init_app(blueprint)
 api.add_namespace(genomic)
 api.add_namespace(vdjbase)
+api.add_namespace(reports)
 app.register_blueprint(blueprint)
+
+from api.reports.reports import load_report_defs
+load_report_defs()
 
 
 @app.route('/', methods=['GET', 'POST'])

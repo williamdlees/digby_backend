@@ -10,13 +10,15 @@ from sqlalchemy_filters import apply_filters
 from werkzeug.exceptions import BadRequest
 from datetime import datetime
 import decimal
-from os.path import join, isfile
-
+import os.path
+from os.path import isfile
 
 from app import vdjbase_dbs, app
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample
 
-VDJBASE_DIR = 'static/study_data/VDJbase/samples'
+VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
+
+
 
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
@@ -160,83 +162,25 @@ class SamplesApi(Resource):
             return list()
 
         args = filter_arguments.parse_args(request)
-        if (args['page_size'] and args['page_size'] <= 0) or (args['page_number'] and args['page_number'] < 0):
-            return list()
-
-        if args['cols'] is None or not args['cols']:
-            return list()
 
         required_cols = json.loads(args['cols'])
 
         for col in required_cols:
             if col not in valid_filters.keys():
-                print('bad column in request: %s' % col)
-                return list(), 404
-
-        if 'id' not in required_cols:
-            required_cols.append('id')
+                raise BadRequest('Bad filter string %s' % args['filter'])
 
         if 'genotypes' in required_cols:                # needed to compose paths to files
             for field in ('name', 'patient_name', 'study_name'):
                 if field not in required_cols:
                     required_cols.append(field)
 
-        hap_filters = None
-        allele_filters = None
+        attribute_query = [valid_filters['id']['field']]        # the query requires the first field to be from Sample
 
-        filter_spec = []
-        if args['filter']:
-            for f in json.loads(args['filter']):
-                try:
-                    if f['field'] == 'haplotypes':
-                        hap_filters = f
-                    elif f['field'] == 'allele':
-                        allele_filters = f
-                    else:
-                        f['model'] = valid_filters[f['field']]['model']
-                        if 'fieldname' in valid_filters[f['field']]:
-                            f['field'] = valid_filters[f['field']]['fieldname']
-                        if '(blank)' in f['value']:
-                            f['value'].append('')
-                        filter_spec.append(f)
-                except:
-                    raise BadRequest('Bad filter string %s' % args['filter'])
+        for col in required_cols:
+            if col != 'id' and valid_filters[col]['field'] is not None:
+                attribute_query.append(valid_filters[col]['field'])
 
-        ret = []
-
-        for dset in dataset.split(','):
-            session = vdjbase_dbs[species][dset].session
-
-            attribute_query = []
-
-            for col in required_cols:
-                if valid_filters[col]['field'] is not None:
-                    attribute_query.append(valid_filters[col]['field'])
-
-            query = session.query(*attribute_query).join(GenoDetection).join(Patient).join(SeqProtocol).join(TissuePro).join(Study, Sample.study_id == Study.id)
-            query = apply_filters(query, filter_spec)
-
-            if hap_filters:
-                hap_samples = session.query(Sample.name.distinct()).join(SamplesHaplotype).join(HaplotypesFile).filter(HaplotypesFile.by_gene_s.in_(hap_filters['value']))
-                query = query.filter(Sample.name.in_(hap_samples))
-
-            if allele_filters:
-                allele_samples = session.query(Sample.name.distinct()).join(AllelesSample, Sample.id == AllelesSample.sample_id).join(Allele, Allele.id == AllelesSample.allele_id).filter(Allele.name.in_(allele_filters['value'])).all()
-                if allele_samples is None:
-                    allele_samples = []
-                query = query.filter(Sample.name.in_([s[0] for s in allele_samples]))
-
-
-            res = query.all()
-
-            for r in res:
-                s = r._asdict()
-                for k, v in s.items():
-                    if isinstance(v, datetime):
-                        s[k] = v.date().isoformat()
-                s['dataset'] = dset
-                s['id'] = '%s.%d' % (dset, s['id'])
-                ret.append(s)
+        ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), json.loads(args['filter']))
 
         total_size = len(ret)
 
@@ -262,8 +206,13 @@ class SamplesApi(Resource):
                 pass
 
         if 'haplotypes' in required_cols:
-            haplotypes = session.query(HaplotypesFile.by_gene_s).distinct().order_by(HaplotypesFile.by_gene_s).all()
-            uniques['haplotypes'] = [(h[0]) for h in haplotypes]
+            uniques['haplotypes'] = []
+            for dset in dataset.split(','):
+                session = vdjbase_dbs[species][dset].session
+                haplotypes = session.query(HaplotypesFile.by_gene_s).distinct().order_by(HaplotypesFile.by_gene_s).all()
+                x = [(h[0]) for h in haplotypes]
+                uniques['haplotypes'].extend(x)
+            uniques['haplotypes'] = list(set(uniques['haplotypes']))
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
@@ -278,28 +227,32 @@ class SamplesApi(Resource):
         if 'genotypes' in required_cols:
             for r in ret:
                 r['genotypes'] = {}
-                sp = '/'.join([VDJBASE_DIR, r['study_name'], r['patient_name'],r['name'] + '_'])
-                r['genotypes']['path'] = app.config['STATIC_REPORT_PATH']
-                r['genotypes']['analysis_screen'] = ''
-                r['genotypes']['analysis_pdf'] = ''
-                r['genotypes']['tigger'] = sp + 'geno_H_binom.tab' if isfile(sp + 'geno_H_binom.tab') else ''
-                r['genotypes']['ogrdbstats'] = sp + 'genotyped_mut_ogrdb_report.csv' if isfile(sp + 'genotyped_mut_ogrdb_report.csv') else ''
+                r['genotypes']['path'] = app.config['BACKEND_LINK']
+                gen_report = '?format=%s&species=%s&genomic_datasets=&genomic_filters=[]&rep_datasets=%s&rep_filters=[{"field":"name","op":"in","value":["%s"]}]&params=[]'
+                r['genotypes']['analysis_screen'] = 'api/reports/reports/run/rep_single_genotype' + gen_report % ('html', species, r['dataset'], r['name'])
+                r['genotypes']['analysis_pdf'] = 'api/reports/reports/run/rep_single_genotype' + gen_report % ('pdf', species, r['dataset'], r['name'])
+                fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], r['study_name'], r['patient_name'],r['name'] + '_')
+                sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], r['study_name'], r['patient_name'],r['name'] + '_'])
+                r['genotypes']['tigger'] = sp + 'geno_H_binom.tab' if isfile(fp + 'geno_H_binom.tab') else ''
+                r['genotypes']['ogrdbstats'] = sp + 'genotyped_mut_ogrdb_report.csv' if isfile(fp + 'genotyped_mut_ogrdb_report.csv') else ''
 
-        if 'haplotypes' in required_cols:                                   # BUG - this won't work with multiple datasets
-            haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s))
-
+        if 'haplotypes' in required_cols:
             for r in ret:
+                session = vdjbase_dbs[species][r['dataset']].session
+                haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s))
                 h = haplotypes.filter(Sample.name == r['name']).join(SamplesHaplotype).join(HaplotypesFile).one_or_none()
                 if h is not None and h[1] is not None:
                     r['haplotypes'] = {}
-                    r['haplotypes']['path'] = app.config['STATIC_REPORT_PATH']
+                    r['haplotypes']['path'] = app.config['BACKEND_LINK']
                     for hap in h[1].split(','):
-                        sp = '/'.join([VDJBASE_DIR, r['study_name'], r['patient_name'],r['name'] + '_'])
-                        r['haplotypes'][hap] = {}
-                        r['haplotypes'][hap]['analysis_screen'] = ''
-                        r['haplotypes'][hap]['analysis_pdf'] = ''
-                        hf = sp + 'gene-IGH' + hap + '_haplotype.tab'
-                        r['haplotypes'][hap]['rabhit'] = hf if isfile(hf) else ''
+                        hap_report = '?format=%s&species=%s&genomic_datasets=&genomic_filters=[]&rep_datasets=%s&rep_filters=[{"field":"name","op":"in","value":["%s"]}]&params={"haplo_gene": "%s"}'
+                        fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], r['study_name'], r['patient_name'], r['name'] + '_') + 'gene-IGH' + hap + '_haplotype.tab'
+                        sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], r['study_name'], r['patient_name'], r['name'] + '_']) + 'gene-IGH' + hap + '_haplotype.tab'
+                        if isfile(fp):
+                            r['haplotypes'][hap] = {}
+                            r['haplotypes'][hap]['analysis_screen'] = 'api/reports/reports/run/rep_single_haplotype' + hap_report % ('html', species, r['dataset'], r['name'], hap)
+                            r['haplotypes'][hap]['analysis_pdf'] = 'api/reports/reports/run/rep_single_haplotype' + hap_report % ('pdf', species, r['dataset'], r['name'], hap)
+                            r['haplotypes'][hap]['rabhit'] = sp
                 else:
                     r['haplotypes'] = ''
 
@@ -310,6 +263,63 @@ class SamplesApi(Resource):
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size'])
         }
+
+def find_vdjbase_samples(attribute_query, species, datasets, filter):
+    hap_filters = None
+    allele_filters = None
+    filter_spec = []
+    for f in filter:
+        try:
+            if f['field'] == 'haplotypes':
+                hap_filters = f
+            elif f['field'] == 'allele':
+                allele_filters = f
+            else:
+                f['model'] = valid_filters[f['field']]['model']
+                if 'fieldname' in valid_filters[f['field']]:
+                    f['field'] = valid_filters[f['field']]['fieldname']
+                if '(blank)' in f['value']:
+                    f['value'].append('')
+                filter_spec.append(f)
+        except:
+            raise BadRequest('Bad filter string')
+    ret = []
+    for dset in datasets:
+        session = vdjbase_dbs[species][dset].session
+
+        query = session.query(*attribute_query)\
+            .join(GenoDetection, Sample.geno_detection_id == GenoDetection.id)\
+            .join(Patient, Sample.patient_id == Patient.id)\
+            .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
+            .join(TissuePro, Sample.tissue_pro_id == TissuePro.id)\
+            .join(Study, Sample.study_id == Study.id)
+        query = apply_filters(query, filter_spec)
+
+        if hap_filters:
+            hap_samples = session.query(Sample.name.distinct()).join(SamplesHaplotype).join(HaplotypesFile).filter(
+                HaplotypesFile.by_gene_s.in_(hap_filters['value']))
+            query = query.filter(Sample.name.in_(hap_samples))
+
+        if allele_filters:
+            allele_samples = session.query(Sample.name.distinct()).join(AllelesSample,
+                                                                        Sample.id == AllelesSample.sample_id).join(
+                Allele, Allele.id == AllelesSample.allele_id).filter(Allele.name.in_(allele_filters['value'])).all()
+            if allele_samples is None:
+                allele_samples = []
+            query = query.filter(Sample.name.in_([s[0] for s in allele_samples]))
+
+        res = query.all()
+
+        for r in res:
+            s = r._asdict()
+            for k, v in s.items():
+                if isinstance(v, datetime):
+                    s[k] = v.date().isoformat()
+            s['dataset'] = dset
+            s['id'] = '%s.%d' % (dset, s['id'])
+            ret.append(s)
+    return ret
+
 
 valid_sequence_cols = {
     'name': {'model': 'Allele', 'field': Allele.name},
