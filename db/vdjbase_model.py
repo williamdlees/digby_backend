@@ -16,6 +16,9 @@ class Gene(Base):
     type = Column(String(20), nullable=False)
     family = Column(String(20), nullable=False)
     species = Column(String(20), nullable=False)
+    locus_order = Column(Integer)
+    alpha_order = Column(Integer)
+    pseudo_gene = Column(Boolean)
 
 
 class GenoDetection(Base):

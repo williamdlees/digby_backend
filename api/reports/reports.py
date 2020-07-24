@@ -7,8 +7,8 @@ import json
 from werkzeug.exceptions import BadRequest
 from db.feature_db import RefSeq, Sample
 from db.vdjbase_model import Sample as vdjb_Sample
-from api.genomic.genomic import find_genomic_samples
-from api.vdjbase.vdjbase import find_vdjbase_samples
+from api.genomic.genomic import find_genomic_samples, find_genomic_filter_params
+from api.vdjbase.vdjbase import find_vdjbase_samples, find_rep_filter_params
 from app import app
 import importlib
 import subprocess
@@ -27,11 +27,67 @@ def load_report_defs():
         global report_defs
         report_defs = json.load(fi)['reports']
 
+report_list_arguments = reqparse.RequestParser()
+report_list_arguments.add_argument('species', type=str)
+report_list_arguments.add_argument('genomic_datasets', type=str)
+report_list_arguments.add_argument('rep_datasets', type=str)
+
 @ns.route('/reports/list')
 @api.response(404, 'No reports available!')
 class ReportsApi(Resource):
+    @api.expect(report_list_arguments, validate=True)
     def get(self):
-        return report_defs
+        try:
+            args = report_list_arguments.parse_args(request)
+            scope = set()
+
+            if len(args.genomic_datasets):
+                genomic_datasets = args.genomic_datasets.split(',')
+                scope |= {'gen_sample'}
+            else:
+                genomic_datasets = None
+
+            if len(args.rep_datasets):
+                rep_datasets = args.rep_datasets.split(',')
+                scope |= {'rep_sample'}
+            else:
+                rep_datasets = None
+
+            genomic_filter_params = find_genomic_filter_params(args.species, genomic_datasets) if genomic_datasets is not None else []
+            rep_filter_params = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else []
+
+            available_reports = {}
+
+            for k,v in report_defs.items():
+                if len(set(v['scope']) & scope):
+                    available_reports[k] = v
+
+            combined_filter_params = {}
+
+            for params_list in (genomic_filter_params, rep_filter_params):
+                if params_list is not None:
+                    for param in params_list:
+                        if param['id'] not in combined_filter_params:
+                            combined_filter_params[param['id']] = param
+                        elif 'options' in param:
+                            combined_filter_params[param['id']]['options'] = list(set(combined_filter_params[param['id']]['options'] + param['options']))
+
+            return {
+                'reports': available_reports,
+                'filters': {
+                    'combined': combined_filter_params,
+                    'gen': genomic_filter_params,
+                    'rep': rep_filter_params
+                }
+            }
+
+        except BadRequest as bad:
+            print('BadRequest raised during report processing: %s' % bad.description)
+            raise bad
+        except Exception:
+            print('Exception encountered processing report request: %s' % traceback.format_exc())
+            raise BadRequest('Error encountered while processing report request')
+
 
 report_arguments = reqparse.RequestParser()
 report_arguments.add_argument('format', type=str)           # pdf or html
@@ -75,8 +131,8 @@ class ReportsRunApi(Resource):
                 raise BadRequest('No samples selected')
 
             # maybe we should check types as well
-            for p in report_defs[report_name]['params'].keys():
-                if p not in params:
+            for p in report_defs[report_name]['params']:
+                if p['id'] not in params.keys():
                     raise BadRequest('Missing parameter: %s' % p)
 
             runner = importlib.import_module('api.reports.' + report_name)
@@ -110,7 +166,7 @@ def make_output_file(format):
 
 
 # R Script Runner
-def run_rscript(script, args, cwd=app.config['OUTPUT_PATH']):
+def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
     cmd_line = ['Rscript', os.path.join(app.config['R_SCRIPT_PATH'], script)]
     cmd_line.extend(args)
     print("Running Rscript: '%s'\n" % ' '.join(cmd_line))
@@ -134,3 +190,7 @@ def send_report(filename, format, attachment_filename=None):
         return redirect(app.config['OUTPUT_REPORT_LINK'] + os.path.basename(filename))
     elif format == 'pdf':
         return send_file(os.path.join(app.config['OUTPUT_PATH'], filename), mimetype='application/pdf', attachment_filename=attachment_filename, as_attachment=True)
+    elif format == 'xls':
+        return send_file(os.path.join(app.config['OUTPUT_PATH'], filename), mimetype='application/vnd.ms-excel', attachment_filename=attachment_filename, as_attachment=True)
+
+
