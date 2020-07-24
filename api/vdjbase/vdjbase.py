@@ -14,7 +14,7 @@ import os.path
 from os.path import isfile
 
 from app import vdjbase_dbs, app
-from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample
+from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
@@ -459,3 +459,86 @@ class SequencesApi(Resource):
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size'])
         }
+
+
+def find_rep_filter_params(species, datasets):
+    if species not in vdjbase_dbs or set(datasets).difference(set(vdjbase_dbs[species])):
+        raise BadRequest('Unknown AIRR-seq dataset')
+
+    genes = []
+    gene_types = []
+
+    for dataset in datasets:
+        session = vdjbase_dbs[species][dataset].session
+        g_q = session.query(Gene.name, Gene.type).all()
+        genes.extend((res[0] for res in g_q))
+        gene_types.extend((res[1] for res in g_q))
+
+    genes = sorted(set(genes))
+    gene_types = sorted(set(gene_types))
+
+    params = [
+        {
+          "id": "f_pseudo_genes",
+          "type": "boolean",
+          "label": "Include pseudogenes"
+        },
+    ]
+
+    params.extend([
+        {
+            "id": "f_gene_types",
+            "type": "multi_select",
+            "label": "Only process selected gene types (leave blank for all)",
+            "options": gene_types
+        },
+        {
+            "id": "f_genes",
+            "type": "multi_select",
+            "label": "Only process selected genes (leave blank for all)",
+            "options": genes
+
+        }
+    ])
+
+    return params
+
+
+PSEUDO_GENES = [
+    "IGHV2-10", "IGHV3-52", "IGHV3-47", "IGHV3-71", "IGHV3-22", "IGHV4-55", "IGHV1-68",
+                    "IGHV5-78", "IGHV3-32", "IGHV3-33-2", "IGHV3-38-3", "IGHV3-25", "IGHV3-19", "IGHV7-40", "IGHV3-63",
+                    "IGHV3-62", "IGHV3-29", "IGHV3-54", "IGHV1-38-4", "IGHV7-34-1", "IGHV1-38-4", "IGHV3-30-2",
+                    "IGHV3-69-1", "IGHV3-30-22", "IGHV1-f", "IGHV3-30-33", "IGHV3-38", "IGHV7-81", "IGHV3-35",
+                    "IGHV3-16","IGHV3-30-52","IGHV1-69D", "IGHD1-14", "IGHV3-30-42"
+]
+
+# Apply filter params to a list of samples in the context of a specific dataset
+
+def apply_rep_filter_params(params, sample_list, session):
+    if 'per_sample' in params:
+        sample_list = filter_per_sample(params['per_sample'], sample_list)
+    gq = session.query(Gene)
+    if len(params['f_gene_types']) > 0:
+        gq = gq.filter(Gene.type.in_(params['f_gene_types']))
+    if len(params['f_genes']) > 0:
+        gq = gq.filter(Gene.name.in_(params['f_genes']))
+    if not params['f_pseudo_genes']:
+        gq = gq.filter(Gene.name.notin_(PSEUDO_GENES))
+    wanted_genes = gq.all()
+    wanted_genes = [gene.name for gene in wanted_genes]
+    return sample_list, wanted_genes
+
+
+def filter_per_sample(per_sample, sample_list):
+    if (per_sample != 'Each sample'):
+        pp_list = []
+        ids = []
+        for (name, genotype, patient_id) in sample_list:
+            if patient_id not in ids:
+                ids.append(patient_id)
+                pp_list.append([name, genotype, patient_id])
+        sample_list = pp_list
+    return sample_list
+
+
+

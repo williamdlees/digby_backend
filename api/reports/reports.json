@@ -3,15 +3,117 @@
     "rep_single_genotype": {
       "title": "Genotype Report",
       "description": "Genotype report for single genotype sample",
-      "params": {
-      }
+      "params": [],
+      "filter_params": false,
+      "scope": [],
+      "format": ["pdf", "html"]
     },
     "rep_single_haplotype": {
       "title": "Haplotype Report",
       "description": "Haplotype report for single sample using the specified haplotyping gene",
-      "params": {
-        "haplo_gene" : "string"
-      }
+      "params": [
+        {
+          "id": "haplo_gene",
+          "type": "textBox",
+          "label": "Haplotyping gene:"
+        }
+      ],
+      "filter_params": false,
+      "scope": [],
+      "format": ["pdf", "html"]
+    },
+    "rep_genotype": {
+      "title": "Genotype List",
+      "description": "List of genotypes for up to 20 samples",
+      "params": [
+        {
+          "id": "per_sample",
+          "type": "select",
+          "label": "Show graphs for:",
+          "options": ["Each sample", "Individual (representative sample for each subject)"]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["pdf", "html"]
+    },
+    "rep_genotype_heatmap": {
+      "title": "Genotype Heatmap",
+      "description": "Genotype Heat Map",
+      "params": [
+        {
+          "id": "per_sample",
+          "type": "select",
+          "label": "Show graphs for",
+          "options": ["Each sample", "Individual (representative sample for each subject)"]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["pdf", "html"]
+    },
+    "haplo_heatmap": {
+      "title": "Haplotype Heatmap",
+      "description": "Haplotype Heat Map",
+      "params": [
+        {
+          "id": "per_sample",
+          "type": "select",
+          "label": "Show graphs for",
+          "options": ["Each sample", "Individual (representative sample for each subject)"]
+        },
+        {
+          "id": "haplo_gene",
+          "type": "select",
+          "label": "Haplotyping Gene",
+          "options": ["IGHJ6-02_03","IGHJ6-02_03","IGHJ6-02_04","IGHJ6-03_04", "IGHD2-8-01_02", "IGHD2-21-01_02"]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["pdf"]
+    },
+    "allele_appearance": {
+      "title": "Allele Appearances",
+      "description": "Charts the frequency at which each allele is found in the selected sample genotypes",
+      "params": [
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": ["Exclude", "Include"]
+        },
+        {
+          "id": "novel_alleles",
+          "type": "select",
+          "label": "Novel Alleles",
+          "options": ["Include", "Exclude"]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": ["Alphabetic", "Locus"]
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["pdf", "xls"]
     }
   }
 }

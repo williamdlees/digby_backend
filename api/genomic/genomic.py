@@ -460,3 +460,52 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
 
     return sample_query.all()
 
+def find_genomic_filter_params(species, genomic_datasets):
+    sp = db.session.query(Species.id).filter(Species.name == species).one_or_none()
+
+    if sp is None:
+        raise BadRequest('No such species')
+
+    for dset in genomic_datasets:
+        ref = db.session.query(RefSeq.id)\
+            .join(Species)\
+            .filter(Species.id == sp.id)\
+            .filter(RefSeq.name == dset)
+        ref = ref.one_or_none()
+        if ref is None:
+            return 'No such genomic dataset %s' % dset, '404'
+
+    genes = db.session.query(Feature.name)\
+        .join(RefSeq)\
+        .filter(Feature.feature == 'gene') \
+        .filter(RefSeq.name.in_(genomic_datasets)).all()
+
+    genes = sorted([gene[0] for gene in genes])
+    gene_types = [gene[0:4] for gene in genes]
+    gene_types = sorted(set(gene_types))
+
+    params = [
+        {
+          "id": "f_pseudo_genes",
+          "type": "boolean",
+          "label": "Include pseudogenes"
+        },
+    ]
+
+    params.extend([
+        {
+            "id": "f_gene_types",
+            "type": "multi_select",
+            "label": "Only process selected gene types (leave blank for all)",
+            "options": gene_types
+        },
+        {
+            "id": "f_genes",
+            "type": "multi_select",
+            "label": "Only process selected genes (leave blank for all)",
+            "options": genes
+
+        }
+    ])
+
+    return params
