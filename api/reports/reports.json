@@ -114,6 +114,15 @@
       "filter_params": true,
       "scope": ["rep_sample"],
       "format": ["pdf", "xls"]
+    },
+    "compare_datasets": {
+      "title": "Compare two datasets",
+      "description": "Overview comparison of two datasets. Please select exactly two datasets to compare.",
+      "params": [
+      ],
+      "filter_params": false,
+      "scope": ["rep_sample"],
+      "format": ["html"]
     }
   }
 }
