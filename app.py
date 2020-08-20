@@ -62,6 +62,8 @@ from api.reports.reports import ns as reports
 from db.feature_db import *
 from db.update import db_update
 from db.build_gff import build_gffs
+import db.vdjbase_maint
+import db.vdjbase_export
 
 migrate = Migrate(app, db)
 
@@ -99,16 +101,25 @@ def profile():
     return render_template('profile.html', form=form, current_user=current_user, url='profile')
 
 
-@app.route('/update', methods=['GET', 'POST'])
+@app.route('/update_genomic', methods=['GET', 'POST'])
 @login_required
-def update():
+def update_genomic():
     return db_update()
 
-@app.route('/build', methods=['GET', 'POST'])
+@app.route('/build_gff', methods=['GET', 'POST'])
 @login_required
-def build():
+def build_gff():
     return build_gffs()
 
+@app.route('/export_vdjbase_metadata', methods=['GET', 'POST'])
+@login_required
+def export_vdjbase_metadata():
+    return db.vdjbase_export.export_metadata()
+
+@app.route('/create_vdjbase_db', methods=['GET', 'POST'])
+@login_required
+def create_vdjbase_db():
+    return db.vdjbase_maint.create_databases()
 
 @app.route('/play', methods=['GET', 'POST'])
 @login_required

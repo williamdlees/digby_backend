@@ -118,6 +118,7 @@ class Allele(Base):
 
     closest_ref = relationship('Allele', remote_side=[id])
     gene = relationship('Gene')
+    samples = relationship("AllelesSample", back_populates="allele")
 
 
 class Patient(Base):
@@ -137,7 +138,7 @@ class Patient(Base):
     study = relationship('Study')
 
 
-class Alleleconfidencereport(Base):
+class AlleleConfidenceReport(Base):
     __tablename__ = 'database_alleleconfidencereport'
 
     id = Column(Integer, primary_key=True)
@@ -176,15 +177,17 @@ class Sample(Base):
     study_id = Column(ForeignKey('database_studies.id'), nullable=False, index=True)
     tissue_pro_id = Column(ForeignKey('database_tissue_pro.id'), nullable=False, index=True)
     genotype_stats = Column(String(100))
+    genotype_report = Column(String(100))
 
     geno_detection = relationship('GenoDetection')
     patient = relationship('Patient')
     seq_protocol = relationship('SeqProtocol')
     study = relationship('Study')
     tissue_pro = relationship('TissuePro')
+    alleles = relationship("AllelesSample", back_populates="sample")
 
 
-class Snp(Base):
+class SNP(Base):
     __tablename__ = 'database_snps'
 
     id = Column(Integer, primary_key=True)
@@ -206,9 +209,9 @@ class AllelesSample(Base):
     patient_id = Column(ForeignKey('database_patients.id'), nullable=False, index=True)
     sample_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
 
-    allele = relationship('Allele')
+    allele = relationship('Allele', back_populates="samples")
     patient = relationship('Patient')
-    sample = relationship('Sample')
+    sample = relationship('Sample', back_populates="alleles")
 
 
 class GenesDistribution(Base):
@@ -226,7 +229,7 @@ class GenesDistribution(Base):
     sample = relationship('Sample')
 
 
-class Haplotypeevidence(Base):
+class HaplotypeEvidence(Base):
     __tablename__ = 'database_haplotypeevidence'
 
     id = Column(Integer, primary_key=True)
@@ -251,3 +254,4 @@ class SamplesHaplotype(Base):
 
     haplotypes_files = relationship('HaplotypesFile')
     samples = relationship('Sample')
+
