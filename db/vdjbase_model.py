@@ -146,7 +146,7 @@ class AlleleConfidenceReport(Base):
     notes = Column(String(400), nullable=False)
     allele_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
 
-    allele = relationship('Allele')
+    allele = relationship('Allele', backref="confidence")
 
 
 class AllelesPattern(Base):

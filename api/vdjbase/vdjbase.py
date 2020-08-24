@@ -3,7 +3,7 @@
 from flask import request
 from flask_restplus import Resource, reqparse, fields, marshal, inputs
 from api.restplus import api
-from sqlalchemy import inspect, func
+from sqlalchemy import inspect, func, cast, literal, String, select, union_all
 from math import ceil
 import json
 from sqlalchemy_filters import apply_filters
@@ -12,9 +12,10 @@ from datetime import datetime
 import decimal
 import os.path
 from os.path import isfile
+from db.filter_list import apply_filter_to_list
 
 from app import vdjbase_dbs, app
-from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene
+from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
@@ -112,7 +113,9 @@ valid_filters = {
     'allele': {'model': None, 'field': None},
 
     'haplotypes': {'model': None, 'field': None},
-    'genotypes': {'model': None, 'field': None}
+    'genotypes': {'model': None, 'field': None},
+
+    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
 }
 
 
@@ -185,8 +188,11 @@ class SamplesApi(Resource):
         total_size = len(ret)
 
         uniques = {}
+
         for f in required_cols:
             uniques[f] = []
+
+        uniques['dataset'] = dataset.split(',')
 
         for s in ret:
             for f in required_cols:
@@ -267,13 +273,17 @@ class SamplesApi(Resource):
 def find_vdjbase_samples(attribute_query, species, datasets, filter):
     hap_filters = None
     allele_filters = None
+    dataset_filters = []
     filter_spec = []
+
     for f in filter:
         try:
             if f['field'] == 'haplotypes':
                 hap_filters = f
             elif f['field'] == 'allele':
                 allele_filters = f
+            elif f['field'] == 'dataset':
+                dataset_filters.append(f)
             else:
                 f['model'] = valid_filters[f['field']]['model']
                 if 'fieldname' in valid_filters[f['field']]:
@@ -284,6 +294,10 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
         except:
             raise BadRequest('Bad filter string')
     ret = []
+
+    if len(dataset_filters) > 0:
+        apply_filter_to_list(datasets, dataset_filters)
+
     for dset in datasets:
         session = vdjbase_dbs[species][dset].session
 
@@ -331,8 +345,11 @@ valid_sequence_cols = {
     'low_confidence': {'model': 'Allele', 'field': Allele.low_confidence},
     'novel': {'model': 'Allele', 'field': Allele.novel},
     'max_kdiff': {'model': 'Allele', 'field': Allele.max_kdiff},
+    'notes': {'model': Allele, 'field': func.group_concat(AlleleConfidenceReport.notes, '\n').label('notes')},
+    'notes_count': {'model': Allele, 'field': func.count(AlleleConfidenceReport.id).label('notes_count')},
 
     'sample_id': {'model': None, 'fieldname': 'sample_id'},
+    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
 }
 
 @ns.route('/sequences/<string:species>/<string:dataset>')
@@ -360,11 +377,16 @@ class SequencesApi(Resource):
 
         sample_id_filter = None
         filter_spec = []
+        dataset_filters = []
+
         if args['filter']:
             for f in json.loads(args['filter']):
                 try:
                     if f['field'] == 'sample_id':
                         sample_id_filter = f
+                    elif f['field'] == 'dataset':
+#                        f['model'] = 'dataset_table'
+                        dataset_filters.append(f)
                     else:
                         f['model'] = valid_sequence_cols[f['field']]['model']
                         if 'fieldname' in valid_sequence_cols[f['field']]:
@@ -375,9 +397,17 @@ class SequencesApi(Resource):
                 except:
                     raise BadRequest('Bad filter string %s' % args['filter'])
 
+        if 'notes_count' in required_cols and 'notes' not in required_cols:
+            required_cols.append('notes')
+
         ret = []
 
-        for dset in dataset.split(','):
+        datasets = dataset.split(',')
+
+        if len(dataset_filters) > 0:
+            apply_filter_to_list(datasets, dataset_filters)
+
+        for dset in datasets:
             session = vdjbase_dbs[species][dset].session
 
             attribute_query = []
@@ -405,6 +435,9 @@ class SequencesApi(Resource):
                     required_names.append(a[0])
                 query = query.filter(Allele.name.in_(required_names))
 
+            if 'notes' in required_cols:
+                query = query.filter(Allele.id == AlleleConfidenceReport.allele_id).group_by(Allele.id)
+
             res = query.all()
 
             for r in res:
@@ -414,6 +447,9 @@ class SequencesApi(Resource):
                         s[k] = v.date().isoformat()
                     elif isinstance(v, decimal.Decimal):
                         s[k] = '%0.2f' % v
+
+                    if k == 'similar' and v is not None:
+                        s[k] = v.replace('|', '')
                 s['dataset'] = dset
                 ret.append(s)
 
@@ -435,6 +471,8 @@ class SequencesApi(Resource):
                         s[f] = '(blank)'
                     if s[f] not in uniques[f]:
                         uniques[f].append(s[f])
+
+        uniques['dataset'] = dataset.split(',')
 
         for f in required_cols:
             try:
