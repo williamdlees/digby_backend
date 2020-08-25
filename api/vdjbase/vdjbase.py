@@ -436,7 +436,7 @@ class SequencesApi(Resource):
                 query = query.filter(Allele.name.in_(required_names))
 
             if 'notes' in required_cols:
-                query = query.filter(Allele.id == AlleleConfidenceReport.allele_id).group_by(Allele.id)
+                query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(Allele.id)
 
             res = query.all()
 
