@@ -6,11 +6,8 @@ import pandas as pd
 import os, math
 from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern
 import re
+from db.vdjbase_formats import *
 
-
-FREQ_BY_SEQ = "Freq_by_Seq"
-FREQ_BY_CLONE = "Freq_by_Clone"
-GENE = "gene"
 
 
 def update_alleles_appearance(session):
@@ -27,8 +24,8 @@ def update_alleles_appearance(session):
             for sim in sims:
                 sim = sim.replace('|', '')
                 allele.appears += session.query(AllelesSample.patient_id)\
+                    .join(Allele)\
                     .filter(AllelesSample.hap == 'geno')\
-                    .filter(AllelesSample.allele_id == Allele.id)\
                     .filter(Allele.name.ilike(sim))\
                     .distinct().count()
 
@@ -57,7 +54,7 @@ def calculate_gene_frequencies(ds_dir, session):
         # counting the appearance of the genes and the total of each family
         family_total_seq = {}
         family_total_clone = {}
-        for gene, count_seq, count_clone in zip(genotype[GENE], genotype[FREQ_BY_SEQ], genotype[FREQ_BY_CLONE]):
+        for gene, count_seq, count_clone in zip(genotype[GENE_COLUMN], genotype[FREQ_BY_SEQ], genotype[FREQ_BY_CLONE]):
             family = gene[:4]
             if family not in family_total_seq.keys():
                 family_total_seq[family] = 0
@@ -74,12 +71,12 @@ def calculate_gene_frequencies(ds_dir, session):
                 count_clone = str(count_clone)
 
             frequencies_by_seq[gene] = 0
-            for x in count_seq.split(";"):
+            for x in count_seq.split(INT_SEP):
                 frequencies_by_seq[gene] += int(x)
             family_total_seq[family] += frequencies_by_seq[gene]
 
             frequencies_by_clone[gene] = 0
-            for x in count_clone.split(";"):
+            for x in count_clone.split(INT_SEP):
                 frequencies_by_clone[gene] += int(x)
             family_total_clone[family] += frequencies_by_clone[gene]
 
