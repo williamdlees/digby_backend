@@ -37,13 +37,13 @@ def import_reference_alleles(reference_dir, session, species):
             recs = read_reference(os.path.join(reference_dir, file))
 
             for allele, sequence in recs.items():
-                gene = allele.split('*')[0] if '*' in allele else allele
+                gene_name = allele.split('*')[0] if '*' in allele else allele
 
-                if gene not in added_genes:
-                    add_gene(extra_alpha, extra_locus, gene, gene_order, session, species)
-                    added_genes.append(gene)
+                if gene_name not in added_genes:
+                    (extra_alpha, extra_locus) = add_gene(extra_alpha, extra_locus, gene_name, gene_order, session, species)
+                    added_genes.append(gene_name)
 
-                save_allele(allele, gene, sequence, session)
+                save_allele(allele, gene_name, sequence, session)
 
         session.commit()
 
@@ -70,7 +70,7 @@ def save_allele(allele_name, gene_name, sequence, session):
             seq_len=str(len(sequence)),
             appears=0,
             gene_id=g.id,
-            is_single_allele=False,
+            is_single_allele=True,
             low_confidence=False,
             novel=False,
             max_kdiff=0,
@@ -99,4 +99,4 @@ def add_gene(extra_alpha, extra_locus, gene, gene_order, session, species):
         pseudo_gene=1 if gene in gene_order.PSEUDO_GENES else 0
     )
     session.add(g)
-    return(g)
+    return(extra_alpha, extra_locus)

@@ -19,6 +19,7 @@ class Gene(Base):
     locus_order = Column(Integer)
     alpha_order = Column(Integer)
     pseudo_gene = Column(Boolean)
+    alleles = relationship("Allele")
 
 
 class GenoDetection(Base):
@@ -117,7 +118,7 @@ class Allele(Base):
     closest_ref_id = Column(ForeignKey('database_alleles.id'), index=True)
 
     closest_ref = relationship('Allele', remote_side=[id])
-    gene = relationship('Gene')
+    gene = relationship('Gene', back_populates="alleles")
     samples = relationship("AllelesSample", back_populates="allele")
 
 

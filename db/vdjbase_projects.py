@@ -8,6 +8,8 @@ import yaml
 from db.vdjbase_model import Study, GenoDetection, SeqProtocol, TissuePro, Patient, Sample, Allele, AllelesSample, Gene, HaplotypesFile, SamplesHaplotype
 import pandas as pd
 import math
+from db.vdjbase_formats import *
+
 
 from sqlalchemy import update
 
@@ -152,18 +154,7 @@ def process_genotypes(ds_dir, species, dataset, session):
 
     return result
 
-GENE_COLUMN = "gene"
-COUNTS_COLUMN = "counts"
-TOTAL_COLUMN = "total"
 
-GENOTYPE_KDIFF_COLUMN = "k_diff"
-GENOTYPED_ALLELES_COLUMN = "GENOTYPED_ALLELES"
-
-FREQ_BY_SEQ = "Freq_by_Seq"
-FREQ_BY_CLONE = "Freq_by_Clone"
-
-
-HAPLO_KDIFF_COLUMN = "K"
 
 def sample_genotype(inputfile, sample_id, patient_id, session):
     """
@@ -172,7 +163,6 @@ def sample_genotype(inputfile, sample_id, patient_id, session):
     :param sample_id: sample id
     """
     haplo = "geno"
-
     genotype = pd.read_csv(inputfile, sep="\t")
 
     for index, row in genotype.iterrows():
@@ -189,7 +179,7 @@ def sample_genotype(inputfile, sample_id, patient_id, session):
 
             # check if the allele exist in the genotype according to the clone size
             if allele != "Del":
-                clone_size = int(row[FREQ_BY_CLONE].split(";")[index])
+                clone_size = int(row[FREQ_BY_CLONE].split(INT_SEP)[index])
                 if not clone_size:
                     continue
 
@@ -369,7 +359,10 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
     samples = session.query(Sample).all()
 
     for sample in samples:
-        sample_dir = os.path.join('samples', sample.study.name, sample.name) #new format
+        sample_dir = os.path.join('samples', sample.study.name, sample.patient.name) #old format
+
+        if not os.path.isdir(os.path.join(ds_dir, sample_dir)):
+            sample_dir = os.path.join('samples', sample.study.name, sample.name) #new format
 
         if os.path.isdir(os.path.join(ds_dir, sample_dir)):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):

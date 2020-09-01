@@ -31,11 +31,6 @@
           "type": "select",
           "label": "Show graphs for:",
           "options": ["Each sample", "Individual (representative sample for each subject)"]
-        },
-        {
-          "id": "f_kdiff",
-          "type": "decimal",
-          "label": "Min Kdiff"
         }
       ],
       "filter_params": true,
@@ -114,6 +109,79 @@
       "filter_params": true,
       "scope": ["rep_sample"],
       "format": ["pdf", "xls"]
+    },
+    "heterozygosity": {
+      "title": "Heterozygosity",
+      "description": "Charts the extent to which alleles of each gene are heterozygous",
+      "params": [
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": ["Exclude", "Include"]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": ["Alphabetic", "Locus"]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["html"]
+    },
+    "allele_usage": {
+      "title": "Allele Usage",
+      "description": "Charts the number of alleles of each gene that appear in the selected samples",
+      "params": [
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": ["Exclude", "Include"]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": ["Alphabetic", "Locus"]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["html"]
+    },
+    "gene_frequencies": {
+      "title": "Gene Frequencies",
+      "description": "Plots the expression frequency of genes in selected samples",
+      "params": [
+        {
+          "id": "single_sample",
+          "type": "select",
+          "label": "Samp-les Per Subject",
+          "options": ["All Available", "One Selected Sample"]
+        },
+        {
+          "id": "calculate_by",
+          "type": "select",
+          "label": "Calculate Frequencies By",
+          "options": ["Number of Clones", "Number of Sequences"]
+        }
+      ],
+      "filter_params": true,
+      "scope": ["rep_sample"],
+      "format": ["pdf"]
     },
     "compare_datasets": {
       "title": "Compare two datasets",

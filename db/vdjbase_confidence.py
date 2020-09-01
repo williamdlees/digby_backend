@@ -269,10 +269,10 @@ def check_hotspot(novels, session):
 
 def check_snp_in_short(novels, session):
     long_study_alleles = session.query(Allele)\
+        .join(AllelesSample)\
+        .join(Sample)\
+        .join(SeqProtocol)\
         .filter(Allele.novel == True)\
-        .filter(AllelesSample.allele_id == Allele.id)\
-        .filter(AllelesSample.sample_id == Sample.id)\
-        .filter(Sample.seq_protocol_id == SeqProtocol.id)\
         .filter(SeqProtocol.sequencing_length == 'Full').all()
     print(len(long_study_alleles))
     print(len(novels))
@@ -282,8 +282,8 @@ def check_snp_in_short(novels, session):
         min_snp = session.query(SNP).filter(SNP.allele_id == novel.id).order_by(SNP.pos).limit(1).one_or_none()
         if min_snp.pos <= 40:
             sample_names = session.query(Sample.name)\
-                .filter(AllelesSample.allele_id == Allele.id)\
-                .filter(AllelesSample.sample_id == Sample.id)\
+                .join(AllelesSample)\
+                .join(Allele)\
                 .filter(Allele.id == novel.id).all()
             report_issue(novel, 'Possible SNP in primer region', 'Sequence found only in short-read study/studies %s has SNP %s%d%s in first 40 nucleotides' %
                 (', '.join([x[0] for x in sample_names]), min_snp.from_base, min_snp.pos, min_snp.to_base), session)
