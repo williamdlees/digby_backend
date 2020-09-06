@@ -106,12 +106,13 @@ class Allele(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(30), nullable=False)
+    pipeline_name = Column(String(30), nullable=False)    # the name assigned by the pipeline, e.g. *bp01
     seq = Column(Text)
     seq_len = Column(String(50), nullable=False)
-    similar = Column(String(250))
+    similar = Column(String(250), nullable=False)       # list of other names which have the same sequence as this one
     appears = Column(Integer, nullable=False)
     gene_id = Column(ForeignKey('database_gene.id'), nullable=False, index=True)
-    is_single_allele = Column(Boolean, nullable=False)
+    is_single_allele = Column(Boolean, nullable=False)      # False if a short sequence is ambiguous, ie could match more than one reference allele
     low_confidence = Column(Boolean, nullable=False)
     novel = Column(Boolean, nullable=False)
     max_kdiff = Column(DECIMAL, nullable=False)

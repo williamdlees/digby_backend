@@ -337,6 +337,7 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
 
 valid_sequence_cols = {
     'name': {'model': 'Allele', 'field': Allele.name},
+    'pipeline_name': {'model': 'Allele', 'field': Allele.pipeline_name},
     'seq': {'model': 'Allele', 'field': Allele.seq, 'no_uniques': True},
     'seq_len': {'model': 'Allele', 'field': Allele.seq_len},
     'similar': {'model': 'Allele', 'field': Allele.similar},
@@ -381,21 +382,26 @@ class SequencesApi(Resource):
 
         if args['filter']:
             for f in json.loads(args['filter']):
-                try:
-                    if f['field'] == 'sample_id':
-                        sample_id_filter = f
-                    elif f['field'] == 'dataset':
+               # try:
+                if f['field'] == 'sample_id':
+                    sample_id_filter = f
+                elif f['field'] == 'dataset':
 #                        f['model'] = 'dataset_table'
-                        dataset_filters.append(f)
-                    else:
-                        f['model'] = valid_sequence_cols[f['field']]['model']
-                        if 'fieldname' in valid_sequence_cols[f['field']]:
-                            f['field'] = valid_sequence_cols[f['field']]['fieldname']
-                        if '(blank)' in f['value']:
-                            f['value'].append('')
-                        filter_spec.append(f)
-                except:
-                    raise BadRequest('Bad filter string %s' % args['filter'])
+                    dataset_filters.append(f)
+                else:
+                    if f['field'] == 'similar':
+                        value = []
+                        for v in f['value']:
+                            value.append('|' + v.replace(',', '|') + '|')
+                        f['value'] = value
+                    f['model'] = valid_sequence_cols[f['field']]['model']
+                    if 'fieldname' in valid_sequence_cols[f['field']]:
+                        f['field'] = valid_sequence_cols[f['field']]['fieldname']
+                    if '(blank)' in f['value']:
+                        f['value'].append('')
+                    filter_spec.append(f)
+                # except:
+                  #  raise BadRequest('Bad filter string %s' % args['filter'])
 
         if 'notes_count' in required_cols and 'notes' not in required_cols:
             required_cols.append('notes')
@@ -467,16 +473,16 @@ class SequencesApi(Resource):
                         s[f] = el.date().isoformat()
                     elif isinstance(el, decimal.Decimal):
                         s[f] = '%0.2f' % el
-                    elif isinstance(el, str) and len(el) == 0:
-                        s[f] = '(blank)'
-                    if s[f] not in uniques[f]:
+                    if (not isinstance(el, str) or len(s[f]) > 0) and s[f] not in uniques[f]:
                         uniques[f].append(s[f])
+                    if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
+                        uniques[f].append('(blank)')
 
         uniques['dataset'] = dataset.split(',')
 
         for f in required_cols:
             try:
-                uniques[f].sort(key=lambda x: (x is None or x == '', x))
+                uniques[f] = [x[1] for x in uniques[f].sorted(key=lambda x: (x is None or x == '', x))]
             except:
                 pass
 

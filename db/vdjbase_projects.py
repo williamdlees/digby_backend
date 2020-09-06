@@ -9,6 +9,7 @@ from db.vdjbase_model import Study, GenoDetection, SeqProtocol, TissuePro, Patie
 import pandas as pd
 import math
 from db.vdjbase_formats import *
+import csv
 
 
 from sqlalchemy import update
@@ -139,6 +140,26 @@ def process_genotypes(ds_dir, species, dataset, session):
     result = ['Processing genotype files']
     samples = session.query(Sample).all()
 
+    # Read names assigned to ambiguous alleles by the pipeline
+
+    pipeline_names = {}   # allele name given pipeline name
+    allele_names = {}     # pipeline name given allele name
+    if os.path.isfile(os.path.join(ds_dir, 'reference/ambiguous_allele_names.csv')):
+        with open(os.path.join(ds_dir, 'reference/ambiguous_allele_names.csv'), 'r') as fi:
+            reader = csv.DictReader(fi)
+            for row in reader:
+                if len(row['ALLELES']) == 1:
+                    allele = '0' + row['ALLELES']
+                elif ',' in row['ALLELES'] or ' ' in row['ALLELES']:
+                    allele = row['ALLELES'].replace(' ', '').replace(',', '_')
+                else:
+                    allele = row['ALLELES']
+
+                pipeline_name = row['GENE'] + '*' + row['PATTERN']
+                allele_name = row['GENE'] + '*' + allele
+                allele_names[allele_name] = pipeline_name
+                pipeline_names[pipeline_name] = allele_name
+
     for sample in samples:
         genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
 
@@ -147,7 +168,7 @@ def process_genotypes(ds_dir, species, dataset, session):
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
-            sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, session)
+            sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
             result.append('Error: no genotype file for sample %s' % sample.name)
@@ -156,7 +177,7 @@ def process_genotypes(ds_dir, species, dataset, session):
 
 
 
-def sample_genotype(inputfile, sample_id, patient_id, session):
+def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_names, session):
     """
     Upload genotype to sample.
     :param inputfile: the path to the genotype
@@ -164,6 +185,8 @@ def sample_genotype(inputfile, sample_id, patient_id, session):
     """
     haplo = "geno"
     genotype = pd.read_csv(inputfile, sep="\t")
+    allele_pattern = re.compile("^[0-9]{2}$")
+    mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c]$")
 
     for index, row in genotype.iterrows():
         gene = row[GENE_COLUMN]
@@ -183,8 +206,51 @@ def sample_genotype(inputfile, sample_id, patient_id, session):
                 if not clone_size:
                     continue
 
-            full_allele_name = gene + "*" + allele
-            add2sample(full_allele_name, sample_id, haplo, patient_id, kdiff, session)
+            # parse allele, handling old ambiguous style (01_02) and new bp style
+            ambig_alleles = ''
+            allele_snps = ''
+            base_allele = allele
+
+            if '_' in allele:
+                ambig_alleles = []
+                allele_snps = []
+
+                base_allele = allele.split('_')[0]
+                rep = allele.split("_")[1:]
+
+                for r in rep:
+                    if re.search(allele_pattern, r):
+                        ambig_alleles.append(r)
+                    elif re.search(mut_pattern, r):
+                        allele_snps.append(r)
+
+                ambig_alleles = '_'.join(ambig_alleles)
+                allele_snps = '_'.join(allele_snps)
+
+            base_allele_name = gene + "*" + base_allele
+            pipeline_name = ''
+
+            if base_allele_name in pipeline_names:
+                pipeline_name = base_allele_name
+                base_allele_name = pipeline_names[base_allele_name]
+            elif 'bp' in base_allele_name:        # will only happen if one of the 'bp' alleles has not been put in ambiguous_allele_names.csv
+                # fudge for time being
+                pipeline_name = base_allele_name
+                base_allele_name = base_allele_name.replace('bp', '')
+                pipeline_names[pipeline_name] = base_allele_name
+                print('%s is not listed in ambiguous_allele_names.csv: assuming it corresponds to %s' % (pipeline_name, base_allele_name))
+
+            if len(ambig_alleles) > 0:
+                base_allele_name += '_' + ambig_alleles
+                if len(pipeline_name) > 0:
+                    pipeline_name += '_' + ambig_alleles
+
+            if len(allele_snps) > 0:
+                base_allele_name += '_' + allele_snps
+                if len(pipeline_name) > 0:
+                    pipeline_name += '_' + allele_snps
+
+            add2sample(base_allele_name, sample_id, haplo, patient_id, kdiff, pipeline_name, session)
 
 # Each unique sequence is only present on one single row in Allele. If multiple allele names
 # correspond to the same sequence, they are listed in that row in the 'similar' field.
@@ -202,9 +268,9 @@ def find_allele_or_similar(allele_name, session):
 
 # Add a row to AllelesSample reflecting the presence of this allele in the sample.
 # If the allele is not present in Allele already, add it there
+# if the allele has a 'pipeline name', translate it to the 01_02 form
 
-
-def add2sample (allele_name, sample_id, haplo, pid, kdiff, session):
+def add2sample (allele_name, sample_id, haplo, pid, kdiff, pipeline_name, session):
     kdiff = float(kdiff)
     if math.isnan(kdiff):
         kdiff = 0.0
@@ -219,6 +285,12 @@ def add2sample (allele_name, sample_id, haplo, pid, kdiff, session):
     allele = find_allele_or_similar(allele_name, session)
     if allele is None:
         allele = new_allele(allele_name, session)
+
+    if len(pipeline_name) > 0:
+        if len(allele.pipeline_name) == 0:
+            allele.pipeline_name = pipeline_name
+        elif pipeline_name not in allele.pipeline_name:
+            allele.pipeline_name = allele.pipeline_name + ', ' + pipeline_name
 
     alleles_sample.allele_id = allele.id
 
@@ -299,7 +371,7 @@ def new_allele(allele_name, session):
         if (temp == final_allele_name):
             allele = same_seq_allele
         else:
-            if sim is not None:
+            if sim is not None and len(sim) > 0:
                 if (final_allele_name in sim):
                     allele = same_seq_allele
                 else:
@@ -323,7 +395,9 @@ def new_allele(allele_name, session):
             appears=0,
             low_confidence=False,
             novel=is_novel_allele,
-            max_kdiff=0.0
+            max_kdiff=0.0,
+            similar='',
+            pipeline_name='',
         )
         session.add(allele)
         session.flush()
@@ -348,6 +422,8 @@ def add_deleted_alleles(session):
             low_confidence=False,
             novel=0,
             max_kdiff=0.0,
+            similar='',
+            pipeline_name='',
         )
         session.add(a)
     session.commit()

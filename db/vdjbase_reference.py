@@ -58,7 +58,7 @@ def save_allele(allele_name, gene_name, sequence, session):
     similar = session.query(Allele).filter(Allele.seq == str(sequence)).one_or_none()
 
     if similar is not None:
-        if similar.similar is None:
+        if similar.similar is None or len(similar.similar) == 0:
             similar.similar = '|%s|' % allele_name
         else:
             similar.similar += ', ' + '|%s|' % allele_name
@@ -74,6 +74,8 @@ def save_allele(allele_name, gene_name, sequence, session):
             low_confidence=False,
             novel=False,
             max_kdiff=0,
+            similar='',
+            pipeline_name='',
         )
         session.add(a)
     session.flush()
