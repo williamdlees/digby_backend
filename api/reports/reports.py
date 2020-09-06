@@ -26,6 +26,9 @@ def load_report_defs():
     with open('api/reports/reports.json') as fi:
         global report_defs
         report_defs = json.load(fi)['reports']
+        for k, report_def in report_defs.items():
+            if 'thumbnail' in report_def:
+                report_defs[k]['thumbnail'] = app.config['STATIC_LINK'] + 'img/reports/' + report_def['thumbnail']
 
 report_list_arguments = reqparse.RequestParser()
 report_list_arguments.add_argument('species', type=str)

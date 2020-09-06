@@ -20,7 +20,7 @@ def run(format, species, genomic_samples, rep_samples, params):
     if format != 'html':
         raise BadRequest('Invalid format requested')
 
-    kdiff = params['f_kdiff'] if 'f_kdiff' in params else 0
+    kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
 
     samples_by_dataset = {}
     for rep_sample in rep_samples:

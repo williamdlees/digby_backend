@@ -24,7 +24,8 @@
     },
     "rep_genotype": {
       "title": "Genotype List",
-      "description": "List of genotypes for up to 20 samples",
+      "description": "Heatmap-style report of the inferred genotypes for up to 20 samples",
+      "thumbnail": "genotype_list.png",
       "params": [
         {
           "id": "per_sample",
@@ -39,7 +40,8 @@
     },
     "rep_genotype_heatmap": {
       "title": "Genotype Heatmap",
-      "description": "Genotype Heat Map",
+      "description": "Heatmap showing the inferred genotype derived from each selected sample.",
+      "thumbnail": "genotype_heatmap.png",
       "params": [
         {
           "id": "per_sample",
@@ -59,7 +61,8 @@
     },
     "haplo_heatmap": {
       "title": "Haplotype Heatmap",
-      "description": "Haplotype Heat Map",
+      "description": "Heatmap showing the inferred haplotype derived from each selected sample. Only samples that can be haplotyped with the selected gene will be shown.",
+      "thumbnail": "haplo_heatmap.png",
       "params": [
         {
           "id": "per_sample",
@@ -85,7 +88,8 @@
     },
     "allele_appearance": {
       "title": "Allele Appearances",
-      "description": "Charts the frequency at which each allele is found in the selected sample genotypes",
+      "description": "Charts the frequency at which each allele appears (on either or both chromosomes) in the selected samples",
+      "thumbnail": "allele_appearance.png",
       "params": [
         {
           "id": "ambiguous_alleles",
@@ -112,7 +116,8 @@
     },
     "heterozygosity": {
       "title": "Heterozygosity",
-      "description": "Charts the extent to which alleles of each gene are heterozygous",
+      "description": "Charts the extent to which alleles of each gene are heterozygous in the selected samples",
+      "thumbnail": "heterozygosity.png",
       "params": [
         {
           "id": "ambiguous_alleles",
@@ -139,6 +144,7 @@
     "allele_usage": {
       "title": "Allele Usage",
       "description": "Charts the number of alleles of each gene that appear in the selected samples",
+      "thumbnail": "allele_usage.png",
       "params": [
         {
           "id": "ambiguous_alleles",
@@ -165,6 +171,7 @@
     "gene_frequencies": {
       "title": "Gene Frequencies",
       "description": "Plots the expression frequency of genes in selected samples",
+      "thumbnail": "gene_frequencies.png",
       "params": [
         {
           "id": "single_sample",
