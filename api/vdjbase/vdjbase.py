@@ -200,10 +200,10 @@ class SamplesApi(Resource):
                     el = s[f]
                     if isinstance(el, datetime):
                         s[f] = el.date().isoformat()
-                    elif isinstance(el, str) and len(el) == 0:
-                        s[f] = '(blank)'
-                    if s[f] not in uniques[f]:
+                    if (not isinstance(el, str) or len(s[f]) > 0) and s[f] not in uniques[f]:
                         uniques[f].append(s[f])
+                    if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
+                        uniques[f].append('(blank)')
 
         for f in required_cols:
             try:
@@ -237,23 +237,36 @@ class SamplesApi(Resource):
                 gen_report = '?format=%s&species=%s&genomic_datasets=&genomic_filters=[]&rep_datasets=%s&rep_filters=[{"field":"name","op":"in","value":["%s"]}]&params=[]'
                 r['genotypes']['analysis_screen'] = 'api/reports/reports/run/rep_single_genotype' + gen_report % ('html', species, r['dataset'], r['name'])
                 r['genotypes']['analysis_pdf'] = 'api/reports/reports/run/rep_single_genotype' + gen_report % ('pdf', species, r['dataset'], r['name'])
-                fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], r['study_name'], r['patient_name'],r['name'] + '_')
-                sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], r['study_name'], r['patient_name'],r['name'] + '_'])
-                r['genotypes']['tigger'] = sp + 'geno_H_binom.tab' if isfile(fp + 'geno_H_binom.tab') else ''
-                r['genotypes']['ogrdbstats'] = sp + 'genotyped_mut_ogrdb_report.csv' if isfile(fp + 'genotyped_mut_ogrdb_report.csv') else ''
+
+                dp = os.path.join(species, r['dataset'], r['study_name'], r['patient_name'])
+
+                if os.path.isdir(os.path.join(VDJBASE_SAMPLE_PATH, dp)):            # old format
+                    fp = os.path.join(VDJBASE_SAMPLE_PATH, dp, r['name'] + '_')
+                    sp = '/'.join(['static/study_data/VDJbase/samples', dp, r['name'] + '_'])
+                    r['genotypes']['tigger'] = sp + 'geno_H_binom.tab' if isfile(fp + 'geno_H_binom.tab') else ''
+                    r['genotypes']['ogrdbstats'] = sp + 'genotyped_mut_ogrdb_report.csv' if isfile(fp + 'genotyped_mut_ogrdb_report.csv') else ''
+                    r['genotypes']['ogrdbplot'] = sp + '_ogrdb_plots.pdf' if isfile(fp + '_ogrdb_plots.pdf') else ''
+                else:                                                               # new format
+                    dp = os.path.join(species, r['dataset'], r['study_name'], r['name']).replace('\\', '/')
+                    fp = os.path.join(VDJBASE_SAMPLE_PATH, dp, r['name']).replace('\\', '/')
+                    sp = '/'.join(['static/study_data/VDJbase/samples', dp, r['name']])
+                    r['genotypes']['tigger'] = sp + '.tsv' if isfile(fp + '.tsv') else ''
+                    r['genotypes']['ogrdbstats'] = sp + '_ogrdb_report.csv' if isfile(fp + '_ogrdb_report.csv') else ''
+                    r['genotypes']['ogrdbplot'] = sp + '_ogrdb_plots.pdf' if isfile(fp + '_ogrdb_plots.pdf') else ''
 
         if 'haplotypes' in required_cols:
             for r in ret:
                 session = vdjbase_dbs[species][r['dataset']].session
-                haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s))
+                haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s), func.group_concat(HaplotypesFile.file))
                 h = haplotypes.filter(Sample.name == r['name']).join(SamplesHaplotype).join(HaplotypesFile).one_or_none()
                 if h is not None and h[1] is not None:
                     r['haplotypes'] = {}
                     r['haplotypes']['path'] = app.config['BACKEND_LINK']
-                    for hap in h[1].split(','):
+                    for (hap, filename) in zip(h[1].split(','), h[2].split(',')):
+                        filename = filename.replace('samples/', '')
                         hap_report = '?format=%s&species=%s&genomic_datasets=&genomic_filters=[]&rep_datasets=%s&rep_filters=[{"field":"name","op":"in","value":["%s"]}]&params={"haplo_gene": "%s"}'
-                        fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], r['study_name'], r['patient_name'], r['name'] + '_') + 'gene-IGH' + hap + '_haplotype.tab'
-                        sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], r['study_name'], r['patient_name'], r['name'] + '_']) + 'gene-IGH' + hap + '_haplotype.tab'
+                        fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], filename)
+                        sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], filename])
                         if isfile(fp):
                             r['haplotypes'][hap] = {}
                             r['haplotypes'][hap]['analysis_screen'] = 'api/reports/reports/run/rep_single_haplotype' + hap_report % ('html', species, r['dataset'], r['name'], hap)

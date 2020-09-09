@@ -6,6 +6,7 @@ from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH
+from api.reports.report_utils import check_tab_file
 
 
 MULTIPLE_GENOTYPE_SCRIPT = "html_multiple_genotype_hoverText.R"
@@ -25,6 +26,11 @@ def run(format, species, genomic_samples, rep_samples, params):
     p = session.query(Sample.genotype).filter(Sample.name == rep_sample['name']).one_or_none()
     p = p[0].replace('samples/','')
     sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, rep_sample['dataset'], p)
+
+    if not os.path.isfile(sample_path):
+        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
+
+    sample_path = check_tab_file(sample_path)
     report_path = personal_genotype(rep_sample['name'], sample_path, html)
 
     if format == 'pdf':

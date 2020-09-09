@@ -157,17 +157,29 @@ def gather_haplo_data(novels, ds_dir, session):
         with open(os.path.join(ds_dir, sample_haplotype.haplotypes_files.file), 'r', newline='') as fi:
             reader = csv.reader(fi, dialect='excel-tab')
             header = True
+            row_index = True
+
             for row in reader:
                 if header:
                     header = False
+                    # check whether or not rows have an R style index number
+                    try:
+                        row_index = float(row[0])
+                    except:
+                        row_index = False
                     continue
-                haplotyped = set(row[3].split(',')) ^ set(row[4].split(','))
+
+                if row_index:
+                    row = row[1:]
+
+                haplotyped = set(row[2].split(',')) ^ set(row[3].split(','))
                 for allele in haplotyped:
                     if '_' in allele:
-                        n = session.query(Allele).filter(Allele.name == row[2] + '*' + allele.lower()).one_or_none()
+                        name = row[1] + '*' + allele.lower()
+                        n = session.query(Allele).filter(Allele.name == name).one_or_none()
                         if n:
-                            allele_names = row[5].split(',')
-                            allele_counts = [row[8], row[10], row[12], row[14]]
+                            allele_names = row[4].split(',')
+                            allele_counts = [row[7], row[9], row[11], row[13]]
                             counts = []
 
                             for i in range(len(allele_names)):
@@ -180,6 +192,8 @@ def gather_haplo_data(novels, ds_dir, session):
                                 counts=', '.join(counts)
                             )
                             session.add(he)
+                        else:
+                            print('Allele %s is present in haplotype file %s but is not in the Alleles table' % (name, sample_haplotype.haplotypes_files.file))
 
     for novel in novels:
         if session.query(HaplotypeEvidence).filter(HaplotypeEvidence.allele_id == novel.id).count():
@@ -327,13 +341,23 @@ def check_for_singleton_infs(novels, ds_dir, session):
         with open(os.path.join(ds_dir, sample_haplotype.haplotypes_files.file), 'r', newline='') as fi:
             reader = csv.reader(fi, dialect='excel-tab')
             header = True
+            row_index = True
+
             for row in reader:
                 if header:
                     header = False
+                    # check whether or not rows have an R style index number
+                    try:
+                        row_index = float(row[0])
+                    except:
+                        row_index = False
                     continue
 
-                h1 = set([row[2] + '*' + a.lower() for a in row[3].split(',')])
-                h2 = set([row[2] + '*' + a.lower() for a in row[4].split(',')])
+                if row_index:
+                    row = row[1:]
+
+                h1 = set([row[1] + '*' + a.lower() for a in row[2].split(',')])
+                h2 = set([row[1] + '*' + a.lower() for a in row[3].split(',')])
 
                 haplotyped = h1 | h2
                 novel_haplotyped = haplotyped & novel_set

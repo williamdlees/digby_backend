@@ -1,6 +1,8 @@
 # Haplotype heatmap for VDJbase samples
 
 from werkzeug.exceptions import BadRequest
+
+from api.reports.report_utils import trans_df
 from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, Gene
@@ -39,9 +41,15 @@ def run(format, species, genomic_samples, rep_samples, params):
         if len(wanted_genes) > 0:
             for (name, genotype, patient_id) in sample_list:
                 sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, genotype.replace('samples/', ''))
+
+                if not os.path.isfile(sample_path):
+                    raise BadRequest('Genotype file for sample %s/%s is missing.' % (dataset, name))
+
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
+                genotype = trans_df(genotype)
                 genotype = genotype[genotype.GENE.isin(wanted_genes)]
-                genotype.insert(0, 'SUBJECT', name)
+                if 'SUBJECT' not in genotype.columns.values:
+                    genotype.insert(0, 'SUBJECT', name)
                 genotypes = genotypes.append(genotype)[genotype.columns.tolist()]
 
     if len(genotypes) == 0:
