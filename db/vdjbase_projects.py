@@ -443,7 +443,7 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
         if os.path.isdir(os.path.join(ds_dir, sample_dir)):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):
                 if sample.name in filename:
-                    if 'haplotype.tab' in filename:
+                    if 'haplotype.' in filename:
                         haplo_gene = filename.replace('_haplotype.tab', '').replace('_haplotype.tsv', '').split('_gene-')[1]
                         process_haplotype(os.path.join(sample_dir, filename).replace('\\', '/'), sample, haplo_gene, session)
                     elif 'ogrdb_plots' in filename:

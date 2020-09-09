@@ -44,9 +44,6 @@ def run(format, species, genomic_samples, rep_samples, params):
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
         sample_list = [s[0] for s in sample_list]
 
-        #for xx in sample_list:
-        #    print(xx)
-
         i = 0
         sample_list_len = len(sample_list)
 

@@ -1,6 +1,8 @@
 # Haplotype report for a single RepSeq sample
 
 from werkzeug.exceptions import BadRequest
+
+from api.reports.report_utils import check_tab_file
 from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype
@@ -30,6 +32,12 @@ def run(format, species, genomic_samples, rep_samples, params):
 
     p = p[0].replace('samples/','')
     sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, rep_sample['dataset'], p)
+
+    if not os.path.isfile(sample_path):
+        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
+
+    sample_path = check_tab_file(sample_path)
+
     report_path = personal_haplotype(rep_sample['name'], sample_path, html)
 
     if format == 'pdf':
