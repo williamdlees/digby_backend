@@ -180,9 +180,15 @@ def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
     print(stdout.decode("utf-8"))
 
     if proc.returncode != 0:
-        if "Execution halted" in str(stderr.decode("utf-8")):
-            print("Got error in Rscript:\n" + str(stderr.decode("utf-8")))
-            raise BadRequest('Error running report')
+        msg = str(stderr.decode("utf-8"))
+        if "Execution halted" in msg:
+            print("Got error in Rscript:\n" + msg)
+            msg = msg.split('\n')
+            errors = []
+            for line in msg:
+                if 'rror' in line:
+                    errors.append(line)
+            raise BadRequest('Error running report: %s' % '\n'.join(errors))
 
     return True
 
