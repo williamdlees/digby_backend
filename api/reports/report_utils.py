@@ -8,7 +8,32 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import make_output_file
 import csv
 
+""" for the future
+trans_cols = {
+    "GENE": 'gene',
+    "ALLELES": 'alleles',
+    "COUNTS": 'counts',
+    "TOTAL": 'total',
+    "NOTE": 'note',
+    "KH": 'kh',
+    "KD": 'kd',
+    "KT": 'kt',
+    "KQ": 'kq',
+    "K_DIFF": 'k_diff',
+    "SUBJECT": 'subject',
+    "PRIORS_ROW": 'priors_row',
+    "PRIORS_COL": 'priors_col',
+    "COUNTS1": 'counts1',
+    "COUNTS2": 'counts2',
+    "COUNTS3": 'counts3',
+    "COUNTS4": 'counts4',
+    "K1": 'k1',
+    "K2": 'k2',
+    "K3": 'k3',
+    "K4": 'k4',
+}
 
+"""
 trans_cols = {
     "gene": 'GENE',
     "alleles": 'ALLELES',
