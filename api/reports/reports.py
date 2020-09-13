@@ -112,21 +112,24 @@ class ReportsRunApi(Resource):
             if report_name not in report_defs:
                 raise BadRequest('No such report')
 
-            genomic_datasets = args.genomic_datasets.split(',') if len(args.genomic_datasets) else None
-            genomic_filters = json.loads(args.genomic_filters)
+            try:
+                genomic_datasets = args.genomic_datasets.split(',') if len(args.genomic_datasets) else None
+                genomic_filters = json.loads(args.genomic_filters)
 
-            if genomic_datasets is not None:
-                genomic_samples = find_genomic_samples([Sample.name, RefSeq.name], args.species, genomic_datasets, genomic_filters)
-            else:
-                genomic_samples = []
+                if genomic_datasets is not None:
+                    genomic_samples = find_genomic_samples([Sample.name, RefSeq.name], args.species, genomic_datasets, genomic_filters)
+                else:
+                    genomic_samples = []
 
-            rep_datasets = args.rep_datasets.split(',') if len(args.rep_datasets) else None
-            rep_filters = json.loads(args.rep_filters)
+                rep_datasets = args.rep_datasets.split(',') if len(args.rep_datasets) else None
+                rep_filters = json.loads(args.rep_filters)
 
-            if rep_datasets is not None:
-                rep_samples = find_vdjbase_samples([vdjb_Sample.name, vdjb_Sample.id], args.species, rep_datasets, rep_filters)
-            else:
-                rep_samples = []
+                if rep_datasets is not None:
+                    rep_samples = find_vdjbase_samples([vdjb_Sample.name, vdjb_Sample.id], args.species, rep_datasets, rep_filters)
+                else:
+                    rep_samples = []
+            except:
+                raise BadRequest("Malformed request")
 
             params = json.loads(args.params)
 
