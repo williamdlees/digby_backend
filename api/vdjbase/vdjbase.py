@@ -205,9 +205,18 @@ class SamplesApi(Resource):
                     if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
                         uniques[f].append('(blank)')
 
+        def name_sort_key(name):
+            name = name.split('_')
+            for i in range(len(name)):
+                name[i] = name[i][1:].zfill(4)
+            return name
+
         for f in required_cols:
             try:
-                uniques[f].sort(key=lambda x: (x is None or x == '', x))
+                if f in ('name', 'patient_name'):
+                    uniques[f].sort(key=lambda x: name_sort_key(x))
+                else:
+                    uniques[f].sort(key=lambda x: (x is None or x == '', x))
             except:
                 pass
 
@@ -222,9 +231,15 @@ class SamplesApi(Resource):
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
-        for spec in sort_specs:
-            if spec['field'] in valid_filters.keys():
-                ret = sorted(ret, key=lambda x : ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+        if len(sort_specs) > 0:
+            for spec in sort_specs:
+                if spec['field'] in valid_filters.keys():
+                    if spec['field'] in ('name', 'patient_name'):
+                        ret = sorted(ret, key=lambda x : name_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                    else:
+                        ret = sorted(ret, key=lambda x : ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+        else:
+            ret = sorted(ret, key=lambda x : name_sort_key(x['name']))
 
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
@@ -370,7 +385,7 @@ valid_sequence_cols = {
 class SequencesApi(Resource):
     @api.expect(filter_arguments, validate=True)
     def get(self, species, dataset):
-        """ Returns the list of sequences in the selected dataset """
+        """ Returns the list of sequences in the selected datasets """
 
         if species not in vdjbase_dbs or set(dataset.split(',')).difference(set(vdjbase_dbs[species])):
             return list()
@@ -493,17 +508,39 @@ class SequencesApi(Resource):
 
         uniques['dataset'] = dataset.split(',')
 
+        # For gene order, it would be a good idea if datasets from the same species agreed!
+
+        gene_order = session.query(Gene.name, Gene.alpha_order).all()
+        gene_order = {x[0]: x[1] for x in gene_order}
+
+        def allele_sort_key(name):
+            if '*' in name:
+                gene = name.split('*')
+            else:
+                gene = (name, '')
+
+            return((gene_order[gene[0]] if gene[0] in gene_order else 999, gene[1]))
+
         for f in required_cols:
             try:
-                uniques[f] = [x[1] for x in uniques[f].sorted(key=lambda x: (x is None or x == '', x))]
+                if f in ('name'):
+                    uniques[f].sort(key=lambda x: allele_sort_key(x))
+                else:
+                    uniques[f] = [x[1] for x in uniques[f].sorted(key=lambda x: (x is None or x == '', x))]
             except:
                 pass
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
-        for spec in sort_specs:
-            if spec['field'] in valid_sequence_cols.keys():
-                ret = sorted(ret, key=lambda x : ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+        if len(sort_specs) > 0:
+            for spec in sort_specs:
+                if spec['field'] in valid_sequence_cols.keys():
+                    if spec['field'] in ('name'):
+                        ret = sorted(ret, key=lambda x : allele_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                    else:
+                        ret = sorted(ret, key=lambda x : ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+        else:
+            ret = sorted(ret, key=lambda x : allele_sort_key(x['name']))
 
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
