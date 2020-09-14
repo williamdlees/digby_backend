@@ -198,11 +198,6 @@ def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
 
 # Send a report - the file should be in OUTPUT_PATH
 def send_report(filename, format, attachment_filename=None):
-    if format == 'html':
-        return redirect(app.config['OUTPUT_REPORT_LINK'] + os.path.basename(filename))
-    elif format == 'pdf':
-        return send_file(os.path.join(app.config['OUTPUT_PATH'], filename), mimetype='application/pdf', attachment_filename=attachment_filename, as_attachment=True)
-    elif format == 'xls':
-        return send_file(os.path.join(app.config['OUTPUT_PATH'], filename), mimetype='application/vnd.ms-excel', attachment_filename=attachment_filename, as_attachment=True)
+    return {'status': 'ok', 'filename': attachment_filename, 'url': app.config['OUTPUT_REPORT_LINK'] + os.path.basename(filename)}
 
 

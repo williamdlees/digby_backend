@@ -51,7 +51,7 @@ def run(format, species, genomic_samples, rep_samples, params):
             haplotype = pd.read_csv(sample_path, sep='\t', dtype=str)
             haplotype = trans_df(haplotype)
             haplotype = haplotype[haplotype.GENE.isin(wanted_genes)]
-            haplotype['SUBJECT'] = name
+            haplotype['SUBJECT'] = name if len(samples_by_dataset) == 1 else dataset + '_' + name
             haplotypes = pd.concat([haplotypes, haplotype], keys=None, ignore_index=True)[haplotype.columns.tolist()]
 
     if len(haplotypes) == 0:

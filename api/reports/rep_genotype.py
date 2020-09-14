@@ -46,8 +46,14 @@ def run(format, species, genomic_samples, rep_samples, params):
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
                 genotype = trans_df(genotype)
                 genotype = genotype[genotype.GENE.isin(wanted_genes)]
+
+                subject_name = name if len(samples_by_dataset) == 1 else dataset + '_' + name
+
                 if 'SUBJECT' not in genotype.columns.values:
-                    genotype.insert(0, 'SUBJECT', name)
+                    genotype.insert(0, 'SUBJECT', subject_name)
+                else:
+                    genotype.SUBJECT = subject_name
+
                 genotypes.append(genotype)
 
     if len(genotypes) == 0:
