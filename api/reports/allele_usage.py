@@ -89,7 +89,7 @@ def run(format, species, genomic_samples, rep_samples, params):
             if gene_name not in gene_allele_counts:
                 gene_allele_counts[gene_name] = gene_allele_ids
             else:
-                gene_allele_counts[gene_name] += gene_allele_ids
+                gene_allele_counts[gene_name] |= gene_allele_ids
 
     listed_allele_count = []
     for gene, alleles in gene_allele_counts.items():
@@ -100,14 +100,13 @@ def run(format, species, genomic_samples, rep_samples, params):
     df = pd.DataFrame(listed_allele_count, columns=labels)
     df.to_csv(input_path, sep='\t', index=False)
     output_path = make_output_file('html')
-    attachment_filename = '%s_allele_usage.pdf' % species
 
     cmd_line = ["-i", input_path,
                 "-o", output_path,
                 "-s", SYSDATA]
 
     if run_rscript(ALLELE_USAGE_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
-        return send_report(output_path, format, attachment_filename)
+        return send_report(output_path, format)
     else:
         raise BadRequest('No output from report')
 

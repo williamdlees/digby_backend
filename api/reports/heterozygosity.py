@@ -106,13 +106,12 @@ def run(format, species, genomic_samples, rep_samples, params):
     df = pd.DataFrame(gene_hetrozygous_dis.values(), columns=labels)
     df.to_csv(haplo_path, sep='\t', index=False)
     output_path = make_output_file('html')
-    attachment_filename = '%s_heterozygosity_plot.pdf' % species
 
     cmd_line = ["-i", haplo_path,
                 "-o", output_path,
                 "-s", SYSDATA]
 
     if run_rscript(HETEROZYGOSITY_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
-        return send_report(output_path, format, attachment_filename)
+        return send_report(output_path, format)
     else:
         raise BadRequest('No output from report')
