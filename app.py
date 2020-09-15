@@ -54,7 +54,7 @@ from security.security import *
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore, confirm_register_form=ExtendedRegisterForm)
 
-from api.restplus import api
+from api.restx import api
 from api.genomic.genomic import ns as genomic
 from api.vdjbase.vdjbase import ns as vdjbase
 from api.reports.reports import ns as reports

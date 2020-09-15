@@ -1,8 +1,8 @@
 # Services related to vdjbase repseq-based data sets
 
 from flask import request, redirect, send_file
-from flask_restplus import Resource, reqparse, fields, marshal, inputs
-from api.restplus import api
+from flask_restx import Resource, reqparse, fields, marshal, inputs
+from api.restx import api
 import json
 from werkzeug.exceptions import BadRequest
 from db.feature_db import RefSeq, Sample

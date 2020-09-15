@@ -1,8 +1,8 @@
 # Services related to genomic sequences and features
 
 from flask import request
-from flask_restplus import Resource, reqparse, inputs
-from api.restplus import api
+from flask_restx import Resource, reqparse, inputs
+from api.restx import api
 from sqlalchemy import inspect, or_, func, distinct
 from math import ceil
 from werkzeug.exceptions import BadRequest
