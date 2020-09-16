@@ -248,13 +248,10 @@ class SamplesApi(Resource):
         if 'genotypes' in required_cols:
             for r in ret:
                 r['genotypes'] = {}
+                r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name']})
+
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
-                gen_report = '?format=%s&species=%s&genomic_datasets=&genomic_filters=[]&rep_datasets=%s&rep_filters=[{"field":"name","op":"in","value":["%s"]}]&params=[]'
-                r['genotypes']['analysis_screen'] = 'api/reports/reports/run/rep_single_genotype' + gen_report % ('html', species, r['dataset'], r['name'])
-                r['genotypes']['analysis_pdf'] = 'api/reports/reports/run/rep_single_genotype' + gen_report % ('pdf', species, r['dataset'], r['name'])
-
                 dp = os.path.join(species, r['dataset'], r['study_name'], r['patient_name'])
-
                 if os.path.isdir(os.path.join(VDJBASE_SAMPLE_PATH, dp)):            # old format
                     fp = os.path.join(VDJBASE_SAMPLE_PATH, dp, r['name'] + '_')
                     sp = '/'.join(['static/study_data/VDJbase/samples', dp, r['name'] + '_'])

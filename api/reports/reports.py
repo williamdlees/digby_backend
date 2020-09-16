@@ -133,7 +133,7 @@ class ReportsRunApi(Resource):
 
             params = json.loads(args.params)
 
-            if len(genomic_samples)== 0 and len(rep_samples) == 0:
+            if len(rep_samples) == 0 and len(genomic_samples) == 0:
                 raise BadRequest('No samples selected')
 
             # maybe we should check types as well
