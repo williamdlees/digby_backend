@@ -279,13 +279,11 @@ class SamplesApi(Resource):
                     r['haplotypes']['path'] = app.config['BACKEND_LINK']
                     for (hap, filename) in zip(h[1].split(','), h[2].split(',')):
                         filename = filename.replace('samples/', '')
-                        hap_report = '?format=%s&species=%s&genomic_datasets=&genomic_filters=[]&rep_datasets=%s&rep_filters=[{"field":"name","op":"in","value":["%s"]}]&params={"haplo_gene": "%s"}'
                         fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], filename)
                         sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], filename])
                         if isfile(fp):
                             r['haplotypes'][hap] = {}
-                            r['haplotypes'][hap]['analysis_screen'] = 'api/reports/reports/run/rep_single_haplotype' + hap_report % ('html', species, r['dataset'], r['name'], hap)
-                            r['haplotypes'][hap]['analysis_pdf'] = 'api/reports/reports/run/rep_single_haplotype' + hap_report % ('pdf', species, r['dataset'], r['name'], hap)
+                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name'], 'hap_gene': hap})
                             r['haplotypes'][hap]['rabhit'] = sp
                 else:
                     r['haplotypes'] = ''
