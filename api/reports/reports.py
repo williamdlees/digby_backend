@@ -107,6 +107,10 @@ class ReportsRunApi(Resource):
     @api.expect(report_arguments, validate=True)
     def get(self, report_name):
         try:
+            if app.config['TESTING']:
+                with open('report_request.log', 'a') as fo:
+                    fo.write('%s\n' % request.url)
+
             args = report_arguments.parse_args(request)
 
             if report_name not in report_defs:
