@@ -37,7 +37,7 @@ def run(format, species, genomic_samples, rep_samples, params):
         sample_list = [s[0] for s in sample_list]
 
         query = session.query(Gene.name, Patient.id, Allele.id, Sample.name, Gene.locus_order, AllelesSample.kdiff, Allele.name) \
-            .join(Allele) \
+            .join(Allele, Gene.id == Allele.gene_id) \
             .join(AllelesSample) \
             .join(Sample) \
             .join(Patient) \
