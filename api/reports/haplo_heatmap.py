@@ -37,8 +37,7 @@ def run(format, species, genomic_samples, rep_samples, params):
         sample_list = [s[0] for s in sample_list]
         haplos = session.query(Sample.name, HaplotypesFile.file)\
             .filter(Sample.name.in_(sample_list))\
-            .join(SamplesHaplotype)\
-            .filter(Sample.id == SamplesHaplotype.samples_id)\
+            .join(SamplesHaplotype, Sample.id == SamplesHaplotype.samples_id)\
             .filter(SamplesHaplotype.haplotypes_files_id == HaplotypesFile.id)\
             .filter(HaplotypesFile.by_gene == params['haplo_gene']).all()
 
