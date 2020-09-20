@@ -29,7 +29,7 @@ Flask-Security==3.0.0
 Flask-SQLAlchemy==2.4.4
 Flask-Table==0.5.0
 Flask-WTF==0.14.3
-gunicorn==19
+gunicorn
 idna==2.10
 importlib-metadata==1.7.0
 inflect==4.1.0
