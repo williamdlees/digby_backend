@@ -7,17 +7,28 @@ from flask_bootstrap import Bootstrap
 from flask_admin import Admin
 from flask_cors import CORS
 import os
-import pretty_errors
-
-
 import logging.handlers
+from extensions import celery
+from extensions import db
 
-app = Flask(__name__)
+
+def create_app(db):
+    app = Flask(__name__)
+    app.config.from_pyfile('config.cfg')
+    app.config.from_pyfile('secret.cfg')
+
+    # configure/initialize all your extensions
+    db.init_app(app)
+    celery.init_app(app)
+
+    return app
+
+
+app = create_app(db)
+
 CORS(app)
 
 bootstrap = Bootstrap(app)
-app.config.from_pyfile('config.cfg')
-app.config.from_pyfile('secret.cfg')
 
 app.config['BASE_PATH'] = os.getcwd()
 
@@ -43,8 +54,8 @@ app.logger.addHandler(handler)
 mail = Mail(app)
 
 from db.vdjbase_db import vdjbase_db_init
-db = SQLAlchemy(app)
-vdjbase_dbs = vdjbase_db_init()
+
+vdjbase_dbs = vdjbase_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 
@@ -62,8 +73,8 @@ from api.reports.reports import ns as reports
 from db.feature_db import *
 from db.update import db_update
 from db.build_gff import build_gffs
-import db.vdjbase_maint
-import db.vdjbase_export
+# import db.vdjbase_maint
+# import db.vdjbase_export
 
 migrate = Migrate(app, db)
 
@@ -120,12 +131,3 @@ def export_vdjbase_metadata():
 @login_required
 def create_vdjbase_db():
     return db.vdjbase_maint.create_databases()
-
-@app.route('/play', methods=['GET', 'POST'])
-@login_required
-def play():
-    feats = db.session.query(Feature).all()
-
-    for feat in feats:
-        for sam in feat.samples:
-            print(sam.sample.type)
