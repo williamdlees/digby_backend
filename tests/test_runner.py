@@ -3,6 +3,8 @@
 import argparse
 import sys
 import os.path
+from time import sleep
+
 import yaml
 import urllib.request
 import hashlib
@@ -68,7 +70,29 @@ def main(argv):
             print('Reason: ', e.reason)
             exit()
 
-        file_url = resp['url']
+        job_id = resp['id']
+        status = resp['status']
+        status_check_url = test_spec['url'].split('run')[0] + 'status/' + job_id
+        i = 0
+
+        while i < 120 and status not in ['FAILURE', 'SUCCESS']:
+            sleep(1)
+            with urllib.request.urlopen(status_check_url) as response:
+                res_body = response.read()
+                resp = json.loads(res_body.decode("utf-8"))
+                status = resp['status']
+
+        if i >= 120:
+            print('Error - report still pending after 120 seconds')
+            continue
+
+        if status != 'SUCCESS':
+            print('Error - FAILURE')
+            continue
+
+        print('Report complete')
+
+        file_url = resp['results']['url']
         hash_md5 = None
         checksum = None
 

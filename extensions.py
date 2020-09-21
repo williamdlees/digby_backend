@@ -1,9 +1,13 @@
 # Flask / Celery integration
 # from https://stackoverflow.com/questions/12044776/how-to-use-flask-sqlalchemy-in-a-celery-task
+import importlib
+import traceback
 
 import flask
 from flask_sqlalchemy import SQLAlchemy
 from celery import Celery
+from werkzeug.exceptions import BadRequest
+
 
 class FlaskCelery(Celery):
 
@@ -36,16 +40,21 @@ class FlaskCelery(Celery):
         self.config_from_object(app.config)
 
 
-celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='rpc://')
+celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redis://localhost:6379/0')
+#celery.config_from_object('celeryconfig')
 db = SQLAlchemy()
 
-from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence
 
 @celery.task()
-def add_together(a, b):
-    sp = db.session.query(Species).all()
+def run_report(report_name, format, species, genomic_samples, rep_samples, params):
+    runner = importlib.import_module('api.reports.' + report_name)
 
-    if sp:
-        return [row.name for row in sp]
-    else:
-        return 'None'
+    try:
+        return runner.run(format, species, genomic_samples, rep_samples, params)
+    except BadRequest as bad:
+        print('BadRequest raised during report processing: %s' % bad.description)
+        return {'status': 'error', 'description': bad.description}
+    except Exception:
+        print('Exception raised during report processing: %s' % traceback.format_exc())
+        return {'status': 'error', 'description': 'Error encountered while running report'}
+

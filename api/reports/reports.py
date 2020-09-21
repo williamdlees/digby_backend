@@ -1,5 +1,5 @@
 # Services related to vdjbase repseq-based data sets
-
+from celery.result import AsyncResult
 from flask import request, redirect, send_file
 from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
@@ -16,6 +16,7 @@ import os
 import traceback
 from json.decoder import JSONDecodeError
 import tempfile
+from extensions import run_report
 
 SYSDATA = os.path.join(app.config['R_SCRIPT_PATH'], 'sysdata.rda')
 
@@ -145,7 +146,10 @@ class ReportsRunApi(Resource):
                 if p['id'] not in params.keys():
                     raise BadRequest('Missing parameter: %s' % p)
 
-            runner = importlib.import_module('api.reports.' + report_name)
+            # Pass to Celery
+
+            result = run_report.delay(report_name, args.format, args.species, genomic_samples, rep_samples, params)
+            return {'id': result.id, 'status': 'queued'}
         except JSONDecodeError:
             print('Exception encountered processing JSON-encoded field: %s' % traceback.format_exc())
             raise BadRequest('Error encountered while processing JSON-encoded field')
@@ -157,14 +161,27 @@ class ReportsRunApi(Resource):
             raise BadRequest('Error encountered while processing report request')
 
 
+@ns.route('/reports/status/<string:job_id>')
+@api.response(404, 'Malformed request')
+class ReportsStatus(Resource):
+    def get(self, job_id):
+        res = AsyncResult(job_id)
+        status = res.status
+
         try:
-            return runner.run(args.format, args.species, genomic_samples, rep_samples, params)
+            if status in ['SUCCESS', 'FAILURE']:
+                return {'id': job_id, 'status': status, 'results': res.get()}
+            else:
+                return {'id': job_id, 'status': status}
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
             raise bad
         except Exception:
-            print('Exception raised during report processing: %s' % traceback.format_exc())
-            raise BadRequest('Error encountered while processing report')
+            print('Exception encountered processing report request: %s' % traceback.format_exc())
+            raise BadRequest('Error encountered while processing report request')
+
+
+
 
 
 # Make a unique file in the output directory
