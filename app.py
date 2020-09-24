@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, flash, Blueprint
-from flask_sqlalchemy import SQLAlchemy
+from extensions import celery, db
 from flask_migrate import Migrate
 from flask_security import Security, SQLAlchemyUserDatastore, login_required
 from flask_mail import Mail
@@ -9,10 +9,9 @@ from flask_cors import CORS
 import os
 import logging.handlers
 from extensions import celery
-from extensions import db
 
 
-def create_app(db):
+def create_app():
     app = Flask(__name__)
     app.config.from_pyfile('config.cfg')
     app.config.from_pyfile('secret.cfg')
@@ -24,7 +23,7 @@ def create_app(db):
     return app
 
 
-app = create_app(db)
+app = create_app()
 
 CORS(app)
 

@@ -1,5 +1,5 @@
 # Services related to vdjbase repseq-based data sets
-from celery.result import AsyncResult
+from extensions import celery
 from flask import request, redirect, send_file
 from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
@@ -88,9 +88,9 @@ class ReportsApi(Resource):
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
             raise bad
-        except Exception:
+        except Exception as e:
             print('Exception encountered processing report request: %s' % traceback.format_exc())
-            raise BadRequest('Error encountered while processing report request')
+            raise BadRequest('Error encountered while processing report request: %s' % str(e))
 
 
 report_arguments = reqparse.RequestParser()
@@ -156,32 +156,31 @@ class ReportsRunApi(Resource):
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
             raise bad
-        except Exception:
+        except Exception as e:
             print('Exception encountered processing report request: %s' % traceback.format_exc())
-            raise BadRequest('Error encountered while processing report request')
+            raise BadRequest('Error encountered while processing report request: %s' % str(e))
 
 
 @ns.route('/reports/status/<string:job_id>')
 @api.response(404, 'Malformed request')
 class ReportsStatus(Resource):
     def get(self, job_id):
-        res = AsyncResult(job_id)
+        res = celery.AsyncResult(job_id)
         status = res.status
+
+        print('Get report status called for %s: returning %s' % (job_id, status))
 
         try:
             if status in ['SUCCESS', 'FAILURE']:
-                return {'id': job_id, 'status': status, 'results': res.get()}
+                return {'id': job_id, 'status': status, 'results': res.get()}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
             else:
-                return {'id': job_id, 'status': status}
+                return {'id': job_id, 'status': status}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
             raise bad
-        except Exception:
+        except Exception as e:
             print('Exception encountered processing report request: %s' % traceback.format_exc())
-            raise BadRequest('Error encountered while processing report request')
-
-
-
+            raise BadRequest('Error encountered while processing report request: %s' % str(e))
 
 
 # Make a unique file in the output directory
