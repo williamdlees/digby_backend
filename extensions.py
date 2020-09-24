@@ -41,7 +41,6 @@ class FlaskCelery(Celery):
 
 
 celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redis://localhost:6379/0')
-#celery.config_from_object('celeryconfig')
 db = SQLAlchemy()
 
 
@@ -54,7 +53,7 @@ def run_report(report_name, format, species, genomic_samples, rep_samples, param
     except BadRequest as bad:
         print('BadRequest raised during report processing: %s' % bad.description)
         return {'status': 'error', 'description': bad.description}
-    except Exception:
+    except Exception as e:
         print('Exception raised during report processing: %s' % traceback.format_exc())
-        return {'status': 'error', 'description': 'Error encountered while running report'}
+        raise BadRequest('Error encountered while processing report request: %s' % str(e))
 
