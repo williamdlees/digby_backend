@@ -167,6 +167,10 @@ class SamplesApi(Resource):
         args = filter_arguments.parse_args(request)
 
         required_cols = json.loads(args['cols'])
+        if 'name' not in required_cols:
+            required_cols.append('name')
+        if 'dataset' not in required_cols:
+            required_cols.append('dataset')
 
         for col in required_cols:
             if col not in valid_filters.keys():
@@ -183,7 +187,8 @@ class SamplesApi(Resource):
             if col != 'id' and valid_filters[col]['field'] is not None:
                 attribute_query.append(valid_filters[col]['field'])
 
-        ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), json.loads(args['filter']))
+        filter = json.loads(args['filter'])
+        ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), filter)
 
         total_size = len(ret)
 
@@ -193,6 +198,14 @@ class SamplesApi(Resource):
             uniques[f] = []
 
         uniques['dataset'] = dataset.split(',')
+
+        # special column for names by dataset
+
+        uniques['names_by_dataset'] = {}
+        filter_applied = len(filter) > 0
+        if filter_applied:
+            for dataset in uniques['dataset']:
+                uniques['names_by_dataset'][dataset] = []
 
         for s in ret:
             for f in required_cols:
@@ -205,6 +218,9 @@ class SamplesApi(Resource):
                     if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
                         uniques[f].append('(blank)')
 
+            if filter_applied:
+                uniques['names_by_dataset'][s['dataset']].append(s['name'])
+
         def name_sort_key(name):
             name = name.split('_')
             for i in range(len(name)):
@@ -215,7 +231,7 @@ class SamplesApi(Resource):
             try:
                 if f in ('name', 'patient_name'):
                     uniques[f].sort(key=lambda x: name_sort_key(x))
-                else:
+                elif f != 'names_by_dataset':
                     uniques[f].sort(key=lambda x: (x is None or x == '', x))
             except:
                 pass
@@ -235,15 +251,15 @@ class SamplesApi(Resource):
             for spec in sort_specs:
                 if spec['field'] in valid_filters.keys():
                     if spec['field'] in ('name', 'patient_name'):
-                        ret = sorted(ret, key=lambda x : name_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                        ret = sorted(ret, key=lambda x: name_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
                     else:
-                        ret = sorted(ret, key=lambda x : ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                        ret = sorted(ret, key=lambda x: ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
         else:
-            ret = sorted(ret, key=lambda x : name_sort_key(x['name']))
+            ret = sorted(ret, key=lambda x: name_sort_key(x['name']))
 
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
-            ret = ret[first : first + args['page_size']]
+            ret = ret[first:first + args['page_size']]
 
         if 'genotypes' in required_cols:
             for r in ret:
@@ -453,14 +469,13 @@ class SequencesApi(Resource):
 
             if sample_id_filter is not None:
                 required_ids = []
-                for fv in sample_id_filter['value']:
-                    d, id = fv.split('.')
-                    if d == dset:
+                if dset in sample_id_filter['value']:
+                    for id in sample_id_filter['value'][dset]:
                         required_ids.append(id)
                 alleles_with_samples = session.query(Allele.name)\
                     .join(AllelesSample)\
                     .join(Sample)\
-                    .filter(Sample.id.in_(required_ids)).all()
+                    .filter(Sample.name.in_(required_ids)).all()
 
                 required_names = []
                 for a in alleles_with_samples:
