@@ -108,6 +108,7 @@ class ReportsRunApi(Resource):
     @api.expect(report_arguments, validate=True)
     def get(self, report_name):
         try:
+            print("ReportsRunApi called")
             if app.config['TESTING']:
                 with open('report_request.log', 'a') as fo:
                     fo.write('%s\n' % request.url)
@@ -115,6 +116,7 @@ class ReportsRunApi(Resource):
             args = report_arguments.parse_args(request)
 
             if report_name not in report_defs:
+                print("Bad Request: no such report")
                 raise BadRequest('No such report')
 
             try:
@@ -133,17 +135,21 @@ class ReportsRunApi(Resource):
                     rep_samples = find_vdjbase_samples([vdjb_Sample.name, vdjb_Sample.id], args.species, rep_datasets, rep_filters)
                 else:
                     rep_samples = []
+                params = json.loads(args.params)
+
             except:
+                print("Bad Request: error parsing arguments")
                 raise BadRequest("Malformed request")
 
-            params = json.loads(args.params)
 
             if len(rep_samples) == 0 and len(genomic_samples) == 0:
+                print("Bad Request: no samples selected")
                 raise BadRequest('No samples selected')
 
             # maybe we should check types as well
             for p in report_defs[report_name]['params']:
                 if p['id'] not in params.keys():
+                    print("Bad Request: missing parameter %s" % p)
                     raise BadRequest('Missing parameter: %s' % p)
 
             # Pass to Celery

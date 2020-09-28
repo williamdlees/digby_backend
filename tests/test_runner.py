@@ -68,19 +68,27 @@ def main(argv):
         except URLError as e:
             print('Error: failed to reach the server.')
             print('Reason: ', e.reason)
-            exit()
+
 
         job_id = resp['id']
         status = resp['status']
         status_check_url = test_spec['url'].split('run')[0] + 'status/' + job_id
         i = 0
 
-        while i < 120 and status not in ['FAILURE', 'SUCCESS']:
-            sleep(1)
-            with urllib.request.urlopen(status_check_url) as response:
-                res_body = response.read()
-                resp = json.loads(res_body.decode("utf-8"))
-                status = resp['status']
+        try:
+            while i < 120 and status not in ['FAILURE', 'SUCCESS']:
+                sleep(1)
+                with urllib.request.urlopen(status_check_url) as response:
+                    res_body = response.read()
+                    resp = json.loads(res_body.decode("utf-8"))
+                    status = resp['status']
+        except HTTPError as e:
+            print('Error: the server couldn\'t fulfill the request.')
+            print('Error code: ', e.code)
+            continue
+        except URLError as e:
+            print('Error: failed to reach the server.')
+            print('Reason: ', e.reason)
 
         if i >= 120:
             print('Error - report still pending after 120 seconds')
