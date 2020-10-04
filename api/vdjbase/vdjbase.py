@@ -43,16 +43,54 @@ class SpeciesApi(Resource):
         else:
             return None, 404
 
+def find_datasets(species):
+    datasets = []
+    for name in vdjbase_dbs[species].keys():
+        if '_description' not in name:
+            datasets.append({'dataset': name, 'description': vdjbase_dbs[species][name + '_description']})
+    return datasets
+
 
 @ns.route('/ref_seqs/<string:species>')
 class DataSetAPI(Resource):
-
     def get(self, species):
         """ Returns the list of datasets available for the selected species """
         if species in vdjbase_dbs:
-            return list(vdjbase_dbs[species].keys())
+            return find_datasets(species)
         else:
             return list()
+
+@ns.route('/dataset_info/<string:species>/<string:dataset>')
+class DataSetInfoAPI(Resource):
+
+    def get(self, species, dataset):
+        """Returns information and statistics on the dataset"""
+        if species not in vdjbase_dbs and dataset not in vdjbase_dbs[species]:
+            return None, 404
+
+        session = vdjbase_dbs[species][dataset].session
+        stats = {}
+
+        stats['description'] = vdjbase_dbs[species][dataset + '_description']
+        stats['total_subjects'] = session.query(Patient.id).count()
+        stats['total_samples'] = session.query(Sample.id).count()
+        stats['sex_count'] = session.query(Patient.sex, func.count(Patient.sex)).group_by(Patient.sex).order_by(func.count(Patient.sex).desc()).all()
+        stats['study_count'] = session.query(Study.name, func.count(Sample.name)).join(Sample, Sample.study_id == Study.id).group_by(Study.name).order_by(func.count(Sample.name).desc()).all()
+        stats['condition_count'] = session.query(Patient.status, func.count(Patient.status)).group_by(Patient.status).order_by(func.count(Patient.status).desc()).all()
+        stats['celltype_count'] = session.query(TissuePro.sub_cell_type, func.count(TissuePro.sub_cell_type)).group_by(TissuePro.sub_cell_type).order_by(func.count(TissuePro.sub_cell_type).desc()).all()
+        stats['tissue_count'] = session.query(TissuePro.tissue, func.count(TissuePro.tissue)).group_by(TissuePro.tissue).order_by(func.count(TissuePro.tissue).desc()).all()
+        studies = session.query(
+            Study.name,
+            Study.accession_id,
+            Study.institute,
+            Study.num_subjects,
+            Study.num_samples,
+            Study.reference,
+            Study.accession_reference
+        ).all()
+        stats['studies'] = [row._asdict() for row in studies]
+
+        return stats
 
 
 valid_filters = {
