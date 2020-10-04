@@ -1,6 +1,6 @@
 # Manage a list of available vdjbase-style databases
 
-from os.path import join, isdir
+from os.path import join, isdir, isfile
 from os import listdir
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -29,9 +29,14 @@ def vdjbase_db_init(vdjbase_db_path):
         if isdir(p) and species[0] != '.':
             for name in listdir(p):
                 if isdir(join(p, name)) and name[0] != '.':
+                    description = ''
+                    if isfile(join(p, name, 'db_description.txt')):
+                        with open(join(p, name, 'db_description.txt'), 'r') as fi:
+                            description = ' '.join(fi.readlines())
                     if species not in vdjbase_dbs:
                         vdjbase_dbs[species] = {}
                     vdjbase_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
+                    vdjbase_dbs[species][name + '_description'] = description
     return vdjbase_dbs
 
 
