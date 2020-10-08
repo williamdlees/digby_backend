@@ -1,7 +1,9 @@
 # Code to import projects, driven by the contents of projects.yml
-
+import copy
 import os
 import os.path
+from collections import defaultdict
+from glob import glob
 import re
 from db.vdjbase_exceptions import *
 import yaml
@@ -16,13 +18,15 @@ from sqlalchemy import update
 
 def import_studies(ds_dir, species, dataset, session):
     result = []
+    study_data = {}
 
     study_file = os.path.join(ds_dir, 'projects.yml')
-    if not os.path.isfile(study_file):
-        raise DbCreationError('project file %s does not exist' % study_file)
-
-    with open(study_file, 'r') as fi:
-        study_data = yaml.safe_load(fi)
+    if os.path.isfile(study_file):
+        with open(study_file, 'r') as fi:
+            study_data = yaml.safe_load(fi)
+    else:
+        # try to consolidate data from sample-level files
+        study_data = consolidate_metadata(ds_dir)
 
     for sd in study_data.values():
         s = Study(
@@ -136,6 +140,68 @@ def import_studies(ds_dir, species, dataset, session):
     result.append('Import completed!')
     return result
 
+
+# raise DbCreationError('project file %s does not exist' % study_file)
+
+# enumerate dirs and paths under the specified directory
+def listdp(dir):
+    dirs = [os.path.split(name)[0] for name in glob(os.path.join(dir, '*/'))]
+    return zip([os.path.split(name)[1] for name in dirs], dirs)
+
+# Consolidate metadata from yml files in each sample directory
+def consolidate_metadata(export_dir):
+    metadata = {}
+    results = []
+    for project_name, project_path in listdp(os.path.join(export_dir, 'samples')):
+        for sample_name, sample_path in listdp(project_path):
+            metadata_file = os.path.join(sample_path, sample_name + '.yml')
+            if not os.path.isfile(metadata_file):
+                print('metadata file %s not found: sample will not be included!' % metadata_file)
+                results.append('metadata file %s not found: sample will not be included!' % metadata_file)
+                continue
+
+            try:
+                with open(metadata_file, 'r') as fi:
+                    study_data = yaml.safe_load(fi)
+
+                if project_name not in study_data:
+                    raise Exception('Project name %s not in sample %s metadata. Sample will not be included.' % (sample_name, project_name))
+
+                # fix up some potentially missing fields
+
+                if study_data[project_name]['Samples'][sample_name]['Sequence Protocol Name'] is None:
+                    study_data[project_name]['Samples'][sample_name]['Sequence Protocol Name'] = list(study_data[project_name]['Sequence Protocol'].keys())[0]
+
+                if study_data[project_name]['Samples'][sample_name]['Tissue Processing Name'] is None:
+                    study_data[project_name]['Samples'][sample_name]['Tissue Processing Name'] = list(study_data[project_name]['Tissue Processing'].keys())[0]
+
+                if study_data[project_name]['Samples'][sample_name]['Reads'] is None:
+                    study_data[project_name]['Samples'][sample_name]['Reads'] = 0
+
+                if study_data[project_name]['Samples'][sample_name]['Chain'] is None:
+                    study_data[project_name]['Samples'][sample_name]['Chain'] = 'IGH'
+
+                if project_name not in metadata:
+                    metadata[project_name] = copy.deepcopy(study_data[project_name])
+                else:
+                    if sample_name not in study_data[project_name]['Samples']:
+                        raise Exception('Wrong sample name not in in sample %s metadata. Sample will not be included.' % sample_name)
+
+                    metadata[project_name]['Samples'][sample_name] = copy.deepcopy(study_data[project_name]['Samples'][sample_name])
+
+                    for section in ('Sequence Protocol', 'Subjects', 'Tissue Processing', 'Genotype Detections'):
+                        for item in study_data[project_name][section].keys():
+                            if item not in metadata[project_name][section]:
+                                metadata[project_name][section][item] = copy.deepcopy(study_data[project_name][section][item])
+
+            except Exception as e:
+                print('Exception processing metadata file %s: %s' % (metadata_file, e))
+
+    with open(os.path.join(export_dir, 'consolidated.yml'), 'w') as fo:
+        fo.write(yaml.dump(metadata, default_flow_style=False))
+
+    return metadata
+
 def process_genotypes(ds_dir, species, dataset, session):
     result = ['Processing genotype files']
     samples = session.query(Sample).all()
@@ -164,7 +230,7 @@ def process_genotypes(ds_dir, species, dataset, session):
         genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '.tsv').replace('\\', '/')  # new directory layout
+            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
