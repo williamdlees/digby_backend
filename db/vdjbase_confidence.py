@@ -268,13 +268,13 @@ def check_hotspot(novels, session):
         q_hotspots= []
 
         for p in ref_qpos:
-            if seq_nt[p+1] == 'c':
+            if len(seq_nt) > p and seq_nt[p+1] == 'c':
                 q_hotspots.append("%s%d%s" % (ref_nt[p+1], find_gapped_index(p+1, novel.closest_ref.seq), seq_nt[p+1]))
 
         ref_qpos = [m.start() for m in re.finditer('[at][ag][c][ct]', ref_nt)]
 
         for p in ref_qpos:
-            if seq_nt[p+2] == 'g':
+            if len(seq_nt) > p + 1 and seq_nt[p+2] == 'g':
                 q_hotspots.append("%s%d%s" % (ref_nt[p+2], find_gapped_index(p+2, novel.closest_ref.seq), seq_nt[p+2]))
 
         if len(q_hotspots) > 0:

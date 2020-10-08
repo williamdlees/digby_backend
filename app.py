@@ -72,8 +72,8 @@ from api.reports.reports import ns as reports
 from db.feature_db import *
 from db.update import db_update
 from db.build_gff import build_gffs
-# import db.vdjbase_maint
-# import db.vdjbase_export
+import db.vdjbase_maint
+import db.vdjbase_export
 
 migrate = Migrate(app, db)
 
