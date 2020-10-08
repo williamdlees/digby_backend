@@ -100,33 +100,36 @@ def main(argv):
 
         print('Report complete')
 
-        file_url = resp['results']['url']
-        hash_md5 = None
-        checksum = None
+        if resp['results']['status'] == 'ok':
+            file_url = resp['results']['url']
+            hash_md5 = None
+            checksum = None
 
-        try:
-            with urllib.request.urlopen(file_url) as response:
-                with open(newfile, 'wb') as fo:
-                    content = response.read()
-                    hash_md5 = hashlib.md5(content)
-                    checksum = len(content)
-                    fo.write(content)
-        except HTTPError as e:
-            print('Error: the server couldn\'t fulfill the request.')
-            print('Error code: ', e.code)
-        except URLError as e:
-            print('Error: failed to reach the server.')
-            print('Reason: ', e.reason)
-            exit()
-        else:
-            # checksum = hash_md5.hexdigest()
-            if test_spec['checksum'] == '':
-                test_specs[test_spec['test_num']]['checksum'] = checksum
-                print('New test, checksum updated')
-            elif test_spec['checksum'] == checksum:
-                print('Passed')
+            try:
+                with urllib.request.urlopen(file_url) as response:
+                    with open(newfile, 'wb') as fo:
+                        content = response.read()
+                        hash_md5 = hashlib.md5(content)
+                        checksum = len(content)
+                        fo.write(content)
+            except HTTPError as e:
+                print('Error: the server couldn\'t fulfill the request.')
+                print('Error code: ', e.code)
+            except URLError as e:
+                print('Error: failed to reach the server.')
+                print('Reason: ', e.reason)
+                exit()
             else:
-                print('Failed: checksum mismatch %d / %d' % (test_spec['checksum'], checksum))
+                # checksum = hash_md5.hexdigest()
+                if test_spec['checksum'] == '':
+                    test_specs[test_spec['test_num']]['checksum'] = checksum
+                    print('New test, checksum updated')
+                elif test_spec['checksum'] == checksum:
+                    print('Passed')
+                else:
+                    print('Failed: checksum mismatch %d / %d' % (test_spec['checksum'], checksum))
+        else:
+            print('Failed: %s', resp['results']['description'])
 
     with open('test_def.yaml', 'w') as fo:
         fo.write(yaml.dump(test_specs))
