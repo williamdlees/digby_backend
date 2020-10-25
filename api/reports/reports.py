@@ -17,6 +17,7 @@ import traceback
 from json.decoder import JSONDecodeError
 import tempfile
 from extensions import run_report
+from celery import current_task
 
 SYSDATA = os.path.join(app.config['R_SCRIPT_PATH'], 'sysdata.rda')
 
@@ -174,13 +175,13 @@ class ReportsStatus(Resource):
         res = celery.AsyncResult(job_id)
         status = res.status
 
-        print('Get report status called for %s: returning %s' % (job_id, status))
+        print('Get report status called for %s: returning %s, %s' % (job_id, status, res.info))
 
         try:
             if status in ['SUCCESS', 'FAILURE']:
                 return {'id': job_id, 'status': status, 'results': res.get()}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
             else:
-                return {'id': job_id, 'status': status}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
+                return {'id': job_id, 'status': status, 'info': res.info}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
             raise bad
@@ -199,6 +200,8 @@ def make_output_file(format):
 
 # R Script Runner
 def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
+    current_task.update_state(state='PENDING', meta={'stage': 'running report'})
+
     cmd_line = ['Rscript', os.path.join(app.config['R_SCRIPT_PATH'], script)]
     cmd_line.extend(args)
     print("Running Rscript: '%s'\n" % ' '.join(cmd_line))
