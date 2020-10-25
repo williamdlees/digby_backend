@@ -5,7 +5,7 @@ import traceback
 
 import flask
 from flask_sqlalchemy import SQLAlchemy
-from celery import Celery
+from celery import Celery, current_task
 from werkzeug.exceptions import BadRequest
 
 
@@ -43,17 +43,17 @@ class FlaskCelery(Celery):
 celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redis://localhost:6379/0')
 db = SQLAlchemy()
 
-
-@celery.task()
-def run_report(report_name, format, species, genomic_samples, rep_samples, params):
+@celery.task(bind=True)
+def run_report(self, report_name, format, species, genomic_samples, rep_samples, params):
     runner = importlib.import_module('api.reports.' + report_name)
 
     try:
+        self.update_state(state='PENDING', meta={'stage': 'preparing data'})
         return runner.run(format, species, genomic_samples, rep_samples, params)
     except BadRequest as bad:
         print('BadRequest raised during report processing: %s' % bad.description)
         return {'status': 'error', 'description': bad.description}
     except Exception as e:
         print('Exception raised during report processing: %s' % traceback.format_exc())
-        raise BadRequest('Error encountered while processing report request: %s' % str(e))
+        return {'status': 'error', 'description': 'Unexpected error when running report: %s' % traceback.format_exc()}
 

@@ -11,6 +11,8 @@ import logging.handlers
 from extensions import celery
 
 
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_pyfile('config.cfg')
