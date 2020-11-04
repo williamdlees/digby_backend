@@ -16,6 +16,7 @@ class Gene(Base):
     type = Column(String(20), nullable=False)
     family = Column(String(20), nullable=False)
     species = Column(String(20), nullable=False)
+    igsnper_plot_path = Column(String(250))
     locus_order = Column(Integer)
     alpha_order = Column(Integer)
     pseudo_gene = Column(Boolean)
@@ -136,8 +137,9 @@ class Patient(Base):
     study_id = Column(ForeignKey('database_studies.id'), nullable=False, index=True)
     name_in_paper = Column(String(30))
     country = Column(String(50))
-
     study = relationship('Study')
+    igsnper_sample_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
+    samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
 
 
 class AlleleConfidenceReport(Base):
@@ -180,13 +182,14 @@ class Sample(Base):
     tissue_pro_id = Column(ForeignKey('database_tissue_pro.id'), nullable=False, index=True)
     genotype_stats = Column(String(100))
     genotype_report = Column(String(100))
+    igsnper_plot_path = Column(String(250))
 
     geno_detection = relationship('GenoDetection')
-    patient = relationship('Patient')
     seq_protocol = relationship('SeqProtocol')
     study = relationship('Study')
     tissue_pro = relationship('TissuePro')
     alleles = relationship("AllelesSample", back_populates="sample")
+    patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
 
 
 class SNP(Base):
