@@ -29,112 +29,116 @@ def import_studies(ds_dir, species, dataset, session):
         study_data = consolidate_metadata(ds_dir)
 
     for sd in study_data.values():
-        s = Study(
-            name=sd['Project'],
-            institute=sd['Institute'],
-            researcher=sd['Researcher'],
-            num_subjects=sd['Number of Subjects'],
-            num_samples=sd['Number of Samples'],
-            reference=sd['Reference'],
-            contact=sd['Contact'],
-            accession_id=sd['Accession id'],
-            accession_reference=sd['Accession reference'],
-        )
-        session.add(s)
+        try:
+            s = Study(
+                name=sd['Project'],
+                institute=sd['Institute'],
+                researcher=sd['Researcher'],
+                num_subjects=sd['Number of Subjects'],
+                num_samples=sd['Number of Samples'],
+                reference=sd['Reference'],
+                contact=sd['Contact'],
+                accession_id=sd['Accession id'],
+                accession_reference=sd['Accession reference'],
+            )
+            session.add(s)
 
-        study_rec = session.query(Study).filter(Study.name == sd['Project']).one_or_none()
+            study_rec = session.query(Study).filter(Study.name == sd['Project']).one_or_none()
 
-        for gd in sd['Genotype Detections'].values():
-            g = session.query(GenoDetection).filter(GenoDetection.name == gd['Name']).one_or_none()
+            for gd in sd['Genotype Detections'].values():
+                g = session.query(GenoDetection).filter(GenoDetection.name == gd['Name']).one_or_none()
 
-            if g is None:
-                g = GenoDetection(
-                    name=gd['Name'],
-                    prepro_tool=gd['Pre-processing'],
-                    aligner_tool=gd['Aligner Tool'],
-                    aligner_ver=gd['Aligner Version'],
-                    aligner_reference=gd['Germline Reference'],
-                    geno_tool=gd['Genotyper Tool'],
-                    geno_ver=gd['Genotyper Version'],
-                    haplotype_tool=gd['Haplotyper Tool'],
-                    haplotype_ver=gd['Haplotyper Version'],
-                    single_assignment=gd['Single Assignment'],
-                    detection=gd['Repertoire or Germline'],
-                )
-                session.add(g)
+                if g is None:
+                    g = GenoDetection(
+                        name=gd['Name'],
+                        prepro_tool=gd['Pre-processing'],
+                        aligner_tool=gd['Aligner Tool'],
+                        aligner_ver=gd['Aligner Version'],
+                        aligner_reference=gd['Germline Reference'],
+                        geno_tool=gd['Genotyper Tool'],
+                        geno_ver=gd['Genotyper Version'],
+                        haplotype_tool=gd['Haplotyper Tool'],
+                        haplotype_ver=gd['Haplotyper Version'],
+                        single_assignment=gd['Single Assignment'],
+                        detection=gd['Repertoire or Germline'],
+                    )
+                    session.add(g)
 
-        for sp in sd['Sequence Protocol'].values():
-            p = session.query(SeqProtocol).filter(SeqProtocol.name == sp['Name']).one_or_none()
+            for sp in sd['Sequence Protocol'].values():
+                p = session.query(SeqProtocol).filter(SeqProtocol.name == sp['Name']).one_or_none()
 
-            if p is None:
-                p = SeqProtocol(
-                    name = sp['Name'],
-                    umi=sp['UMI'],
-                    sequencing_length=sp['Sequencing_length'],
-                    primers_3_location=sp['Primer 3 location'],
-                    primers_5_location=sp['Primer 5 location'],
-                    sequencing_platform=sp['Sequencing_platform'],
-                    helix=sp['Helix'],
+                if p is None:
+                    p = SeqProtocol(
+                        name = sp['Name'],
+                        umi=sp['UMI'],
+                        sequencing_length=sp['Sequencing_length'],
+                        primers_3_location=sp['Primer 3 location'],
+                        primers_5_location=sp['Primer 5 location'],
+                        sequencing_platform=sp['Sequencing_platform'],
+                        helix=sp['Helix'],
+                    )
+                    session.add(p)
+
+            for tp in sd['Tissue Processing'].values():
+                t = session.query(TissuePro).filter(TissuePro.name == tp['Name']).one_or_none()
+
+                if t is None:
+                    t = TissuePro(
+                        name=tp['Name'],
+                        species=tp['Species'],
+                        tissue=tp['Tissue'],
+                        cell_type=tp['Cell Type'],
+                        sub_cell_type=tp['Sub Cell Type'],
+                        isotype=tp['Isotype'],
+                    )
+                    session.add(t)
+
+            for pa in sd['Subjects'].values():
+                p = Patient(
+                    name=pa['Name'],
+                    sex=pa['Sex'],
+                    ethnic=pa['Ethnic'],
+                    status=pa['Health Status'],
+                    cohort=pa['Cohort'],
+                    age=pa['Age'],
+                    study_id=study_rec.id,
+                    name_in_paper=pa['Original name'],
+                    country=pa['Country'],
+                    igsnper_sample_id=0,
                 )
                 session.add(p)
 
-        for tp in sd['Tissue Processing'].values():
-            t = session.query(TissuePro).filter(TissuePro.name == tp['Name']).one_or_none()
-
-            if t is None:
-                t = TissuePro(
-                    name=tp['Name'],
-                    species=tp['Species'],
-                    tissue=tp['Tissue'],
-                    cell_type=tp['Cell Type'],
-                    sub_cell_type=tp['Sub Cell Type'],
-                    isotype=tp['Isotype'],
+            for sa in sd['Samples'].values():
+                gd_id = session.query(GenoDetection.id).filter(GenoDetection.name == sa['Genotype Detection Name']).one_or_none()
+                if gd_id is None:
+                    result.append(['sample %s: Genotype Detection record not found' % sa['Name']])
+                sp_id = session.query(SeqProtocol.id).filter(SeqProtocol.name == sa['Sequence Protocol Name']).one_or_none()
+                if sp_id is None:
+                    result.append(['sample %s: Sequence Protocol record not found' % sa['Name']])
+                tp_id = session.query(TissuePro.id).filter(TissuePro.name == sa['Tissue Processing Name']).one_or_none()
+                if tp_id is None:
+                    result.append(['sample %s: Tissue Processing record not found' % sa['Name']])
+                pa_id = session.query(Patient.id).filter(Patient.name == sa['Subject Name']).one_or_none()
+                if pa_id is None:
+                    result.append(['sample %s: Subject record not found' % sa['Name']])
+                s = Sample(
+                    name=sa['Name'],
+                    chain=sa['Chain'],
+                    row_reads=sa['Reads'],
+                    genotype='',
+                    genotype_graph='',
+                    date=sa['Date'],
+                    samples_group=sa['Sample Group'],
+                    geno_detection_id=gd_id[0],
+                    patient_id=pa_id[0],
+                    seq_protocol_id=sp_id[0],
+                    study_id=study_rec.id,
+                    tissue_pro_id=tp_id[0],
+                    genotype_stats='',
                 )
-                session.add(t)
-
-        for pa in sd['Subjects'].values():
-            p = Patient(
-                name=pa['Name'],
-                sex=pa['Sex'],
-                ethnic=pa['Ethnic'],
-                status=pa['Health Status'],
-                cohort=pa['Cohort'],
-                age=pa['Age'],
-                study_id=study_rec.id,
-                name_in_paper=pa['Original name'],
-                country=pa['Country'],
-            )
-            session.add(p)
-
-        for sa in sd['Samples'].values():
-            gd_id = session.query(GenoDetection.id).filter(GenoDetection.name == sa['Genotype Detection Name']).one_or_none()
-            if gd_id is None:
-                result.append(['sample %s: Genotype Detection record not found'] % sa['Name'])
-            sp_id = session.query(SeqProtocol.id).filter(SeqProtocol.name == sa['Sequence Protocol Name']).one_or_none()
-            if sp_id is None:
-                result.append(['sample %s: Sequence Protocol record not found'] % sa['Name'])
-            tp_id = session.query(TissuePro.id).filter(TissuePro.name == sa['Tissue Processing Name']).one_or_none()
-            if tp_id is None:
-                result.append(['sample %s: Tissue Processing record not found'] % sa['Name'])
-            pa_id = session.query(Patient.id).filter(Patient.name == sa['Subject Name']).one_or_none()
-            if pa_id is None:
-                result.append(['sample %s: Subject record not found'] % sa['Name'])
-            s = Sample(
-                name=sa['Name'],
-                chain=sa['Chain'],
-                row_reads=sa['Reads'],
-                genotype='',
-                genotype_graph='',
-                date=sa['Date'],
-                samples_group=sa['Sample Group'],
-                geno_detection_id=gd_id[0],
-                patient_id=pa_id[0],
-                seq_protocol_id=sp_id[0],
-                study_id=study_rec.id,
-                tissue_pro_id=tp_id[0],
-                genotype_stats='',
-            )
-            session.add(s)
+                session.add(s)
+        except Exception as e:
+            print('Exception processing metadata file')
 
     session.commit()
     result.append('Import completed!')
@@ -167,6 +171,9 @@ def consolidate_metadata(export_dir):
                 if project_name not in study_data:
                     raise Exception('Project name %s not in sample %s metadata. Sample will not be included.' % (sample_name, project_name))
 
+                if not isinstance(study_data[project_name]['Accession id'], str):
+                    raise Exception('Accession id in metadata for sample %s, project %s is not a string. Sample will not be included.' % (sample_name, project_name))
+
                 # fix up some potentially missing fields
 
                 if study_data[project_name]['Samples'][sample_name]['Sequence Protocol Name'] is None:
@@ -181,6 +188,39 @@ def consolidate_metadata(export_dir):
                 if study_data[project_name]['Samples'][sample_name]['Chain'] is None:
                     study_data[project_name]['Samples'][sample_name]['Chain'] = 'IGH'
 
+                # fix for fields changed with 16 oct release
+
+                for gk, gd in study_data[project_name]['Genotype Detections'].items():
+                    if 'Aligner Tool' not in gd and 'Alignment Tool' in gd:
+                            study_data[project_name]['Genotype Detections'][gk]['Aligner Tool'] = gd['Alignment Tool']
+                            if gd['Alignment reference v'] == gd['Alignment reference d'] and gd['Alignment reference v'] == gd['Alignment reference j']:
+                                study_data[project_name]['Genotype Detections'][gk]['Germline Reference'] = gd['Alignment reference v']
+                            else:
+                                study_data[project_name]['Genotype Detections'][gk]['Germline Reference'] = '(%s (v), %s (d), %s (j))' %\
+                                                     (gd['Alignment reference v'], gd['Alignment reference d'], gd['Alignment reference j'])
+                    if isinstance(gd['Single Assignment'], str):
+                        study_data[project_name]['Genotype Detections'][gk]['Single Assignment'] = ('t' in gd['Single Assignment'] or 'T' in gd['Single Assignment'])
+
+                for sk, sp in study_data[project_name]['Sequence Protocol'].items():
+                    if 'Primer.3.location' in sp and 'Primer 3 location' not in sp:
+                        study_data[project_name]['Sequence Protocol'][sk]['Primer 3 location'] = sp['Primer.3.location']
+                    if 'Primer.5.location' in sp and 'Primer 5 location' not in sp:
+                        study_data[project_name]['Sequence Protocol'][sk]['Primer 5 location'] = sp['Primer.5.location']
+
+                for sk, sp in study_data[project_name]['Subjects'].items():
+                    if 'Health.Status' in sp and 'Health Status' not in sp:
+                        study_data[project_name]['Subjects'][sk]['Health Status'] = sp['Health.Status']
+                    if 'Original.name' in sp and 'Original name' not in sp:
+                        study_data[project_name]['Subjects'][sk]['Original name'] = sp['Original.name']
+
+                for tk, tp in study_data[project_name]['Tissue Processing'].items():
+                    if not isinstance(tp['Cell.Type'], str):
+                        print('foo')
+                    if 'Cell.Type' in tp and 'Cell Type' not in tp:
+                        study_data[project_name]['Tissue Processing'][tk]['Cell Type'] = tp['Cell.Type']
+                    if 'Sub.Cell.Type' in tp and 'Sub Cell Type' not in tp:
+                        study_data[project_name]['Tissue Processing'][tk]['Sub Cell Type'] = tp['Sub.Cell.Type']
+
                 if project_name not in metadata:
                     metadata[project_name] = copy.deepcopy(study_data[project_name])
                 else:
@@ -193,6 +233,7 @@ def consolidate_metadata(export_dir):
                         for item in study_data[project_name][section].keys():
                             if item not in metadata[project_name][section]:
                                 metadata[project_name][section][item] = copy.deepcopy(study_data[project_name][section][item])
+
 
             except Exception as e:
                 print('Exception processing metadata file %s: %s' % (metadata_file, e))

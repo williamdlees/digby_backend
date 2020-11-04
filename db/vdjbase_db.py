@@ -20,6 +20,10 @@ class ContentProvider():
         self.connection = self.db.connect()
         self.session = Session(bind=self.connection)
 
+    def close(self):
+        self.connection.close()
+        self.db.dispose()
+
 
 def vdjbase_db_init(vdjbase_db_path):
     vdjbase_dbs = {}
