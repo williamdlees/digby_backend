@@ -301,6 +301,7 @@ class SamplesApi(Resource):
 
         if 'genotypes' in required_cols:
             for r in ret:
+                # TODO: this section should be changed to use database fields to find the paths.
                 r['genotypes'] = {}
                 r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name']})
 
@@ -319,6 +320,16 @@ class SamplesApi(Resource):
                     r['genotypes']['tigger'] = sp + '.tsv' if isfile(fp + '.tsv') else ''
                     r['genotypes']['ogrdbstats'] = sp + '_ogrdb_report.csv' if isfile(fp + '_ogrdb_report.csv') else ''
                     r['genotypes']['ogrdbplot'] = sp + '_ogrdb_plots.pdf' if isfile(fp + '_ogrdb_plots.pdf') else ''
+
+                session = vdjbase_dbs[species][r['dataset']].session
+                igsnper_path = session.query(Sample.igsnper_plot_path).filter(Sample.name == r['name']).one_or_none()
+
+                if igsnper_path is not None:
+                    r['genotypes']['igsnper'] = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], igsnper_path[0]])
+                else:
+                    r['genotypes']['igsnper'] = ''
+
+
 
         if 'haplotypes' in required_cols:
             for r in ret:
@@ -417,6 +428,8 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
 
 valid_sequence_cols = {
     'name': {'model': 'Allele', 'field': Allele.name},
+    'gene_name': {'model': 'Gene', 'field': Gene.name.label('gene_name'), 'fieldname': 'name'},
+    'igsnper_plot_path': {'model': 'Gene', 'field': Gene.igsnper_plot_path},
     'pipeline_name': {'model': 'Allele', 'field': Allele.pipeline_name},
     'seq': {'model': 'Allele', 'field': Allele.seq, 'no_uniques': True},
     'seq_len': {'model': 'Allele', 'field': Allele.seq_len},
@@ -455,6 +468,9 @@ class SequencesApi(Resource):
             if col not in valid_sequence_cols.keys():
                 print('bad column in request: %s' % col)
                 return list(), 404
+
+        if 'gene_name' in required_cols:
+            required_cols.append('igsnper_plot_path')
 
         sample_id_filter = None
         filter_spec = []
@@ -502,7 +518,7 @@ class SequencesApi(Resource):
                 if valid_sequence_cols[col]['field'] is not None:
                     attribute_query.append(valid_sequence_cols[col]['field'])
 
-            query = session.query(*attribute_query)
+            query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
             query = apply_filters(query, filter_spec)
 
             if sample_id_filter is not None:
@@ -536,7 +552,12 @@ class SequencesApi(Resource):
                     if k == 'similar' and v is not None:
                         s[k] = v.replace('|', '')
                 s['dataset'] = dset
+
+                if len(s['igsnper_plot_path']) > 0:
+                    s['igsnper_plot_path'] = '/'.join([app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset, s['igsnper_plot_path']])
+
                 ret.append(s)
+
 
         total_size = len(ret)
 

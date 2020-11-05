@@ -17,7 +17,7 @@ def do_igsnper(species, dataset):
     if not os.path.isfile(os.path.join(ds_dir, 'db.sqlite3')):
         return 'No database found'
 
-    igsnper_dir = os.path.join(ds_dir, 'igsnper')
+    igsnper_dir = os.path.join(ds_dir, 'samples', 'igsnper')
     db = ContentProvider(os.path.join(ds_dir, 'db.sqlite3'))
 
     # remove any existing igsnper related database fields
@@ -65,7 +65,7 @@ def do_igsnper(species, dataset):
         if db.session.query(Gene).filter(Gene.name == gene).count() == 1:
             db.session.query(Gene).filter(Gene.name == gene).update({Gene.igsnper_plot_path: 'igsnper/html_reports/%s.html' % gene})
         else:
-            print('Igsnpper identified gene %s, which is not listed in the Genes table.' % gene)
+            print('Igsnper identified gene %s, which is not listed in the Genes table.' % gene)
 
     for fn in glob(os.path.join(igsnper_dir, '*_processed/*.txt')):
         subject = os.path.splitext(os.path.basename(fn))[0]
