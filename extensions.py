@@ -38,10 +38,12 @@ class FlaskCelery(Celery):
     def init_app(self, app):
         self.app = app
         self.config_from_object(app.config)
+        return SQLAlchemy(app)
+
 
 
 celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redis://localhost:6379/0')
-db = SQLAlchemy()
+
 
 @celery.task(bind=True)
 def run_report(self, report_name, format, species, genomic_samples, rep_samples, params):

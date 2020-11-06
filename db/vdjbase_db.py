@@ -32,7 +32,7 @@ def vdjbase_db_init(vdjbase_db_path):
         p = join(vdjbase_db_path, species)
         if isdir(p) and species[0] != '.':
             for name in listdir(p):
-                if isdir(join(p, name)) and name[0] != '.':
+                if isdir(join(p, name)) and name[0] != '.' and '.txt' not in name:
                     description = ''
                     if isfile(join(p, name, 'db_description.txt')):
                         with open(join(p, name, 'db_description.txt'), 'r') as fi:

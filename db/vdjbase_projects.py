@@ -273,6 +273,9 @@ def process_genotypes(ds_dir, species, dataset, session):
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
             genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
 
+        if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
+            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '.tsv').replace('\\', '/')  # another new directory layout
+
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)

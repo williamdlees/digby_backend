@@ -1,4 +1,4 @@
-from extensions import db
+from app import sql_db as db
 
 class Species(db.Model):
     id = db.Column(db.Integer, primary_key=True)

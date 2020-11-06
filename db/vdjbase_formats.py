@@ -1,20 +1,19 @@
 # Format definitions for VDJbase pipeline files
 
-"""new format
-GENE_COLUMN = "gene"
-COUNTS_COLUMN = "counts"
-TOTAL_COLUMN = "total"
-GENOTYPE_KDIFF_COLUMN = "k_diff"
-INT_SEP = ";"
-"""
+new_format = True
 
-
-#old forma
-GENE_COLUMN = "GENE"
-COUNTS_COLUMN = "COUNTS"
-TOTAL_COLUMN = "TOTAL"
-GENOTYPE_KDIFF_COLUMN = "K_DIFF"
-INT_SEP = ","
+if new_format:
+    GENE_COLUMN = "gene"
+    COUNTS_COLUMN = "counts"
+    TOTAL_COLUMN = "total"
+    GENOTYPE_KDIFF_COLUMN = "k_diff"
+    INT_SEP = ";"
+else:
+    GENE_COLUMN = "GENE"
+    COUNTS_COLUMN = "COUNTS"
+    TOTAL_COLUMN = "TOTAL"
+    GENOTYPE_KDIFF_COLUMN = "K_DIFF"
+    INT_SEP = ","
 
 
 # unvarying between formats

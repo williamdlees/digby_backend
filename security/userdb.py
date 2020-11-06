@@ -1,6 +1,6 @@
 # ORM definitions for user management
 
-from extensions import db
+from app import sql_db as db
 from flask_security import UserMixin, RoleMixin
 #from db.submissiondb import Submission
 
