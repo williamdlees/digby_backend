@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, flash, Blueprint
-from extensions import celery, db
 from flask_migrate import Migrate
 from flask_security import Security, SQLAlchemyUserDatastore, login_required
 from flask_mail import Mail
@@ -8,23 +7,29 @@ from flask_admin import Admin
 from flask_cors import CORS
 import os
 import logging.handlers
+
+from flask_security.utils import hash_password
+from flask_sqlalchemy import SQLAlchemy
+
 from extensions import celery
 
+sql_db = None
 
 
 def create_app():
+    global sql_db
     app = Flask(__name__)
     app.config.from_pyfile('config.cfg')
     app.config.from_pyfile('secret.cfg')
 
     # configure/initialize all your extensions
-    db.init_app(app)
-    celery.init_app(app)
+
+    sql_db = celery.init_app(app)
 
     return app
 
-
 app = create_app()
+
 
 CORS(app)
 
@@ -42,10 +47,14 @@ app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api/reports
 
 if 'R_LIBS' not in os.environ or os.environ['R_LIBS'] is None or len(os.environ['R_LIBS']) < 1:
     os.environ['R_LIBS'] = app.config['R_SCRIPT_PATH']
+
+# TODO - make this work on Windows as well as Unix, the D:\ screws it up
+"""
 else:
     r_libs = os.environ['R_LIBS'].split(':')
     r_libs = r_libs.append(app.config['R_SCRIPT_PATH'])
     os.environ['R_LIBS'] = ':'.join(r_libs)
+"""
 
 handler = logging.handlers.RotatingFileHandler('app.log', maxBytes=1024 * 1024)
 handler.setLevel(logging.INFO)
@@ -77,7 +86,9 @@ import db.vdjbase_maint
 import db.vdjbase_export
 from db.vdjbase_igsnper import do_igsnper
 
-migrate = Migrate(app, db)
+print('migrating app')
+print(sql_db)
+migrate = Migrate(app, sql_db)
 
 blueprint = Blueprint('api', __name__, url_prefix='/api')
 api.init_app(blueprint)
@@ -94,15 +105,22 @@ load_report_defs()
 def index():
     return render_template('index.html', current_user=current_user)
 
+@app.route('/create_user', methods=['GET', 'POST'])
+def create_user():
+    if user_datastore.find_role('Admin') is None:                       # First live user gets admin rights
+        user = user_datastore.create_user(email="admin@vdjbase.org", password=hash_password("admin"))
+        sql_db.session.commit()
+        user_datastore.create_role(name='Admin')                        # You will want to remove this in any real application!
+        user_datastore.add_role_to_user(user, 'Admin')          # You will want to remove this in any real application!
+        sql_db.session.commit()
+        return "User created"
+    else:
+        return "User not created"
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    if user_datastore.find_role('Admin') is None:                       # First live user gets admin rights
-        user_datastore.create_role(name='Admin')                        # You will want to remove this in any real application!
-        user_datastore.add_role_to_user(current_user, 'Admin')          # You will want to remove this in any real application!
-        db.session.commit()                                             # You will want to remove this in any real application!
-
     form = ProfileForm(obj = current_user)
     form.email = ''
     if request.method == 'POST':

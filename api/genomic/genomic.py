@@ -6,7 +6,7 @@ from api.restx import api
 from sqlalchemy import inspect, or_, func, distinct
 from math import ceil
 from werkzeug.exceptions import BadRequest
-from extensions import db
+from app import sql_db as db
 from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence
 import json
 from datetime import datetime
