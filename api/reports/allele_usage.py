@@ -45,7 +45,7 @@ def run(format, species, genomic_samples, rep_samples, params):
             .join(Allele) \
             .join(AllelesSample) \
             .join(Sample) \
-            .join(Patient) \
+            .join(Patient, Patient.id == Sample.patient_id) \
             .filter(Gene.name.in_(wanted_genes)) \
             .filter(Allele.name.notlike('%Del%')) \
             .filter(Allele.name.notlike('%OR%')) \
