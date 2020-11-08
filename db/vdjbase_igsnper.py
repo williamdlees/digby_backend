@@ -39,7 +39,7 @@ def do_igsnper(species, dataset):
 
         for sample in samples:
             if 'S1' in sample[1]:
-                tigger_file_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, sample[0].replace('samples/', ''))
+                tigger_file_path = os.path.join(ds_dir, sample[0])
 
                 if os.path.isfile(tigger_file_path):
                     fo.write('%s     %s     %s\n' % (tigger_file_path, sample[2], sample[3]))
