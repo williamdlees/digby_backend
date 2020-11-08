@@ -38,9 +38,9 @@ def run(format, species, genomic_samples, rep_samples, params):
 
         query = session.query(Gene.name, Patient.id, Allele.id, Sample.name, Gene.locus_order, AllelesSample.kdiff, Allele.name) \
             .join(Allele, Gene.id == Allele.gene_id) \
-            .join(AllelesSample) \
-            .join(Sample) \
-            .join(Patient) \
+            .join(AllelesSample, Allele.id == AllelesSample.allele_id) \
+            .join(Sample, Sample.id == AllelesSample.sample_id) \
+            .join(Patient, Patient.id == Sample.patient_id) \
             .filter(Gene.name.in_(wanted_genes)) \
             .filter(Allele.name.notlike('%Del%')) \
             .filter(Allele.name.notlike('%OR%')) \
