@@ -324,7 +324,7 @@ class SamplesApi(Resource):
                 session = vdjbase_dbs[species][r['dataset']].session
                 igsnper_path = session.query(Sample.igsnper_plot_path).filter(Sample.name == r['name']).one_or_none()
 
-                if igsnper_path is not None:
+                if igsnper_path is not None and igsnper_path[0] is not None:
                     r['genotypes']['igsnper'] = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], igsnper_path[0]])
                 else:
                     r['genotypes']['igsnper'] = ''
@@ -553,8 +553,10 @@ class SequencesApi(Resource):
                         s[k] = v.replace('|', '')
                 s['dataset'] = dset
 
-                if len(s['igsnper_plot_path']) > 0:
+                if s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
                     s['igsnper_plot_path'] = '/'.join([app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset, s['igsnper_plot_path']])
+                else:
+                    s['igsnper_plot_path'] = ''
 
                 ret.append(s)
 
