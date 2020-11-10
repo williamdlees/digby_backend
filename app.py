@@ -7,6 +7,7 @@ from flask_admin import Admin
 from flask_cors import CORS
 import os
 import logging.handlers
+from reverse_proxied import ReverseProxied
 
 from flask_security.utils import hash_password
 from flask_sqlalchemy import SQLAlchemy
@@ -29,7 +30,7 @@ def create_app():
     return app
 
 app = create_app()
-
+app.wsgi_app = ReverseProxied(app.wsgi_app)
 
 CORS(app)
 
