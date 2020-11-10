@@ -31,7 +31,7 @@
                     {% if current_user.active %}
                     <a href="{{ url_for('profile') }}" class="m-item">Profile</a> |
                     {% if current_user.has_role('Admin') %}
-                        <a href="{{ 'admin' }}" class="m-item">Admin</a> |
+                        <a href="{{ 'admin/' }}" class="m-item">Admin</a> |
                     {%  endif %}
                     <a href="{{ url_for_security('logout') }}" class="m-item">{{ current_user.name }} - Logout</a>
                     {% else %}
