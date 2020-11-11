@@ -250,9 +250,9 @@ class SamplesApi(Resource):
                 if valid_filters[f]['field'] is not None and 'no_uniques' not in valid_filters[f]:
                     el = s[f]
                     if isinstance(el, datetime):
-                        s[f] = el.date().isoformat()
-                    if (not isinstance(el, str) or len(s[f]) > 0) and s[f] not in uniques[f]:
-                        uniques[f].append(s[f])
+                        el = el.date().isoformat()
+                    if (not isinstance(el, str) or len(el) > 0) and el not in uniques[f]:
+                        uniques[f].append(el)
                     if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
                         uniques[f].append('(blank)')
 
@@ -298,6 +298,13 @@ class SamplesApi(Resource):
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
             ret = ret[first:first + args['page_size']]
+
+        for rec in ret:
+            for k, v in rec.items():
+                if isinstance(v, datetime):
+                    rec[k] = v.date().isoformat()
+                elif isinstance(v, decimal.Decimal):
+                    rec[k] = '%0.2f' % v
 
         if 'genotypes' in required_cols:
             for r in ret:
@@ -544,11 +551,6 @@ class SequencesApi(Resource):
             for r in res:
                 s = r._asdict()
                 for k, v in s.items():
-                    if isinstance(v, datetime):
-                        s[k] = v.date().isoformat()
-                    elif isinstance(v, decimal.Decimal):
-                        s[k] = '%0.2f' % v
-
                     if k == 'similar' and v is not None:
                         s[k] = v.replace('|', '')
                 s['dataset'] = dset
@@ -571,12 +573,12 @@ class SequencesApi(Resource):
             for f in required_cols:
                 if valid_sequence_cols[f]['field'] is not None and 'no_uniques' not in valid_sequence_cols[f]:
                     el = s[f]
-                    if isinstance(el, datetime):
-                        s[f] = el.date().isoformat()
+                    if isinstance(el, datetime):        # convert and add to uniques. Can't convert the returned records until we sort
+                        el = el.date().isoformat()
                     elif isinstance(el, decimal.Decimal):
-                        s[f] = '%0.2f' % el
-                    if (not isinstance(el, str) or len(s[f]) > 0) and s[f] not in uniques[f]:
-                        uniques[f].append(s[f])
+                        el = '%0.2f' % el
+                    if (not isinstance(el, str) or len(el) > 0) and el not in uniques[f]:
+                        uniques[f].append(el)
                     if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
                         uniques[f].append('(blank)')
 
@@ -619,6 +621,15 @@ class SequencesApi(Resource):
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
             ret = ret[first : first + args['page_size']]
+
+        for rec in ret:
+            for k, v in rec.items():
+                if isinstance(v, datetime):
+                    rec[k] = v.date().isoformat()
+                elif isinstance(v, decimal.Decimal):
+                    rec[k] = '%0.2f' % v
+
+
 
         return {
             'samples': ret,
