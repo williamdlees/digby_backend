@@ -107,6 +107,7 @@ load_report_defs()
 def index():
     return render_template('index.html', current_user=current_user)
 
+
 @app.route('/create_user', methods=['GET', 'POST'])
 def create_user():
     if user_datastore.find_role('Admin') is None:                       # First live user gets admin rights

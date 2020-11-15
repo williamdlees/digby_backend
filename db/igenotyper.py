@@ -7,10 +7,10 @@ from os.path import isfile, join, splitext, isdir
 import csv
 from sqlalchemy import func, and_
 import traceback
-
+from db.save_genomic import save_genomic_dataset_details, save_genomic_study, find_existing_allele, find_all_alleles, save_genomic_sequence, \
+    update_sample_sequence_link, add_feature_to_ref, find_allele_type
 
 IGENOTYPER_DIR = 'static/study_data/IGenotyper'
-
 
 
 def update():
@@ -23,16 +23,8 @@ def update_refs():
     with open(IGENOTYPER_DIR + '/Ref/ref.txt', 'r') as fo:
         for row in fo:
             (species, locus, name, ref_file) = row.split('\t')
-
-            sp = db.session.query(Species).filter_by(name=species).one_or_none()
-
-            if not sp:
-                sp = Species(name=species)
-                db.session.add(sp)
-
             records = list(SeqIO.parse(IGENOTYPER_DIR + '/Ref/' + ref_file, 'fasta'))
-            ref_seq = RefSeq(name=name, locus=locus, species=sp, sequence=records[0].seq.lower(), length=len(records[0].seq))
-            db.session.add(ref_seq)
+            save_genomic_dataset_details(locus, name, ref_file, species, sequence=records[0].seq.lower())
             db.session.commit()
 
 
@@ -48,15 +40,7 @@ def update_studies():
                     k, v = row.split('\t')
                     sd[k] = v.strip()
 
-            study = Study(name=sd['name'],
-                          institute=sd['institute'],
-                          researcher=sd['researcher'],
-                          reference=sd['reference'],
-                          contact=sd['contact'],
-                          accession_id=sd['accession_id'],
-                          accession_reference=sd['accession_reference'])
-            db.session.add(study)
-            db.session.commit()
+            study = save_genomic_study(sd['name'], sd['institute'], sd['researcher'], sd['reference'], sd['contact'], sd['accession_id'], sd['accession_reference'])
 
             for sf in listdir(join(IGENOTYPER_DIR, study_dir)):
                 if sf[0] != '.':
@@ -125,14 +109,17 @@ def process_sample(sample_dir, study):
                         allele_name = row['haplotype_%1d_allele' % h]
                         if allele_name != 'ND' and allele_name != 'NotDetermined':
                             if allele_name == 'Novel':
-                                if not len(row['haplotype_%1d_novel_sequence' % h]):
+                                gene_sequence = row['haplotype_%1d_novel_sequence' % h]
+                                gene_name = row['gene_name']
+                                if not len(gene_sequence):
                                     print('Warning: no sequence for novel allele in gene %s' % row['gene name'])
-                                sequence = db.session.query(Sequence).filter(and_(Sequence.name.like('%s*i%%' % row['gene_name']), Sequence.sequence == row['haplotype_%1d_novel_sequence' % h])).one_or_none()
+
+                                sequence = find_existing_allele(gene_name, gene_sequence)
 
                                 if not sequence:
-                                    sequences = db.session.query(Sequence).filter(Sequence.name.like('%s*i%%' % row['gene_name'])).all()
+                                    sequences = find_all_alleles(gene_name)
 
-                                    this_ntsequence = str(Seq(row['haplotype_%1d_novel_sequence' % h]).reverse_complement()).lower()
+                                    this_ntsequence = str(Seq(gene_sequence).reverse_complement()).lower()
                                     for seq in sequences:
                                         if seq.sequence == this_ntsequence:
                                             sequence = seq
@@ -140,57 +127,17 @@ def process_sample(sample_dir, study):
                                     if not sequence:
                                         novel_num = len(sequences) + 1
                                         allele_name = '%s*i%02d' % (row['gene_name'], novel_num)
-
-                                        sequence = Sequence(
-                                            name=allele_name,
-                                            imgt_name='',
-                                            type=find_allele_type(allele_name),
-                                            novel=True,
-                                            deleted=False,
-                                            sequence=this_ntsequence,
-                                            gapped_sequence='',
-                                            species=ref.species,
-                                        )
-
-                                        db.session.add(sequence)
-
-                                ss = db.session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
-
-                                if ss:
-                                    ss.chromosome = 'h1, h2'
-                                    ss.chromo_count = 2
-                                else:
-                                    SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h, chromo_count=1)
-
-                                db.session.commit()
+                                        sequence = save_genomic_sequence(allele_name, '', True, False, this_ntsequence, '', ref.species)
+                                update_sample_sequence_link(h, sample, sequence)
 
                             elif allele_name == 'Deleted':
                                 allele_name = '%s_Del' % (row['gene_name'])
                                 sequence = db.session.query(Sequence).filter(Sequence.name.like(allele_name)).one_or_none()
 
                                 if not sequence:
-                                    sequence = Sequence(
-                                        name=allele_name,
-                                        imgt_name='',
-                                        type=find_allele_type(allele_name),
-                                        novel=False,
-                                        deleted=True,
-                                        sequence='',
-                                        gapped_sequence='',
-                                        species=ref.species,
-                                    )
+                                    sequence = save_genomic_sequence(allele_name, ref, False, True, this_ntsequence,  '', ref.species)
 
-                                    db.session.add(sequence)
-
-                                ss = db.session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
-
-                                if ss:
-                                    ss.chromosome = 'h1, h2'
-                                    ss.chromo_count = 2
-                                else:
-                                    SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h, chromo_count=1)
-
-                                db.session.commit()
+                                update_sample_sequence_link(h, sample, sequence)
                             else:
                                 allele_name = '%s*%02d' % (row['gene_name'], int(allele_name))
                                 sequence = db.session.query(Sequence).filter(and_(Sequence.imgt_name == allele_name, Sequence.species == ref.species)).one_or_none()
@@ -198,52 +145,19 @@ def process_sample(sample_dir, study):
                                     print('Human allele name %s not found in IMGT reference set. Ignoring.' % allele_name)
                                     continue
                                 else:
-                                    ss = db.session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
-                                    if ss:
-                                        ss.chromosome = 'h1, h2'
-                                        ss.chromo_count = 2
-                                    else:
-                                        SampleSequence(sample=sample, sequence=sequence, chromosome='h%1d' % h, chromo_count=1)
-                                    db.session.commit()
+                                    update_sample_sequence_link(h, sample, sequence)
 
                             gene = db.session.query(Feature).filter(and_(Feature.name == row['gene_name'], Feature.refseq == ref, Feature.feature == 'gene')).one_or_none()
                             allele_type = find_allele_type(row['gene_name'])
 
                             if not gene:
-                                gene = Feature(
-                                    name=row['gene_name'],
-                                    feature='gene',
-                                    start=row['start'],
-                                    end=row['end'],
-                                    strand=strand,
-                                    attribute='Name=%s;ID=%04d' % (row['gene_name'], gene_id),
-                                    feature_id=gene_id,
-                                )
-                                ref.features.append(gene)
+                                gene = add_feature_to_ref(row['gene_name'], gene, row['start'], row['end'], strand, 'Name=%s;ID=%04d' % (row['gene_name'], gene_id), gene_id, ref)
                                 gene_id += 1
 
-                                gene_mRNA = Feature(
-                                    name=row['gene_name'],
-                                    feature='mRNA',
-                                    start=row['start'],
-                                    end=row['end'],
-                                    strand=strand,
-                                    attribute='Name=%s;ID=%04d' % (row['gene_name'], gene_id),
-                                    feature_id=gene_id,
-                                )
-                                ref.features.append(gene_mRNA)
+                                gene_mRNA = add_feature_to_ref(row['gene_name'], 'mRNA', row['start'], row['end'], strand, 'Name=%s;ID=%04d' % (row['gene_name'], gene_id), gene_id, ref)
                                 gene_id += 1
 
-                                gene_VDJ = Feature(
-                                    name=row['gene_name'] + '_' + allele_type,
-                                    feature='CDS',
-                                    start=row['start'],
-                                    end=row['end'],
-                                    strand=strand,
-                                    attribute='Name=%s_%s;ID=%04d' % (row['gene_name'], allele_type, gene_id),
-                                    feature_id=gene_id,
-                                )
-                                ref.features.append(gene_VDJ)
+                                gene_VDJ = add_feature_to_ref(row['gene_name'] + '_' + allele_type, 'CDS', row['start'], row['end'], strand, 'Name=%s_%s;ID=%04d' % (row['gene_name'], allele_type, gene_id), gene_id, ref)
                                 gene_id += 1
                                 sequence.features.append(gene_VDJ)
                             else:
@@ -263,14 +177,3 @@ def process_sample(sample_dir, study):
 
     db.session.commit()
 
-
-def find_allele_type(allele_name):
-    if 'V' in allele_name:
-        allele_type = 'V-REGION'
-    elif 'D' in allele_name:
-        allele_type = 'D-REGION'
-    elif 'J' in allele_name:
-        allele_type = 'J-REGION'
-    else:
-        allele_type = 'UNKNOWN'
-    return allele_type

@@ -17,7 +17,7 @@ type = {
 }
 
 def update():
-#    delete_dependencies('Atlantic Salmon')
+    delete_dependencies('Atlantic Salmon')
 #    return ""
 
     ctg = 'GU129139'

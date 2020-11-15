@@ -7,7 +7,7 @@ def db_update():
 
     status = ""
     status += db.salmon.update()
-    status += db.igenotyper.update()
+    # status += db.igenotyper.update()
 
     return status
 
