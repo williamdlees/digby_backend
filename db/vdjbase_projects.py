@@ -214,8 +214,6 @@ def consolidate_metadata(export_dir):
                         study_data[project_name]['Subjects'][sk]['Original name'] = sp['Original.name']
 
                 for tk, tp in study_data[project_name]['Tissue Processing'].items():
-                    if not isinstance(tp['Cell.Type'], str):
-                        print('foo')
                     if 'Cell.Type' in tp and 'Cell Type' not in tp:
                         study_data[project_name]['Tissue Processing'][tk]['Cell Type'] = tp['Cell.Type']
                     if 'Sub.Cell.Type' in tp and 'Sub Cell Type' not in tp:
