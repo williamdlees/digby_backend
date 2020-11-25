@@ -3,9 +3,12 @@ from db.feature_db import RefSeq, Feature, Species, Sequence, SequenceFeature
 
 
 def build_gffs():
-    build_gff('Atlantic Salmon')
-    build_gff('Human')
-    build_fake_human_ref()
+
+    species = db.session.query(Species.name.distinct()).join(RefSeq).all()
+    species = [x[0] for x in species]
+
+    for sp in species:
+        build_gff(sp)
     return('GFFs built! Now run /mnt/d/Research/digby_backend/static/gff/make_bam')
 
 def build_gff(species):
@@ -21,8 +24,7 @@ def build_gff(species):
 
             features = db.session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
-                if feature.feature == 'gene':
-                    fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
+                fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
 
         # Alignment file of all alleles and other annotated regions within samples aligned to this reference (SAM, needs external conversion to BAM)
         # FIX - add non coding regions
@@ -30,10 +32,11 @@ def build_gff(species):
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
             fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
+            features = db.session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
                 if feature.feature != 'gene':
                     for sequence in feature.sequences:
-                        if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION') and '_' not in sequence.name:  # '_' is a fudge for salmon line-bred, no alleles
+                        if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION'):  # '_' is a fudge for salmon line-bred, no alleles
                             legend = 'novel ' if sequence.novel else ''
                             legend = legend + ('*' + sequence.name.split('*')[1] if '*' in sequence.name else sequence.name)
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tNM:Z:%s\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, legend))
@@ -45,15 +48,16 @@ def build_gff(species):
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
             fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
-            features = db.session.query(Feature).filter(Feature.refseq == ref_seq).filter(Feature.name.like('%REGION')).order_by(Feature.start).all()
+            features = db.session.query(Feature).filter(Feature.refseq == ref_seq).filter(Feature.attribute.like('%REGION%')).order_by(Feature.start).all()
 
             order = 1
             for feature in features:
                 for sequence in feature.sequences:
                     if sequence.novel:
                         if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION'):
+                            gene_name = sequence.name.split('*')[1] if '*' in sequence.name else sequence.name
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' %
-                                     (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order, 'novel *' + sequence.name.split('*')[1]))
+                                     (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order, 'novel *' + gene_name))
                         else:
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' %
                                      (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order))

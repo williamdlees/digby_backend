@@ -24,7 +24,7 @@ def update_refs():
         for row in fo:
             (species, locus, name, ref_file) = row.split('\t')
             records = list(SeqIO.parse(IGENOTYPER_DIR + '/Ref/' + ref_file, 'fasta'))
-            save_genomic_dataset_details(locus, name, ref_file, species, sequence=records[0].seq.lower())
+            save_genomic_dataset_details(locus, name, species, sequence=records[0].seq.lower())
             db.session.commit()
 
 
@@ -127,7 +127,7 @@ def process_sample(sample_dir, study):
                                     if not sequence:
                                         novel_num = len(sequences) + 1
                                         allele_name = '%s*i%02d' % (row['gene_name'], novel_num)
-                                        sequence = save_genomic_sequence(allele_name, '', True, False, this_ntsequence, '', ref.species)
+                                        sequence = save_genomic_sequence(allele_name, '', find_allele_type(allele_name), True, False, this_ntsequence, '', ref.species)
                                 update_sample_sequence_link(h, sample, sequence)
 
                             elif allele_name == 'Deleted':

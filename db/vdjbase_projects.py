@@ -51,7 +51,7 @@ def import_studies(ds_dir, species, dataset, session):
                 if g is None:
                     g = GenoDetection(
                         name=gd['Name'],
-                        prepro_tool=gd['Pre-processing'],
+                        prepro_tool=gd['Pre-processing'] if gd['Pre-processing'] else '',
                         aligner_tool=gd['Aligner Tool'],
                         aligner_ver=gd['Aligner Version'],
                         aligner_reference=gd['Germline Reference'],

@@ -14,11 +14,12 @@ import os.path
 from os.path import isfile
 from db.filter_list import apply_filter_to_list
 
-from app import vdjbase_dbs, app
+from app import vdjbase_dbs, app, db
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
 
-VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
+from db.feature_db import Species   # don't import any tables that would conflict with vdjbase!
 
+VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
 
 # Return SqlAlchemy row as a dict, using correct column names
@@ -27,21 +28,27 @@ def object_as_dict(obj):
             for c in inspect(obj).mapper.column_attrs}
 
 
+# can't declare in genomic api or we would get circular imports
+def get_genomic_species():
+        sp = db.session.query(Species).all()
+        return [row.name for row in sp] if sp else []
+
+
 ns = api.namespace('repseq', description='Genes and annotations inferred from RepSeq data')
 
+# for use by genomic api
+
+def get_vdjbase_species():
+    return list(vdjbase_dbs.keys())
+
+
 @ns.route('/species')
-@api.response(404, 'No species available!')
 class SpeciesApi(Resource):
 
     def get(self):
-
         """ Returns the list of species for which information is held """
-        sp = list(vdjbase_dbs.keys())
+        return list(set(vdjbase_dbs.keys()) | set(get_genomic_species()))
 
-        if sp:
-            return sp
-        else:
-            return None, 404
 
 def find_datasets(species):
     datasets = []
@@ -642,7 +649,7 @@ class SequencesApi(Resource):
 
 def find_rep_filter_params(species, datasets):
     if species not in vdjbase_dbs or set(datasets).difference(set(vdjbase_dbs[species])):
-        raise BadRequest('Unknown AIRR-seq dataset')
+        return []
 
     genes = []
     gene_types = []
