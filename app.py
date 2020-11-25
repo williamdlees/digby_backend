@@ -82,14 +82,12 @@ from api.vdjbase.vdjbase import ns as vdjbase
 from api.reports.reports import ns as reports
 
 from db.feature_db import *
-from db.update import db_update
+from db.update import update_genomic_db
 from db.build_gff import build_gffs
 import db.vdjbase_maint
 import db.vdjbase_export
 from db.vdjbase_igsnper import do_igsnper
 
-print('migrating app')
-print(sql_db)
 migrate = Migrate(app, sql_db)
 
 blueprint = Blueprint('api', __name__, url_prefix='/api')
@@ -137,7 +135,7 @@ def profile():
 @app.route('/update_genomic', methods=['GET', 'POST'])
 @login_required
 def update_genomic():
-    return db_update()
+    return update_genomic_db()
 
 
 @app.route('/build_gff', methods=['GET', 'POST'])

@@ -72,10 +72,13 @@ class ReportsApi(Resource):
             for params_list in (genomic_filter_params, rep_filter_params):
                 if params_list is not None:
                     for param in params_list:
-                        if param['id'] not in combined_filter_params:
-                            combined_filter_params[param['id']] = param
-                        elif 'options' in param:
-                            combined_filter_params[param['id']]['options'] = list(set(combined_filter_params[param['id']]['options'] + param['options']))
+                        try:
+                            if param['id'] not in combined_filter_params:
+                                combined_filter_params[param['id']] = param
+                            elif 'options' in param:
+                                combined_filter_params[param['id']]['options'] = list(set(combined_filter_params[param['id']]['options'] + param['options']))
+                        except:
+                            print('foo')
 
             return {
                 'reports': available_reports,

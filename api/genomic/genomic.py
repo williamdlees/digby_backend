@@ -7,12 +7,13 @@ from sqlalchemy import inspect, or_, func, distinct
 from math import ceil
 from werkzeug.exceptions import BadRequest
 from app import sql_db as db
-from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence
+from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence, DataSet
 import json
 from datetime import datetime
 from sqlalchemy_filters import apply_filters
 from decimal import Decimal
 from app import app
+from api.vdjbase.vdjbase import get_vdjbase_species
 
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
@@ -29,25 +30,40 @@ class SpeciesApi(Resource):
     def get(self):
         """ Returns the list of species for which information is held """
         sp = db.session.query(Species).all()
-
-        if sp:
-            return [row.name for row in sp]
-        else:
-            return None, 404
+        genomic_sp = [row.name for row in sp] if sp else []
+        vdjbase_sp = get_vdjbase_species()
+        return list(set(genomic_sp) | set(vdjbase_sp))
 
 
-@ns.route('/ref_seqs/<string:species>')
-@api.response(404, 'No reference sequences available for that species.')
-class RefSeqAPI(Resource):
+@ns.route('/assemblies/<string:species>/<string:data_sets>')
+class AssemblyAPI(Resource):
+
+    def get(self, species, data_sets):
+        """ Returns the list of annotated assemblies for the selected species and datasets """
+        data_sets = data_sets.split(',')
+
+        assemblies = db.session.query(distinct(RefSeq.name))\
+            .join(Sample)\
+            .join(DataSet)\
+            .join(Species)\
+            .filter(Species.name == species)\
+            .filter(DataSet.name.in_(data_sets)).all()
+
+        return [{'assembly': row[0]} for row in assemblies]
+
+
+@ns.route('/data_sets/<string:species>')
+@api.response(404, 'No data sets available for that species.')
+class DataSetAPI(Resource):
 
     def get(self, species):
-        """ Returns the list of annotated reference sequences for the selected species """
+        """ Returns the list of data sets for the selected species """
         sp = db.session.query(Species).filter_by(name=species).one_or_none()
 
         if sp:
-            return [{'ref_seq': row.name, 'locus': row.locus} for row in sp.refseqs]
+            return [{'dataset': row.name, 'locus': row.locus} for row in sp.datasets]
         else:
-            return None, 404
+            return []
 
 @ns.route('/sample_info/<string:species>/<string:study_name>/<string:sample>')
 class SampleInfoApi(Resource):
@@ -72,7 +88,7 @@ class SampleInfoApi(Resource):
                 attribute_query.append(genomic_sample_filters[col]['field'])
 
         info = db.session.query(*attribute_query)\
-            .join(Species)\
+            .join(Species, Species.id == Sample.species_id)\
             .join(Study, Study.id == Sample.study_id)\
             .join(RefSeq, RefSeq.id == Sample.ref_seq_id)\
             .filter(Species.name == species)\
@@ -121,6 +137,7 @@ genomic_sequence_filters = {
     'type': {'model': 'Sequence', 'field': Sequence.type},
     'novel': {'model': 'Sequence', 'field': Sequence.novel},
     'deleted': {'model': 'Sequence', 'field': Sequence.deleted},
+    'functional': {'model': 'Sequence', 'field': Sequence.functional},
     'sequence': {'model': 'Sequence', 'field': Sequence.sequence, 'no_uniques': True},
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
 
@@ -174,9 +191,9 @@ class SequencesAPI(Resource):
         """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
         args = filter_arguments.parse_args(request)
 
-        refs = db.session.query(RefSeq.id).join(Species).filter(Species.name == species).filter(RefSeq.name.in_(genomic_datasets.split(','))).all()
+        sample_ids = db.session.query(Sample.id).join(DataSet).join(Species).filter(Species.name == species).filter(DataSet.name.in_(genomic_datasets.split(','))).all()
 
-        if not refs:
+        if not sample_ids:
             raise BadRequest('Bad species name or reference set name %s' % species)
 
         required_cols = json.loads(args['cols'])
@@ -197,7 +214,7 @@ class SequencesAPI(Resource):
             .join(RefSeq)\
             .join(SampleSequence, SampleSequence.sequence_id == Sequence.id)\
             .join(Sample)\
-            .filter(RefSeq.id.in_(refs))\
+            .filter(Sample.id.in_(sample_ids))\
             .group_by(Sequence.name)
 
         filter_spec = []
@@ -324,14 +341,20 @@ genomic_sample_filters = {
     'type': {'model': 'Sample', 'field': Sample.type},
     'date': {'model': 'Sample', 'field': Sample.date},
     'report': {'model': 'Sample', 'field': Sample.report_link.label('report'), 'fieldname': 'report'},
+    'sample_description': {'model': 'Sample', 'field': Sample.description.label('sample_description'), 'fieldname': 'sample_description'},
 
     'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'study_name'},
     'institute': {'model': 'Study', 'field': Study.institute},
     'researcher': {'model': 'Study', 'field': Study.researcher},
     'reference': {'model': 'Study', 'field': Study.reference},
     'contact': {'model': 'Study', 'field': Study.contact},
-    'accession_id': {'model': 'Study', 'field': Study.accession_id},
-    'accession_reference': {'model': 'Study', 'field': Study.accession_reference},
+    'study_description': {'model': 'Study', 'field': Study.description.label('study_description'), 'fieldname': 'study_description'},
+
+    'assembly_id': {'model': 'RefSeq', 'field': RefSeq.name.label('assembly_id'), 'fieldname': 'assembly_id'},
+    'assembly_reference': {'model': 'RefSeq', 'field': RefSeq.reference.label('assembly_reference'), 'fieldname': 'assembly_reference'},
+    'chromosome': {'model': 'RefSeq', 'field': RefSeq.chromosome},
+    'assembly_start': {'model': 'RefSeq', 'field': RefSeq.start.label('assembly_start'), 'fieldname': 'assembly_start'},
+    'assembly_end': {'model': 'RefSeq', 'field': RefSeq.end.label('assembly_end'), 'fieldname': 'assembly_end'},
 
     'allele': {'model': None, 'field': None},
 }
@@ -420,18 +443,18 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
     ref_ids = []
 
     for dset in genomic_datasets:
-        ref = db.session.query(RefSeq.id)\
+        ref = db.session.query(DataSet.id)\
             .join(Species)\
             .filter(Species.id == sp.id)\
-            .filter(RefSeq.name == dset)
+            .filter(DataSet.name == dset)
         ref = ref.one_or_none()
         if ref is None:
-            return 'No such genomic dataset %s' % dset, '404'
+            raise BadRequest('No such genomic dataset %s' % dset)
         ref_ids.append(ref.id)
 
     sample_query = db.session.query(*attribute_query)\
         .join(Study)\
-        .filter(Sample.ref_seq_id.in_(ref_ids))
+        .filter(Sample.data_set_id.in_(ref_ids))
 
     allele_filters = None
 
@@ -464,21 +487,23 @@ def find_genomic_filter_params(species, genomic_datasets):
     sp = db.session.query(Species.id).filter(Species.name == species).one_or_none()
 
     if sp is None:
-        raise BadRequest('No such species')
+        return []
 
     for dset in genomic_datasets:
-        ref = db.session.query(RefSeq.id)\
+        ref = db.session.query(DataSet.id)\
             .join(Species)\
             .filter(Species.id == sp.id)\
-            .filter(RefSeq.name == dset)
+            .filter(DataSet.name == dset)
         ref = ref.one_or_none()
         if ref is None:
             return 'No such genomic dataset %s' % dset, '404'
 
-    genes = db.session.query(Feature.name)\
-        .join(RefSeq)\
-        .filter(Feature.feature == 'gene') \
-        .filter(RefSeq.name.in_(genomic_datasets)).all()
+    genes = db.session.query(Sequence.name)\
+        .join(SampleSequence, SampleSequence.sequence_id == Sequence.id)\
+        .join(Sample, SampleSequence.sample_id == Sample.id)\
+        .join(DataSet)\
+        .filter(Sequence.type.like('%REGION')) \
+        .filter(DataSet.name.in_(genomic_datasets)).all()
 
     genes = sorted([gene[0] for gene in genes])
     gene_types = [gene[0:4] for gene in genes]

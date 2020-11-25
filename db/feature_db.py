@@ -1,9 +1,9 @@
 from app import sql_db as db
 
+
 class Species(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
-    samples = db.relationship("Sample", backref='species')
 
 
 class RefSeq(db.Model):
@@ -12,9 +12,20 @@ class RefSeq(db.Model):
     locus = db.Column(db.String(100))
     sequence = db.Column(db.Text(10000000))
     length = db.Column(db.Integer)
+    chromosome = db.Column(db.String(10))
+    start = db.Column(db.BigInteger)
+    end = db.Column(db.BigInteger)
+    reference = db.Column(db.String(500))
     species_id = db.Column(db.Integer, db.ForeignKey('species.id'))
     species = db.relationship('Species', backref='refseqs')
-    samples = db.relationship("Sample", backref='ref_seq')
+
+
+class DataSet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    locus = db.Column(db.String(100))
+    species_id = db.Column(db.Integer, db.ForeignKey('species.id'))
+    species = db.relationship('Species', backref='datasets')
 
 
 class SampleSequence(db.Model):
@@ -59,6 +70,7 @@ class Sequence(db.Model):
     type = db.Column(db.String(100))
     novel = db.Column(db.Boolean)
     deleted = db.Column(db.Boolean)
+    functional = db.Column(db.String(1))
     sequence = db.Column(db.Text(10000000))
     gapped_sequence = db.Column(db.Text(10000000))
     species_id = db.Column(db.Integer, db.ForeignKey('species.id'))
@@ -71,23 +83,25 @@ class Sample(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     type = db.Column(db.String(100))
+    description = db.Column(db.String(500))
     date = db.Column(db.DateTime, nullable=False)
     study_id = db.Column(db.Integer, db.ForeignKey('study.id'))
     sequences = db.relationship("Sequence", secondary='sample_sequence')
     species_id = db.Column(db.Integer, db.ForeignKey('species.id'))
     ref_seq_id = db.Column(db.Integer, db.ForeignKey('ref_seq.id'))
+    data_set_id = db.Column(db.Integer, db.ForeignKey('data_set.id'))
     report_link = db.Column(db.String(200))
+    data_set = db.relationship("DataSet", backref='samples')
 
 
 class Study(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(500))
     institute = db.Column(db.String(500))
     researcher = db.Column(db.String(200))
     reference = db.Column(db.String(500))
     contact = db.Column(db.String(200))
-    accession_id = db.Column(db.String(50))
-    accession_reference = db.Column(db.String(200))
     samples = db.relationship("Sample", backref='study')
 
 

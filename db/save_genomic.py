@@ -1,26 +1,63 @@
 # FUnctions to save genomic elements to the VDJbase database
 
-from db.feature_db import Species, RefSeq, Feature, Sample, SampleSequence, Sequence, Study
+from db.feature_db import Species, RefSeq, Feature, Sample, SampleSequence, Sequence, Study, DataSet
 from app import db
 from Bio.Seq import Seq
 from sqlalchemy import and_
 
 
-def save_genomic_dataset_details(locus, name, ref_file, species, sequence):
+feature_type = {
+    "5'UTR": 'five_prime_UTR',
+    'L-PART1': 'CDS',
+    'V-INTRON': 'intron',
+    'L-PART2': 'CDS',
+    'V-REGION': 'CDS',
+    'D-REGION': 'CDS',
+    'J-REGION': 'CDS',
+    "3'UTR": 'three_prime_UTR',
+    'J-HEPTAMER': 'UTR',
+    'J-NONAMER': 'UTR',
+    'V-HEPTAMER': 'UTR',
+    'V-NONAMER': 'UTR',
+    "D-3-HEPTAMER": 'UTR',
+    "D-£-NONAMER": 'UTR',
+    "D-5-HEPTAMER": 'UTR',
+    "D-5-NONAMER": 'UTR',
+}
+
+
+def save_genomic_dataset_details(locus, name, species):
     sp = db.session.query(Species).filter_by(name=species).one_or_none()
     if not sp:
         sp = Species(name=species)
         db.session.add(sp)
 
-    ref_seq = RefSeq(name=name, locus=locus, species=sp, sequence=sequence, length=len(sequence))
+    data_set = DataSet(name=name, locus=locus, species=sp)
+    db.session.add(data_set)
+    return sp, data_set
+
+
+def save_genomic_ref_seq(locus, name, sp, ref_sequence, reference, chromosome, start, end):
+    ref_seq = RefSeq(name=name, locus=locus, species=sp, sequence=ref_sequence, length=len(ref_sequence), reference=reference, chromosome=chromosome, start=start, end=end)
     db.session.add(ref_seq)
+    return ref_seq
 
 
-def save_genomic_study(name, institute, researcher, reference, contact, accession_id, accession_reference):
-    study = Study(name=name, institute=institute, researcher=researcher, reference=reference, contact=contact, accession_id=accession_id, accession_reference=accession_reference)
+def save_genomic_study(name, institute, researcher, reference, contact, description):
+    study = Study(name=name, institute=institute, researcher=researcher, reference=reference, contact=contact, description=description)
     db.session.add(study)
     db.session.commit()
     return study
+
+
+def save_genomic_sample(name, type, date, study, species_id, ref_seq_id, data_set_id, report_link, description):
+    sample = db.session.query(Sample).filter_by(name=name).one_or_none()
+
+    if not sample:
+        sample = Sample(name=name, type=type, date=date, study=study, species_id=species_id, ref_seq_id=ref_seq_id, data_set_id=data_set_id, report_link=report_link, description=description)
+        db.session.add(sample)
+
+    return sample
 
 
 # Find an allele of this gene that exactly matches the specified sequence
@@ -34,6 +71,14 @@ def find_existing_allele(gene_name, gene_sequence):
 
     return seq
 
+def find_allele_by_seq(gene_sequence, species_id):
+    gene_sequence = gene_sequence.lower()
+    seq = db.session.query(Sequence)\
+        .join(Species)\
+        .filter(and_(Species.id == species_id, Sequence.sequence == gene_sequence))\
+        .one_or_none()
+    return seq
+
 
 # Find all alleles of the specified gene
 def find_all_alleles(gene_name):
@@ -41,8 +86,8 @@ def find_all_alleles(gene_name):
     return sequences
 
 
-def save_genomic_sequence(name, imgt_name, novel, deleted, sequence, gapped_sequence, species):
-    sequence = Sequence(name=name, imgt_name=imgt_name, type=find_allele_type(name), novel=novel, deleted=deleted, sequence=sequence, gapped_sequence=gapped_sequence, species=species)
+def save_genomic_sequence(name, imgt_name, allele_type, novel, deleted, functional, sequence, gapped_sequence, species):
+    sequence = Sequence(name=name, imgt_name=imgt_name, type=allele_type, novel=novel, functional=functional, deleted=deleted, sequence=sequence, gapped_sequence=gapped_sequence, species=species)
     db.session.add(sequence)
     return sequence
 
