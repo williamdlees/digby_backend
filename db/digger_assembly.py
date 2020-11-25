@@ -38,7 +38,8 @@ def process_digger_assembly(sample_data, sample_dir):
     db.session.commit()
     study = save_genomic_study(sample_data['Sample'], sample_data['Institute'], sample_data['Researcher'], sample_data['Reference'], sample_data['Contact'], sample_data['Study_description'])
 
-    sample = save_genomic_sample(sample_data['Sample'], sample_data['Type'], sample_data['Date'], study, sp.id, ref_seq.id, data_set.id, '', sample_data['Sample_description'])
+    report_link = '/'.join(['study_data', 'Genomic', sample_data['Species'].replace(' ', '_'), sample_data['Dataset'].replace(' ', '_'), sample_data['Annotation_file']])
+    sample = save_genomic_sample(sample_data['Sample'], sample_data['Type'], sample_data['Date'], study, sp.id, ref_seq.id, data_set.id, report_link, sample_data['Sample_description'])
 
     # all records will be of the same sense. We'll use the sense when preparing the assembly file for gff
 
@@ -133,7 +134,7 @@ def process_digger_assembly(sample_data, sample_dir):
                     functional = 'P'
                 elif row['functional'] == 'ORF':
                     functional = 'O'
-                gs = save_genomic_sequence(name, imgt_name, allele_type, True, False, functional, row['seq'], '', sp)
+                gs = save_genomic_sequence(name, imgt_name, allele_type, True, False, functional, row['seq'], row['seq_gapped'], sp)
                 gs.features.append(region_feature)
 
             SampleSequence(sample=sample, sequence=gs, chromosome='h1', chromo_count=1)

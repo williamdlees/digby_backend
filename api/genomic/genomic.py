@@ -202,6 +202,9 @@ class SequencesAPI(Resource):
             if col not in genomic_sequence_filters.keys():
                 raise BadRequest('Bad column string %s' % args['cols'])
 
+        if 'sequence' in required_cols and 'gapped_sequence' not in required_cols:
+            required_cols.append('gapped_sequence')
+
         attribute_query = [genomic_sequence_filters['name']['field']]        # the query requires the first field to be from Sequence
 
         for col in required_cols:
@@ -397,8 +400,13 @@ class SamplesAPI(Resource):
                         el = el.date().isoformat()
                     elif isinstance(el, str) and len(el) == 0:
                         el = '(blank)'
-                    elif f == 'report' and 'http' not in el:
-                        el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
+                    elif f == 'report':
+                        sample_type = getattr(s, 'type')
+                        if type == 'Igenotyper assembly':
+                            if 'http' not in el:
+                                el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
+                        elif type == 'VDJbase_assembly':
+                           el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
                     if el not in uniques[f]:
                         uniques[f].append(el)
 
