@@ -180,7 +180,13 @@ class SampleInfoApi(Resource):
             if valid_filters[col]['field'] is not None:
                 attribute_query.append(valid_filters[col]['field'])
 
-        info = session.query(*attribute_query).join(GenoDetection).join(Patient).join(SeqProtocol).join(TissuePro).join(Study, Sample.study_id == Study.id).filter(Sample.name==sample).one_or_none()
+        info = session.query(*attribute_query)\
+            .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
+            .join(Patient, Patient.id == Sample.patient_id)\
+            .join(SeqProtocol)\
+            .join(TissuePro)\
+            .join(Study, Sample.study_id == Study.id)\
+            .filter(Sample.name==sample).one_or_none()
 
         if info:
             info = info._asdict()
