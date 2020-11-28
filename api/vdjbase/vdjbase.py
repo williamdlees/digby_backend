@@ -568,7 +568,7 @@ class SequencesApi(Resource):
                         s[k] = v.replace('|', '')
                 s['dataset'] = dset
 
-                if s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
+                if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
                     s['igsnper_plot_path'] = '/'.join([app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset, s['igsnper_plot_path']])
                 else:
                     s['igsnper_plot_path'] = ''
