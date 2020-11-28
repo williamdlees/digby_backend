@@ -359,7 +359,10 @@ genomic_sample_filters = {
     'assembly_start': {'model': 'RefSeq', 'field': RefSeq.start.label('assembly_start'), 'fieldname': 'assembly_start'},
     'assembly_end': {'model': 'RefSeq', 'field': RefSeq.end.label('assembly_end'), 'fieldname': 'assembly_end'},
 
+    'dataset': {'model': 'Dataset', 'field': DataSet.name.label('dataset'), 'fieldname': 'dataset'},
+
     'allele': {'model': None, 'field': None},
+
 }
 
 
@@ -379,6 +382,8 @@ class SamplesAPI(Resource):
 
         if 'study_name' not in required_cols:
             required_cols = ['study_name'] + required_cols
+        if 'dataset' not in required_cols:
+            required_cols.append('dataset')
 
         attribute_query = [genomic_sample_filters['id']['field']]        # the query requires the first field to be from Sample
 
@@ -386,11 +391,22 @@ class SamplesAPI(Resource):
             if col != 'id' and genomic_sample_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sample_filters[col]['field'])
 
-        samples = find_genomic_samples(attribute_query, species, genomic_datasets.split(','), json.loads(args['filter']))
+        filter = json.loads(args['filter'])
+        datasets = genomic_datasets.split(',')
+        samples = find_genomic_samples(attribute_query, species, datasets, filter)
 
         uniques = {}
         for f in required_cols:
             uniques[f] = []
+        uniques['dataset'] = datasets
+
+        # special column for names by dataset
+
+        uniques['names_by_dataset'] = {}
+        filter_applied = len(filter) > 0
+        if filter_applied:
+            for dataset in uniques['dataset']:
+                uniques['names_by_dataset'][dataset] = []
 
         for s in samples:
             for f in required_cols:
@@ -409,6 +425,8 @@ class SamplesAPI(Resource):
                            el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
                     if el not in uniques[f]:
                         uniques[f].append(el)
+            if filter_applied:
+                uniques['names_by_dataset'][s.dataset].append(s.name)
 
         ret = []
         for r in samples:
@@ -462,9 +480,11 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
 
     sample_query = db.session.query(*attribute_query)\
         .join(Study)\
+        .join(DataSet, Sample.data_set_id == DataSet.id)\
         .filter(Sample.data_set_id.in_(ref_ids))
 
     allele_filters = None
+    dataset_filters = []
 
     filter_spec = []
     for f in genomic_filters:
