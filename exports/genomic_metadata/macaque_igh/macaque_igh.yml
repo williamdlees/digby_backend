@@ -1,0 +1,21 @@
+Macaque_IGH:
+    Rh10_VDJbase_assembly:
+        Dataset: Macaque_IGH
+        Sample: Rh10_VDJbase_assembly
+        Sample_description: CORIELL:AG07107
+        Type: VDJbase_assembly
+        Annotation_file: cirelli_matches_rhemac10.csv
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: '2020-11-17'
+        Institute: Institute of Structural and Molecular Biology, Birkbeck College, London
+        Study_description: Rhemac 10 IGH locus auto-annotated by VDJbase, using sequences from Cirelli et al., 2019 as seeds
+        Researcher: William Lees
+        Reference: ''
+        Contact:  william@lees.org.uk
+        Assembly_id: GCF_003339765.1
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/assembly/GCF_003339765.1/
+        Assembly_file: igh_rhemac10_chr-7165128660-169868564.fasta 
+        Chromosome: 10
+        Start_CoOrd: 7165128660
+        End_CoOrd: 169868564

@@ -10,6 +10,5 @@ app.log
 *.pickle
 /static/study_data/VDJbase/samples/
 /static/output/*
-/exports
 report_request.log
 /tests/test_results

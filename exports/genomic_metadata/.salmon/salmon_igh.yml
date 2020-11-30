@@ -1,0 +1,16 @@
+Salmon_IGH:
+    Salmon_IGH_IMGT:
+        Dataset: Salmon_IGH
+        Description: Salmnon IGH locus annotated by IMGT curators
+        Sample: Salmon_IMGT
+        Type: IMGT_assembly
+        URL: http://www.imgt.org/ligmdb/view?id=GU129139
+        Species: Atlantic Salmon
+        Locus: IGH
+        Date: '2020-06-10'
+        Institute: Virologie et Immunologie Moléculaires (VIM), Institut National de la Recherche Agronomique (INRA), Université Paris-Saclay, Jouy-en-Josas, France
+        Researcher: Pierre Boudinot
+        Reference: https://www.frontiersin.org/articles/10.3389/fimmu.2019.02541/full
+        Contact: smaga@uvigo.es
+        Assembly_id: GU129139
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/nuccore/GU129139
