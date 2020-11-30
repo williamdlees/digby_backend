@@ -101,27 +101,27 @@ class DataSetInfoAPI(Resource):
 
 
 valid_filters = {
-    'name': {'model': 'Sample', 'field': Sample.name},
+    'name': {'model': 'Sample', 'field': Sample.name, 'sort': 'underscore'},
     'id': {'model': 'Sample', 'field': Sample.id},
     'chain': {'model': 'Sample', 'field': Sample.chain},
-    'row_reads': {'model': 'Sample', 'field': Sample.row_reads},
+    'row_reads': {'model': 'Sample', 'field': Sample.row_reads, 'sort': 'numeric'},
     'date': {'model': 'Sample', 'field': Sample.date},
     'samples_group': {'model': 'Sample', 'field': Sample.samples_group},
 
-    'patient_name': {'model': 'Patient', 'field': Patient.name.label('patient_name'), 'fieldname': 'name'},
+    'patient_name': {'model': 'Patient', 'field': Patient.name.label('patient_name'), 'fieldname': 'name', 'sort': 'underscore'},
     'sex': {'model': 'Patient', 'field': Patient.sex},
     'ethnic': {'model': 'Patient', 'field': Patient.ethnic},
     'status': {'model': 'Patient', 'field': Patient.status},
     'cohort': {'model': 'Patient', 'field': Patient.cohort},
-    'age': {'model': 'Patient', 'field': Patient.age},
+    'age': {'model': 'Patient', 'field': Patient.age, 'sort': 'numeric'},
     'name_in_paper': {'model': 'Patient', 'field': Patient.name_in_paper},
     'country': {'model': 'Patient', 'field': Patient.country},
 
     'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'name'},
     'institute': {'model': 'Study', 'field': Study.institute},
     'researcher': {'model': 'Study', 'field': Study.researcher},
-    'num_subjects': {'model': 'Study', 'field': Study.num_subjects},
-    'num_samples': {'model': 'Study', 'field': Study.num_samples},
+    'num_subjects': {'model': 'Study', 'field': Study.num_subjects, 'sort': 'numeric'},
+    'num_samples': {'model': 'Study', 'field': Study.num_samples, 'sort': 'numeric'},
     'study_reference': {'model': 'Study', 'field': Study.reference.label('study_reference'), 'fieldname': 'reference'},
     'study_contact': {'model': 'Study', 'field': Study.contact.label('study_contact'), 'fieldname': 'contact'},
     'study_acc_id': {'model': 'Study', 'field': Study.accession_id.label('study_acc_id'), 'fieldname': 'accession_id'},
@@ -137,7 +137,7 @@ valid_filters = {
 
     'sequencing_protocol': {'model': 'SeqProtocol', 'field': SeqProtocol.name.label('sequencing_protocol'), 'fieldname': 'name'},
     'umi': {'model': 'SeqProtocol', 'field': SeqProtocol.umi},
-    'sequencing_length': {'model': 'SeqProtocol', 'field': SeqProtocol.sequencing_length},
+    'sequencing_length': {'model': 'SeqProtocol', 'field': SeqProtocol.sequencing_length, 'sort': 'numeric'},
     'primer_3_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.primers_3_location.label('primer_3_loc'), 'fieldname': 'primers_3_location'},
     'primer_5_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.primers_5_location.label('primer_5_loc'), 'fieldname': 'primers_5_location'},
     'seq_platform': {'model': 'SeqProtocol', 'field': SeqProtocol.sequencing_platform.label('seq_platform'), 'fieldname': 'sequencing_platform'},
@@ -163,7 +163,9 @@ valid_filters = {
     'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
 }
 
-
+rep_sample_bool_values = {
+    'umi': ('UMI', '(blank)')
+}
 
 @ns.route('/sample_info/<string:species>/<string:dataset>/<string:sample>')
 class SampleInfoApi(Resource):
@@ -264,6 +266,9 @@ class SamplesApi(Resource):
                     el = s[f]
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
+                    elif isinstance(el, bool):
+                        if f in rep_sample_bool_values:
+                            el = rep_sample_bool_values[f][0 if el else 1]
                     if (not isinstance(el, str) or len(el) > 0) and el not in uniques[f]:
                         uniques[f].append(el)
                     if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
@@ -278,10 +283,21 @@ class SamplesApi(Resource):
                 name[i] = name[i][1:].zfill(4)
             return name
 
+        def num_sort_key(x):
+            if x is None or x == '':
+                return -1
+            else:
+                try:
+                    return float(x)
+                except:
+                    return 0
+
         for f in required_cols:
             try:
-                if f in ('name', 'patient_name'):
-                    uniques[f].sort(key=lambda x: name_sort_key(x))
+                if 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'underscore':
+                    uniques[f].sort(key=name_sort_key)
+                elif 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'numeric':
+                    uniques[f].sort(key=num_sort_key)
                 elif f != 'names_by_dataset':
                     uniques[f].sort(key=lambda x: (x is None or x == '', x))
             except:
@@ -399,7 +415,12 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
                 f['model'] = valid_filters[f['field']]['model']
                 if 'fieldname' in valid_filters[f['field']]:
                     f['field'] = valid_filters[f['field']]['fieldname']
-                if '(blank)' in f['value']:
+                if f['field'] in rep_sample_bool_values:
+                    value = []
+                    for v in f['value']:
+                        value.append('1' if v == rep_sample_bool_values[f['field']][0] else '0')
+                    f['value'] = value
+                elif '(blank)' in f['value']:
                     f['value'].append('')
                 filter_spec.append(f)
         except:
@@ -447,23 +468,29 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
 
 
 valid_sequence_cols = {
-    'name': {'model': 'Allele', 'field': Allele.name},
+    'name': {'model': 'Allele', 'field': Allele.name, 'sort': 'allele'},
     'gene_name': {'model': 'Gene', 'field': Gene.name.label('gene_name'), 'fieldname': 'name'},
     'igsnper_plot_path': {'model': 'Gene', 'field': Gene.igsnper_plot_path},
     'pipeline_name': {'model': 'Allele', 'field': Allele.pipeline_name},
     'seq': {'model': 'Allele', 'field': Allele.seq, 'no_uniques': True},
-    'seq_len': {'model': 'Allele', 'field': Allele.seq_len},
+    'seq_len': {'model': 'Allele', 'field': Allele.seq_len, 'sort': 'numeric'},
     'similar': {'model': 'Allele', 'field': Allele.similar},
-    'appears': {'model': 'Allele', 'field': Allele.appears},
+    'appears': {'model': 'Allele', 'field': Allele.appears, 'sort': 'numeric'},
     'is_single_allele': {'model': 'Allele', 'field': Allele.is_single_allele},
     'low_confidence': {'model': 'Allele', 'field': Allele.low_confidence},
     'novel': {'model': 'Allele', 'field': Allele.novel},
-    'max_kdiff': {'model': 'Allele', 'field': Allele.max_kdiff},
+    'max_kdiff': {'model': 'Allele', 'field': Allele.max_kdiff, 'sort': 'numeric'},
     'notes': {'model': Allele, 'field': func.group_concat(AlleleConfidenceReport.notes, '\n').label('notes')},
-    'notes_count': {'model': Allele, 'field': func.count(AlleleConfidenceReport.id).label('notes_count')},
+    'notes_count': {'model': Allele, 'field': func.count(AlleleConfidenceReport.id).label('notes_count'), 'sort': 'numeric'},
 
     'sample_id': {'model': None, 'fieldname': 'sample_id'},
     'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
+}
+
+rep_sequence_bool_values = {
+    'is_single_allele': ('Unambiguous', '(blank)'),
+    'low_confidence': ('Low Confidence', '(blank)'),
+    'novel': ('Novel', '(blank)'),
 }
 
 @ns.route('/sequences/<string:species>/<string:dataset>')
@@ -513,7 +540,12 @@ class SequencesApi(Resource):
                     f['model'] = valid_sequence_cols[f['field']]['model']
                     if 'fieldname' in valid_sequence_cols[f['field']]:
                         f['field'] = valid_sequence_cols[f['field']]['fieldname']
-                    if '(blank)' in f['value']:
+                    if f['field'] in rep_sequence_bool_values:
+                        value = []
+                        for v in f['value']:
+                            value.append('1' if v == rep_sequence_bool_values[f['field']][0] else '0')
+                        f['value'] = value
+                    elif '(blank)' in f['value']:
                         f['value'].append('')
                     filter_spec.append(f)
                 # except:
@@ -590,6 +622,9 @@ class SequencesApi(Resource):
                         el = el.date().isoformat()
                     elif isinstance(el, decimal.Decimal):
                         el = '%0.2f' % el
+                    elif isinstance(el, bool):
+                        if f in rep_sequence_bool_values:
+                            el = rep_sequence_bool_values[f][0 if el else 1]
                     if (not isinstance(el, str) or len(el) > 0) and el not in uniques[f]:
                         uniques[f].append(el)
                     if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
@@ -610,10 +645,21 @@ class SequencesApi(Resource):
 
             return((gene_order[gene[0]] if gene[0] in gene_order else 999, gene[1]))
 
+        def num_sort_key(x):
+            if x is None or x == '':
+                return -1
+            else:
+                try:
+                    return float(x)
+                except:
+                    return 0
+
         for f in required_cols:
             try:
-                if f in ('name'):
-                    uniques[f].sort(key=lambda x: allele_sort_key(x))
+                if 'sort' in valid_sequence_cols[f] and valid_sequence_cols[f]['sort'] == 'allele':
+                    uniques[f].sort(key=allele_sort_key)
+                elif 'sort' in valid_sequence_cols[f] and valid_sequence_cols[f]['sort'] == 'numeric':
+                    uniques[f].sort(key=num_sort_key)
                 else:
                     uniques[f] = [x[1] for x in uniques[f].sorted(key=lambda x: (x is None or x == '', x))]
             except:

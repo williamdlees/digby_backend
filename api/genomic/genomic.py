@@ -142,18 +142,23 @@ genomic_sequence_filters = {
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
 
     'feature': {'model': 'Feature', 'field': Feature.feature},
-    'start': {'model': 'Feature', 'field': Feature.start},
-    'end': {'model': 'Feature', 'field': Feature.end},
+    'start': {'model': 'Feature', 'field': Feature.start, 'sort': 'numeric'},
+    'end': {'model': 'Feature', 'field': Feature.end, 'sort': 'numeric'},
     'score': {'model': 'Feature', 'field': Feature.score},
     'strand': {'model': 'Feature', 'field': Feature.strand},
     'frame': {'model': 'Feature', 'field': Feature.frame},
 
     'refseq_name': {'model': 'RefSeq', 'field': RefSeq.name.label('refseq_name'), 'fieldname': 'name'},
 
-    'sample_count': {'field': func.count(Sample.name).label('sample_count'), 'fieldname': 'sample_count'},
-    'appearances': {'field': func.sum(SampleSequence.chromo_count).label('appearances'), 'fieldname': 'appearances'},
+    'sample_count': {'field': func.count(Sample.name).label('sample_count'), 'fieldname': 'sample_count', 'sort': 'numeric'},
+    'appearances': {'field': func.sum(SampleSequence.chromo_count).label('appearances'), 'fieldname': 'appearances', 'sort': 'numeric'},
 
     'sample_id': {'model': None, 'fieldname': 'sample_id'},
+}
+
+genomic_sequence_bool_values = {
+    'novel': ('Novel', '(blank)'),
+    'deleted': ('Deleted', '(blank)'),
 }
 
 filter_arguments = reqparse.RequestParser()
@@ -237,7 +242,12 @@ class SequencesAPI(Resource):
                         f['model'] = genomic_sequence_filters[f['field']]['model']
                         if 'fieldname' in genomic_sequence_filters[f['field']]:
                             f['field'] = genomic_sequence_filters[f['field']]['fieldname']
-                        if '(blank)' in f['value']:
+                        if f['field'] in genomic_sequence_bool_values:
+                            value = []
+                            for v in f['value']:
+                                value.append('1' if v == genomic_sequence_bool_values[f['field']][0] else '0')
+                            f['value'] = value
+                        elif '(blank)' in f['value']:
                             f['value'].append('')
                         filter_spec.append(f)
                 except:
@@ -276,8 +286,29 @@ class SequencesAPI(Resource):
                         el = int(el)
                     elif isinstance(el, str) and len(el) == 0:
                         el = '(blank)'
+                    elif isinstance(el, bool):
+                        if f in genomic_sequence_bool_values:
+                            el = genomic_sequence_bool_values[f][0 if el else 1]
                     if el not in uniques[f]:
                         uniques[f].append(el)
+
+        def num_sort_key(x):
+            if x is None or x == '':
+                return -1
+            else:
+                try:
+                    return float(x)
+                except:
+                    return 0
+
+        for f in required_cols:
+            try:
+                if 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'numeric':
+                    uniques[f].sort(key=num_sort_key)
+                else:
+                    uniques[f].sort(key=lambda x: (x is None or x == '', x))
+            except:
+                pass
 
         ret = []
         for r in seqs:
@@ -356,8 +387,8 @@ genomic_sample_filters = {
     'assembly_id': {'model': 'RefSeq', 'field': RefSeq.name.label('assembly_id'), 'fieldname': 'assembly_id'},
     'assembly_reference': {'model': 'RefSeq', 'field': RefSeq.reference.label('assembly_reference'), 'fieldname': 'assembly_reference'},
     'chromosome': {'model': 'RefSeq', 'field': RefSeq.chromosome},
-    'assembly_start': {'model': 'RefSeq', 'field': RefSeq.start.label('assembly_start'), 'fieldname': 'assembly_start'},
-    'assembly_end': {'model': 'RefSeq', 'field': RefSeq.end.label('assembly_end'), 'fieldname': 'assembly_end'},
+    'assembly_start': {'model': 'RefSeq', 'field': RefSeq.start.label('assembly_start'), 'fieldname': 'assembly_start', 'sort': 'numeric'},
+    'assembly_end': {'model': 'RefSeq', 'field': RefSeq.end.label('assembly_end'), 'fieldname': 'assembly_end', 'sort': 'numeric'},
 
     'dataset': {'model': 'Dataset', 'field': DataSet.name.label('dataset'), 'fieldname': 'dataset'},
 
@@ -384,6 +415,8 @@ class SamplesAPI(Resource):
             required_cols = ['study_name'] + required_cols
         if 'dataset' not in required_cols:
             required_cols.append('dataset')
+        if 'type' not in required_cols:
+            required_cols.append('type')
 
         attribute_query = [genomic_sample_filters['id']['field']]        # the query requires the first field to be from Sample
 
@@ -407,6 +440,24 @@ class SamplesAPI(Resource):
         if filter_applied:
             for dataset in uniques['dataset']:
                 uniques['names_by_dataset'][dataset] = []
+
+        def num_sort_key(x):
+            if x is None or x == '':
+                return -1
+            else:
+                try:
+                    return float(x)
+                except:
+                    return 0
+
+        for f in required_cols:
+            try:
+                if 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'numeric':
+                    uniques[f].sort(key=num_sort_key)
+                else:
+                    uniques[f].sort(key=lambda x: (x is None or x == '', x))
+            except:
+                pass
 
         for s in samples:
             for f in required_cols:
