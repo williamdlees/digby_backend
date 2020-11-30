@@ -13,4 +13,3 @@ app.log
 report_request.log
 /tests/test_results
 /exports
-/exports2
