@@ -12,3 +12,4 @@ app.log
 /static/output/*
 report_request.log
 /tests/test_results
+/exports2
