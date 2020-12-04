@@ -1,5 +1,6 @@
 from app import db
 from db.feature_db import RefSeq, Feature, Species, Sequence, SequenceFeature
+from sqlalchemy import or_
 
 
 def build_gffs():
@@ -24,7 +25,8 @@ def build_gff(species):
 
             features = db.session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
-                fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
+                if feature.feature == 'CDS':
+                    fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
 
         # Alignment file of all alleles and other annotated regions within samples aligned to this reference (SAM, needs external conversion to BAM)
         # FIX - add non coding regions
@@ -34,7 +36,7 @@ def build_gff(species):
 
             features = db.session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
-                if feature.feature != 'gene':
+                if feature.feature == 'CDS':
                     for sequence in feature.sequences:
                         if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION'):  # '_' is a fudge for salmon line-bred, no alleles
                             legend = 'novel ' if sequence.novel else ''
@@ -63,8 +65,11 @@ def build_gff(species):
                                      (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order))
                         order += 1
 
-                imgts = db.session.query(Sequence).join(Species).join(RefSeq).filter(RefSeq.name == ref_seq.name).\
-                    filter(Sequence.name.like(feature.name.split('_')[0] + '*%')).filter(Sequence.novel == False).order_by(Sequence.name.desc()).all()
+                # TODO need a better way of identifying alleles here. Can't really rely on syntax. I think we need to store
+                # the root name and allele as separate fields in the sequence object so that we can cope with different syntax
+                imgts = db.session.query(Sequence).join(Species).join(RefSeq).filter(RefSeq.name == ref_seq.name)\
+                    .filter(or_(Sequence.name.like(feature.name.split('_')[0] + '*%'), Sequence.name == feature.name))\
+                    .filter(Sequence.novel == False).order_by(Sequence.name.desc()).all()
 
                 for imgt in imgts:
                     nt_sequence = imgt.sequence

@@ -73,7 +73,6 @@ class SampleInfoApi(Resource):
         sample = db.session.query(Sample)\
             .join(Species)\
             .join(Study, Study.id == Sample.study_id)\
-            .join(RefSeq, RefSeq.id == Sample.ref_seq_id)\
             .filter(Species.name == species)\
             .filter(Study.name == study_name)\
             .filter(Sample.name == sample).one_or_none()
@@ -91,6 +90,7 @@ class SampleInfoApi(Resource):
             .join(Species, Species.id == Sample.species_id)\
             .join(Study, Study.id == Sample.study_id)\
             .join(RefSeq, RefSeq.id == Sample.ref_seq_id)\
+            .join(DataSet, DataSet.id == Sample.data_set_id)\
             .filter(Species.name == species)\
             .filter(Study.name == study_name)\
             .filter(Sample.id == sample.id).one_or_none()
@@ -102,8 +102,6 @@ class SampleInfoApi(Resource):
                     info[k] = v.date().isoformat()
 
         return info
-
-
 
 
 range_arguments = reqparse.RequestParser()
@@ -132,7 +130,7 @@ def enumerate_feature(f):
 
 
 genomic_sequence_filters = {
-    'name': {'model': 'Sequence', 'field': Sequence.name},
+    'name': {'model': 'Sequence', 'field': Sequence.name, 'sort': 'name'},
     'imgt_name': {'model': 'Sequence', 'field': Sequence.imgt_name},
     'type': {'model': 'Sequence', 'field': Sequence.type},
     'novel': {'model': 'Sequence', 'field': Sequence.novel},
@@ -141,18 +139,7 @@ genomic_sequence_filters = {
     'sequence': {'model': 'Sequence', 'field': Sequence.sequence, 'no_uniques': True},
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
 
-    'feature': {'model': 'Feature', 'field': Feature.feature},
-    'start': {'model': 'Feature', 'field': Feature.start, 'sort': 'numeric'},
-    'end': {'model': 'Feature', 'field': Feature.end, 'sort': 'numeric'},
-    'score': {'model': 'Feature', 'field': Feature.score},
-    'strand': {'model': 'Feature', 'field': Feature.strand},
-    'frame': {'model': 'Feature', 'field': Feature.frame},
-
-    'refseq_name': {'model': 'RefSeq', 'field': RefSeq.name.label('refseq_name'), 'fieldname': 'name'},
-
-    'sample_count': {'field': func.count(Sample.name).label('sample_count'), 'fieldname': 'sample_count', 'sort': 'numeric'},
-    'appearances': {'field': func.sum(SampleSequence.chromo_count).label('appearances'), 'fieldname': 'appearances', 'sort': 'numeric'},
-
+    'appearances': {'field': func.count(Sample.id.distinct()).label('appearances'), 'fieldname': 'appearances', 'sort': 'numeric'},
     'sample_id': {'model': None, 'fieldname': 'sample_id'},
 }
 
@@ -196,10 +183,26 @@ class SequencesAPI(Resource):
         """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
         args = filter_arguments.parse_args(request)
 
-        sample_ids = db.session.query(Sample.id).join(DataSet).join(Species).filter(Species.name == species).filter(DataSet.name.in_(genomic_datasets.split(','))).all()
+        sp = db.session.query(Species).filter(Species.name == species).one_or_none()
+        if sp is None:
+            raise BadRequest('Bad species name %s' % species)
 
-        if not sample_ids:
-            raise BadRequest('Bad species name or reference set name %s' % species)
+        ds = db.session.query(DataSet.id)\
+            .filter(DataSet.species_id == sp.id)\
+            .filter(DataSet.name.in_(genomic_datasets.split(',')))\
+            .all()
+        if ds is None:
+            raise BadRequest('Bad data set name in %s' % genomic_datasets)
+
+        sequence_id_query = db.session.query(Sequence.id.distinct())\
+            .join(SampleSequence, Sequence.id == SampleSequence.sequence_id)\
+            .join(Sample, Sample.id == SampleSequence.sample_id)\
+            .join(DataSet)\
+            .join(Species)\
+            .filter(Species.name == species)\
+            .filter(DataSet.id.in_(ds))
+
+        sequence_ids = sequence_id_query.all()
 
         required_cols = json.loads(args['cols'])
 
@@ -217,13 +220,11 @@ class SequencesAPI(Resource):
                 attribute_query.append(genomic_sequence_filters[col]['field'])
 
         seq_query = db.session.query(*attribute_query)\
-            .join(SequenceFeature, SequenceFeature.sequence_id == Sequence.id)\
-            .join(Feature)\
-            .join(RefSeq)\
-            .join(SampleSequence, SampleSequence.sequence_id == Sequence.id)\
-            .join(Sample)\
-            .filter(Sample.id.in_(sample_ids))\
-            .group_by(Sequence.name)
+            .filter(Sequence.id.in_(sequence_ids))\
+            .join(SampleSequence, Sequence.id == SampleSequence.sequence_id)\
+            .join(Sample, Sample.id == SampleSequence.sample_id)\
+            .group_by(Sequence.id)
+
 
         filter_spec = []
         sample_count_filters = []
@@ -264,11 +265,17 @@ class SequencesAPI(Resource):
                 seq_query = seq_query.having(OPERATORS[f['op']](func.sum(SampleSequence.chromo_count), f['value']))
 
         if sample_id_filter is not None:
-            alleles_with_samples = db.session.query(Sequence.name)\
-                .join(SampleSequence)\
-                .join(Sample)\
-                .filter(Sample.id.in_(sample_id_filter['value'])).all()
-            seq_query = seq_query.filter(Sequence.name.in_(alleles_with_samples))
+            filtered_sample_ids = []
+
+            for dataset, names in sample_id_filter['value'].items():
+                sample_ids = db.session.query(Sample.id.distinct())\
+                    .join(DataSet)\
+                    .filter(DataSet.name == dataset)\
+                    .filter(Sample.name.in_(names)).all()
+                filtered_sample_ids.extend(sample_ids)
+
+            filtered_sequence_ids = sequence_id_query.filter(Sample.id.in_(filtered_sample_ids)).all()
+            seq_query = seq_query.filter(Sequence.id.in_(filtered_sequence_ids))
 
         seqs = seq_query.all()
 
@@ -292,6 +299,34 @@ class SequencesAPI(Resource):
                     if el not in uniques[f]:
                         uniques[f].append(el)
 
+        # something of a sort order for names
+
+        def allele_sort_key(x):
+            if x is None or x == '' or 'IGH' not in x:
+                return ''
+            name = x.split('IGH')[1]
+            seg = name[:1]
+            name = name[1:]
+            allele = '0000'
+            if '*' in name:
+                name, allele = name.split('*')
+                allele = allele.replace('0', '').zfill(4)
+            if '.' in name:
+                fam, num = name.split('.', 1)
+            elif '-' in name:
+                fam, num, = name.split('-', 1)
+            else:
+                fam = ''
+                num = name
+
+            if '.' in num:
+                num = num.split('.', 1)[0]
+            if '-' in num:
+                num = num.split('-', 1)[0]
+            num = num.zfill(8)
+            return seg+num+allele
+
+
         def num_sort_key(x):
             if x is None or x == '':
                 return -1
@@ -305,6 +340,8 @@ class SequencesAPI(Resource):
             try:
                 if 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'numeric':
                     uniques[f].sort(key=num_sort_key)
+                elif 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'name':
+                    uniques[f].sort(key=allele_sort_key)
                 else:
                     uniques[f].sort(key=lambda x: (x is None or x == '', x))
             except:
@@ -325,7 +362,13 @@ class SequencesAPI(Resource):
 
         for spec in sort_specs:
             if spec['field'] in genomic_sequence_filters.keys():
-                ret = sorted(ret, key=lambda x : (x[spec['field']] is None,  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                f = spec['field']
+                if 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'numeric':
+                    ret = sorted(ret, key=lambda x: num_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                elif 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'name':
+                    ret = sorted(ret, key=lambda x: allele_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                else:
+                    ret = sorted(ret, key=lambda x : (x[spec['field']] is None,  x[spec['field']]), reverse=(spec['order'] == 'desc'))
 
         total_size = len(ret)
 
@@ -531,6 +574,7 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
 
     sample_query = db.session.query(*attribute_query)\
         .join(Study)\
+        .join(RefSeq, Sample.ref_seq_id == RefSeq.id)\
         .join(DataSet, Sample.data_set_id == DataSet.id)\
         .filter(Sample.data_set_id.in_(ref_ids))
 

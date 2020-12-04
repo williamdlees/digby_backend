@@ -32,8 +32,11 @@ def save_genomic_dataset_details(locus, name, species):
         sp = Species(name=species)
         db.session.add(sp)
 
-    data_set = DataSet(name=name, locus=locus, species=sp)
-    db.session.add(data_set)
+    data_set = db.session.query(DataSet).filter(DataSet.name == name).filter(DataSet.species == sp).one_or_none()
+    if not data_set:
+        data_set = DataSet(name=name, locus=locus, species=sp)
+        db.session.add(data_set)
+
     return sp, data_set
 
 
@@ -76,8 +79,9 @@ def find_allele_by_seq(gene_sequence, species_id):
     seq = db.session.query(Sequence)\
         .join(Species)\
         .filter(and_(Species.id == species_id, Sequence.sequence == gene_sequence))\
-        .one_or_none()
-    return seq
+        .all()
+
+    return seq[0] if len(seq) > 0 else None
 
 
 # Find all alleles of the specified gene
@@ -87,7 +91,7 @@ def find_all_alleles(gene_name):
 
 
 def save_genomic_sequence(name, imgt_name, allele_type, novel, deleted, functional, sequence, gapped_sequence, species):
-    sequence = Sequence(name=name, imgt_name=imgt_name, type=allele_type, novel=novel, functional=functional, deleted=deleted, sequence=sequence, gapped_sequence=gapped_sequence, species=species)
+    sequence = Sequence(name=name, imgt_name=imgt_name, type=allele_type, novel=novel, functional=functional, deleted=deleted, sequence=sequence.lower(), gapped_sequence=gapped_sequence.lower(), species=species)
     db.session.add(sequence)
     return sequence
 

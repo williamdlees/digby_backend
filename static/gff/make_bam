@@ -4,18 +4,24 @@
 #samtools view -S -b Human_Human_IGH_imgt.sam > Human_Human_IGH_imgt.bam
 #samtools index Human_Human_IGH_imgt.bam
 
-samtools view -S -b Atlantic_Salmon_GU129139.sam > Atlantic_Salmon_GU129139.bam
-samtools index Atlantic_Salmon_GU129139.bam
+#samtools view -S -b Atlantic_Salmon_GU129139.sam > Atlantic_Salmon_GU129139.bam
+#samtools index Atlantic_Salmon_GU129139.bam
 
-samtools view -S -b Atlantic_Salmon_GU129139_imgt.sam > Atlantic_Salmon_GU129139_imgt.bam
-samtools index Atlantic_Salmon_GU129139_imgt.bam
+#samtools view -S -b Atlantic_Salmon_GU129139_imgt.sam > Atlantic_Salmon_GU129139_imgt.bam
+#samtools index Atlantic_Salmon_GU129139_imgt.bam
 
-samtools view -S -b Rhesus_Macaque_GCF_003339765.1.sam > Rhesus_Macaque_GCF_003339765.1.bam
-samtools index Rhesus_Macaque_GCF_003339765.1.bam
+#samtools view -S -b Rhesus_Macaque_GCF_003339765.1.sam > Rhesus_Macaque_GCF_003339765.1.bam
+#samtools index Rhesus_Macaque_GCF_003339765.1.bam
 
-samtools view -S -b Rhesus_Macaque_GCF_003339765.1_imgt.sam > Rhesus_Macaque_GCF_003339765.1_imgt.bam
-samtools index Rhesus_Macaque_GCF_003339765.1_imgt.bam
+#samtools view -S -b Rhesus_Macaque_GCF_003339765.1_imgt.sam > Rhesus_Macaque_GCF_003339765.1_imgt.bam
+#samtools index Rhesus_Macaque_GCF_003339765.1_imgt.bam
 
-
+rm *.bam
+rm *.faidx
+echo "making bam files"
+for foo in *.sam; do name=${foo%.*}; samtools view -S -b $name.sam > $name.bam; done
+echo "indexing bam files"
+for foo in *.bam; do samtools index $foo; done
+echo "indexing fasta files"
 for foo in *.fasta; do samtools faidx $foo; done
-
+echo "done"
