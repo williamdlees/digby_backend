@@ -11,7 +11,8 @@ from db.save_genomic import save_genomic_dataset_details, save_genomic_study, sa
 
 def process_digger_record(sample_data, sample_dir, novels):
     results = []
-    needed_items = ['Assembly_id', 'Assembly_reference', 'Annotation_file', 'Assembly_file', 'Chromosome', 'Start_CoOrd', 'End_CoOrd', 'Sample_description', 'Study_description']
+    needed_items = ['Assembly_id', 'Assembly_reference', 'Annotation_file', 'Assembly_file', 'Chromosome', 'Start_CoOrd',
+                    'End_CoOrd', 'Sample_description', 'Study_description', 'Annotation_method', 'Annotation_reference']
 
     valid_entry = True
     for needed_item in needed_items:
@@ -51,7 +52,8 @@ def process_digger_record(sample_data, sample_dir, novels):
         annotation_filename, contig_filter = annotation_filename.split('>')
 
     report_link = '/'.join(['study_data', 'Genomic', sample_data['Species'].replace(' ', '_'), sample_data['Dataset'].replace(' ', '_'), annotation_filename])
-    sample = save_genomic_sample(sample_data['Sample'], sample_data['Type'], sample_data['Date'], study, sp.id, ref_seq.id, data_set.id, report_link, sample_data['Sample_description'])
+    sample = save_genomic_sample(sample_data['Sample'], sample_data['Type'], sample_data['Date'], study, sp.id, ref_seq.id, data_set.id, report_link,
+                                 sample_data['Sample_description'], sample_data['Annotation_method'], sample_data['Annotation_reference'])
 
     # all records will be of the same sense. We'll use the sense when preparing the assembly file for gff
 

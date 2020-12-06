@@ -53,11 +53,12 @@ def save_genomic_study(name, institute, researcher, reference, contact, descript
     return study
 
 
-def save_genomic_sample(name, type, date, study, species_id, ref_seq_id, data_set_id, report_link, description):
+def save_genomic_sample(name, type, date, study, species_id, ref_seq_id, data_set_id, report_link, description, annot_method, annot_ref):
     sample = db.session.query(Sample).filter_by(name=name).one_or_none()
 
     if not sample:
-        sample = Sample(name=name, type=type, date=date, study=study, species_id=species_id, ref_seq_id=ref_seq_id, data_set_id=data_set_id, report_link=report_link, description=description)
+        sample = Sample(name=name, type=type, date=date, study=study, species_id=species_id, ref_seq_id=ref_seq_id, data_set_id=data_set_id,
+                        report_link=report_link, description=description, annot_method=annot_method, annot_ref=annot_ref)
         db.session.add(sample)
 
     return sample

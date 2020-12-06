@@ -418,6 +418,8 @@ genomic_sample_filters = {
     'type': {'model': 'Sample', 'field': Sample.type},
     'date': {'model': 'Sample', 'field': Sample.date},
     'report': {'model': 'Sample', 'field': Sample.report_link.label('report'), 'fieldname': 'report'},
+    'annot_method': {'model': 'Sample', 'field': Sample.annot_method},
+    'annot_ref': {'model': 'Sample', 'field': Sample.annot_ref},
     'sample_description': {'model': 'Sample', 'field': Sample.description.label('sample_description'), 'fieldname': 'sample_description'},
 
     'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'study_name'},
@@ -460,6 +462,11 @@ class SamplesAPI(Resource):
             required_cols.append('dataset')
         if 'type' not in required_cols:
             required_cols.append('type')
+        if 'report' in required_cols:
+            if 'annot_method' not in required_cols:
+                required_cols.append('annot_method')
+            if 'annot_ref' not in required_cols:
+                required_cols.append('annot_ref')
 
         attribute_query = [genomic_sample_filters['id']['field']]        # the query requires the first field to be from Sample
 

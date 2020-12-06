@@ -91,6 +91,8 @@ class Sample(db.Model):
     ref_seq_id = db.Column(db.Integer, db.ForeignKey('ref_seq.id'))
     data_set_id = db.Column(db.Integer, db.ForeignKey('data_set.id'))
     report_link = db.Column(db.String(200))
+    annot_method = db.Column(db.String(200))
+    annot_ref = db.Column(db.String(500))
     data_set = db.relationship("DataSet", backref='samples')
 
 
