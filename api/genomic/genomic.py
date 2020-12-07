@@ -262,7 +262,7 @@ class SequencesAPI(Resource):
 
         for f in appearances_filters:
             if f['op'] in OPERATORS:
-                seq_query = seq_query.having(OPERATORS[f['op']](func.sum(SampleSequence.chromo_count), f['value']))
+                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Sample.id.distinct()), f['value']))
 
         if sample_id_filter is not None:
             filtered_sample_ids = []

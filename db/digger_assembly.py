@@ -12,7 +12,8 @@ from db.save_genomic import save_genomic_dataset_details, save_genomic_study, sa
 def process_digger_record(sample_data, sample_dir, novels):
     results = []
     needed_items = ['Assembly_id', 'Assembly_reference', 'Annotation_file', 'Assembly_file', 'Chromosome', 'Start_CoOrd',
-                    'End_CoOrd', 'Sample_description', 'Study_description', 'Annotation_method', 'Annotation_reference']
+                    'End_CoOrd', 'Sample_description', 'Study_description', 'Annotation_method', 'Annotation_reference',
+                    'Study']
 
     valid_entry = True
     for needed_item in needed_items:
@@ -43,7 +44,7 @@ def process_digger_record(sample_data, sample_dir, novels):
     ref_seq = save_genomic_ref_seq(sample_data['Locus'], sample_data['Assembly_id'], sp, sequence, sample_data['Assembly_reference'],
                                    sample_data['Chromosome'], sample_data['Start_CoOrd'], sample_data['End_CoOrd'])
     db.session.commit()
-    study = save_genomic_study(sample_data['Sample'], sample_data['Institute'], sample_data['Researcher'], sample_data['Reference'], sample_data['Contact'], sample_data['Study_description'])
+    study = save_genomic_study(sample_data['Study'], sample_data['Institute'], sample_data['Researcher'], sample_data['Reference'], sample_data['Contact'], sample_data['Study_description'])
 
     contig_filter = None
     annotation_filename = sample_data['Annotation_file']
