@@ -13,7 +13,7 @@ from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH
 PERSONAL_HAPLOTYPE_SCRIPT = 'Haplotype_plot.R'
 
 
-def run(format, species, genomic_samples, rep_samples, params):
+def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) != 1:
         raise BadRequest('This report processes a single repertoire-derived haplotype')
 

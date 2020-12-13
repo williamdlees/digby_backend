@@ -12,6 +12,9 @@ import pandas as pd
 import math
 from db.vdjbase_formats import *
 import csv
+import traceback
+import json
+import sys
 
 
 from sqlalchemy import update
@@ -42,10 +45,14 @@ def import_studies(ds_dir, species, dataset, session):
                 accession_reference=sd['Accession reference'],
             )
             session.add(s)
-
             study_rec = session.query(Study).filter(Study.name == sd['Project']).one_or_none()
+        except Exception as e:
+            print('Exception processing study record %s' % json.dumps(sd, default=str))
+            traceback.print_exc(limit=2, file=sys.stdout)
+            print("\n\n")
 
-            for gd in sd['Genotype Detections'].values():
+        for gd in sd['Genotype Detections'].values():
+            try:
                 g = session.query(GenoDetection).filter(GenoDetection.name == gd['Name']).one_or_none()
 
                 if g is None:
@@ -63,8 +70,14 @@ def import_studies(ds_dir, species, dataset, session):
                         detection=gd['Repertoire or Germline'],
                     )
                     session.add(g)
+            except Exception as e:
+                print('Exception processing GenoDetection record %s' % json.dumps(gd, default=str))
+                print('Corresponding Study record is %s' % json.dumps(sd, default=str))
+                traceback.print_exc(limit=2, file=sys.stdout)
+                print("\n\n")
 
-            for sp in sd['Sequence Protocol'].values():
+        for sp in sd['Sequence Protocol'].values():
+            try:
                 p = session.query(SeqProtocol).filter(SeqProtocol.name == sp['Name']).one_or_none()
 
                 if p is None:
@@ -78,8 +91,14 @@ def import_studies(ds_dir, species, dataset, session):
                         helix=sp['Helix'],
                     )
                     session.add(p)
+            except Exception as e:
+                print('Exception processing SeqProtocol record %s' % json.dumps(sp, default=str))
+                print('Corresponding Study record is %s' % json.dumps(sd), default=str)
+                traceback.print_exc(limit=2, file=sys.stdout)
+                print("\n\n")
 
-            for tp in sd['Tissue Processing'].values():
+        for tp in sd['Tissue Processing'].values():
+            try:
                 t = session.query(TissuePro).filter(TissuePro.name == tp['Name']).one_or_none()
 
                 if t is None:
@@ -92,8 +111,14 @@ def import_studies(ds_dir, species, dataset, session):
                         isotype=tp['Isotype'],
                     )
                     session.add(t)
+            except Exception as e:
+                print('Exception processing TissuePro record %s' % json.dumps(tp, default=str))
+                print('Corresponding Study record is %s' % json.dumps(sd, default=str))
+                traceback.print_exc(limit=2, file=sys.stdout)
+                print("\n\n")
 
-            for pa in sd['Subjects'].values():
+        for pa in sd['Subjects'].values():
+            try:
                 p = Patient(
                     name=pa['Name'],
                     sex=pa['Sex'],
@@ -107,38 +132,61 @@ def import_studies(ds_dir, species, dataset, session):
                     igsnper_sample_id=0,
                 )
                 session.add(p)
+            except Exception as e:
+                print('Exception processing Subject record %s' % json.dumps(pa, default=str))
+                #print('Corresponding Study record is %s' % json.dumps(sd, default=str))
+                traceback.print_exc(limit=2, file=sys.stdout)
+                print("\n\n")
 
-            for sa in sd['Samples'].values():
+        for sa in sd['Samples'].values():
+            try:
+                dependencies_ok = True
                 gd_id = session.query(GenoDetection.id).filter(GenoDetection.name == sa['Genotype Detection Name']).one_or_none()
                 if gd_id is None:
                     result.append(['sample %s: Genotype Detection record not found' % sa['Name']])
+                    print('sample %s: Genotype Detection record not found' % sa['Name'])
+                    dependencies_ok = False
                 sp_id = session.query(SeqProtocol.id).filter(SeqProtocol.name == sa['Sequence Protocol Name']).one_or_none()
                 if sp_id is None:
                     result.append(['sample %s: Sequence Protocol record not found' % sa['Name']])
+                    print('sample %s: Sequence Protocol record not found' % sa['Name'])
+                    dependencies_ok = False
                 tp_id = session.query(TissuePro.id).filter(TissuePro.name == sa['Tissue Processing Name']).one_or_none()
                 if tp_id is None:
                     result.append(['sample %s: Tissue Processing record not found' % sa['Name']])
+                    print('sample %s: Tissue Processing record not found' % sa['Name'])
+                    dependencies_ok = False
                 pa_id = session.query(Patient.id).filter(Patient.name == sa['Subject Name']).one_or_none()
                 if pa_id is None:
                     result.append(['sample %s: Subject record not found' % sa['Name']])
-                s = Sample(
-                    name=sa['Name'],
-                    chain=sa['Chain'],
-                    row_reads=sa['Reads'],
-                    genotype='',
-                    genotype_graph='',
-                    date=sa['Date'],
-                    samples_group=sa['Sample Group'],
-                    geno_detection_id=gd_id[0],
-                    patient_id=pa_id[0],
-                    seq_protocol_id=sp_id[0],
-                    study_id=study_rec.id,
-                    tissue_pro_id=tp_id[0],
-                    genotype_stats='',
-                )
-                session.add(s)
-        except Exception as e:
-            print('Exception processing metadata file')
+                    print('sample %s: Subject record not found' % sa['Name'])
+                    dependencies_ok = False
+
+                if dependencies_ok:
+                    s = Sample(
+                        name=sa['Name'],
+                        chain=sa['Chain'],
+                        row_reads=sa['Reads'],
+                        genotype='',
+                        genotype_graph='',
+                        date=sa['Date'],
+                        samples_group=sa['Sample Group'],
+                        geno_detection_id=gd_id[0],
+                        patient_id=pa_id[0],
+                        seq_protocol_id=sp_id[0],
+                        study_id=study_rec.id,
+                        tissue_pro_id=tp_id[0],
+                        genotype_stats='',
+                    )
+                    session.add(s)
+                else:
+                    print('Sample %s not added because dependent records were missing.' % sa['Name'])
+
+            except Exception as e:
+                print('Exception adding Samples record %s' % json.dumps(sa, default=str))
+                print('Corresponding Study record is %s' % json.dumps(sd, default=str))
+                traceback.print_exc(limit=2, file=sys.stdout)
+                print("\n\n")
 
     session.commit()
     result.append('Import completed!')

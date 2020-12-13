@@ -20,6 +20,7 @@ def object_as_dict(obj):
     return {c.key: getattr(obj, c.key)
             for c in inspect(obj).mapper.column_attrs}
 
+GENOMIC_SAMPLE_PATH = 'study_data/Genomic'
 
 ns = api.namespace('genomic', description='Genomic data and annotations')
 
@@ -139,7 +140,9 @@ genomic_sequence_filters = {
     'sequence': {'model': 'Sequence', 'field': Sequence.sequence, 'no_uniques': True},
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
 
-    'appearances': {'field': func.count(Sample.id.distinct()).label('appearances'), 'fieldname': 'appearances', 'sort': 'numeric'},
+    'dataset': {'model': 'DataSet', 'field': DataSet.name.label('dataset'), 'fieldname': 'dataset'},
+
+    'appearances': {'model': None, 'field': func.count(Sample.id.distinct()).label('appearances'), 'fieldname': 'appearances', 'sort': 'numeric'},
     'sample_id': {'model': None, 'fieldname': 'sample_id'},
 }
 
@@ -183,110 +186,17 @@ class SequencesAPI(Resource):
         """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
         args = filter_arguments.parse_args(request)
 
-        sp = db.session.query(Species).filter(Species.name == species).one_or_none()
-        if sp is None:
-            raise BadRequest('Bad species name %s' % species)
-
-        ds = db.session.query(DataSet.id)\
-            .filter(DataSet.species_id == sp.id)\
-            .filter(DataSet.name.in_(genomic_datasets.split(',')))\
-            .all()
-        if ds is None:
-            raise BadRequest('Bad data set name in %s' % genomic_datasets)
-
-        sequence_id_query = db.session.query(Sequence.id.distinct())\
-            .join(SampleSequence, Sequence.id == SampleSequence.sequence_id)\
-            .join(Sample, Sample.id == SampleSequence.sample_id)\
-            .join(DataSet)\
-            .join(Species)\
-            .filter(Species.name == species)\
-            .filter(DataSet.id.in_(ds))
-
-        sequence_ids = sequence_id_query.all()
-
         required_cols = json.loads(args['cols'])
-
-        for col in required_cols:
-            if col not in genomic_sequence_filters.keys():
-                raise BadRequest('Bad column string %s' % args['cols'])
-
-        if 'sequence' in required_cols and 'gapped_sequence' not in required_cols:
-            required_cols.append('gapped_sequence')
-
-        attribute_query = [genomic_sequence_filters['name']['field']]        # the query requires the first field to be from Sequence
-
-        for col in required_cols:
-            if col != 'name' and genomic_sequence_filters[col]['field'] is not None:
-                attribute_query.append(genomic_sequence_filters[col]['field'])
-
-        seq_query = db.session.query(*attribute_query)\
-            .filter(Sequence.id.in_(sequence_ids))\
-            .join(SampleSequence, Sequence.id == SampleSequence.sequence_id)\
-            .join(Sample, Sample.id == SampleSequence.sample_id)\
-            .group_by(Sequence.id)
-
-
-        filter_spec = []
-        sample_count_filters = []
-        sample_id_filter = None
-        appearances_filters = []
-        if args['filter']:
-            for f in json.loads(args['filter']):
-                try:
-                    if 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_count':
-                        sample_count_filters.append(f)
-                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_id':
-                        sample_id_filter = f
-                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'appearances':
-                        appearances_filters.append(f)
-                    else:
-                        f['model'] = genomic_sequence_filters[f['field']]['model']
-                        if 'fieldname' in genomic_sequence_filters[f['field']]:
-                            f['field'] = genomic_sequence_filters[f['field']]['fieldname']
-                        if f['field'] in genomic_sequence_bool_values:
-                            value = []
-                            for v in f['value']:
-                                value.append('1' if v == genomic_sequence_bool_values[f['field']][0] else '0')
-                            f['value'] = value
-                        elif '(blank)' in f['value']:
-                            f['value'].append('')
-                        filter_spec.append(f)
-                except:
-                    raise BadRequest('Bad filter string %s' % args['filter'])
-
-        seq_query = apply_filters(seq_query, filter_spec)
-
-        for f in sample_count_filters:
-            if f['op'] in OPERATORS:
-                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Sample.name), f['value']))
-
-        for f in appearances_filters:
-            if f['op'] in OPERATORS:
-                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Sample.id.distinct()), f['value']))
-
-        if sample_id_filter is not None:
-            filtered_sample_ids = []
-
-            for dataset, names in sample_id_filter['value'].items():
-                sample_ids = db.session.query(Sample.id.distinct())\
-                    .join(DataSet)\
-                    .filter(DataSet.name == dataset)\
-                    .filter(Sample.name.in_(names)).all()
-                filtered_sample_ids.extend(sample_ids)
-
-            filtered_sequence_ids = sequence_id_query.filter(Sample.id.in_(filtered_sample_ids)).all()
-            seq_query = seq_query.filter(Sequence.id.in_(filtered_sequence_ids))
-
-        seqs = seq_query.all()
+        ret = find_genomic_sequences(required_cols, genomic_datasets.split(','), species, json.loads(args['filter']))
 
         uniques = {}
         for f in required_cols:
             uniques[f] = []
 
-        for s in seqs:
+        for s in ret:
             for f in required_cols:
                 if genomic_sequence_filters[f]['field'] is not None and 'no_uniques' not in genomic_sequence_filters[f]:
-                    el = getattr(s, f)
+                    el = s[f]
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
                     elif isinstance(el, Decimal):
@@ -347,17 +257,6 @@ class SequencesAPI(Resource):
             except:
                 pass
 
-        ret = []
-        for r in seqs:
-            s = r._asdict()
-            for k, v in s.items():
-                if isinstance(v, datetime):
-                    s[k] = v.date().isoformat()
-                elif isinstance(v, Decimal):
-                    s[k] = int(v)
-
-            ret.append(s)
-
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
         for spec in sort_specs:
@@ -383,6 +282,119 @@ class SequencesAPI(Resource):
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size'])
         }
+
+
+def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_filters):
+    sp = db.session.query(Species).filter(Species.name == species).one_or_none()
+
+    if sp is None:
+        raise BadRequest('Bad species name %s' % species)
+
+    ds = db.session.query(DataSet.id) \
+        .filter(DataSet.species_id == sp.id) \
+        .filter(DataSet.name.in_(genomic_datasets)) \
+        .all()
+
+    if ds is None:
+        raise BadRequest('Bad data set name in %s' % genomic_datasets)
+
+    sequence_id_query = db.session.query(Sequence.id.distinct()) \
+        .join(SampleSequence, Sequence.id == SampleSequence.sequence_id) \
+        .join(Sample, Sample.id == SampleSequence.sample_id) \
+        .join(DataSet) \
+        .join(Species) \
+        .filter(Species.name == species) \
+        .filter(DataSet.id.in_(ds))
+
+    sequence_ids = sequence_id_query.all()
+
+    for col in required_cols:
+        if col not in genomic_sequence_filters.keys():
+            raise BadRequest('Bad column string %s' % col)
+
+    if 'sequence' in required_cols and 'gapped_sequence' not in required_cols:
+        required_cols.append('gapped_sequence')
+
+    attribute_query = [
+        genomic_sequence_filters['name']['field']]  # the query requires the first field to be from Sequence
+
+    for col in required_cols:
+        if col != 'name' and genomic_sequence_filters[col]['field'] is not None:
+            attribute_query.append(genomic_sequence_filters[col]['field'])
+
+    seq_query = db.session.query(*attribute_query) \
+        .filter(Sequence.id.in_(sequence_ids)) \
+        .join(SampleSequence, Sequence.id == SampleSequence.sequence_id) \
+        .join(Sample, Sample.id == SampleSequence.sample_id) \
+        .join(DataSet, DataSet.id == Sample.data_set_id)\
+        .group_by(Sequence.id)
+
+    filter_spec = []
+    sample_count_filters = []
+    sample_id_filter = None
+    appearances_filters = []
+
+    if len(genomic_filters) > 0:
+        for f in genomic_filters:
+            try:
+                if 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_count':
+                    sample_count_filters.append(f)
+                elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_id':
+                    sample_id_filter = f
+                elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'appearances':
+                    appearances_filters.append(f)
+                else:
+                    f['model'] = genomic_sequence_filters[f['field']]['model']
+                    if 'fieldname' in genomic_sequence_filters[f['field']]:
+                        f['field'] = genomic_sequence_filters[f['field']]['fieldname']
+                    if f['field'] in genomic_sequence_bool_values:
+                        value = []
+                        for v in f['value']:
+                            value.append('1' if v == genomic_sequence_bool_values[f['field']][0] else '0')
+                        f['value'] = value
+                    elif '(blank)' in f['value']:
+                        f['value'].append('')
+                    filter_spec.append(f)
+            except:
+                raise BadRequest('Bad filter string %s' % args['filter'])
+
+    seq_query = apply_filters(seq_query, filter_spec)
+
+    for f in sample_count_filters:
+        if f['op'] in OPERATORS:
+            seq_query = seq_query.having(OPERATORS[f['op']](func.count(Sample.name), f['value']))
+
+    for f in appearances_filters:
+        if f['op'] in OPERATORS:
+            seq_query = seq_query.having(OPERATORS[f['op']](func.count(Sample.id.distinct()), f['value']))
+
+    if sample_id_filter is not None:
+        filtered_sample_ids = []
+
+        for dataset, names in sample_id_filter['value'].items():
+            sample_ids = db.session.query(Sample.id.distinct()) \
+                .join(DataSet) \
+                .filter(DataSet.name == dataset) \
+                .filter(Sample.name.in_(names)).all()
+            filtered_sample_ids.extend(sample_ids)
+
+        filtered_sequence_ids = sequence_id_query.filter(Sample.id.in_(filtered_sample_ids)).all()
+        seq_query = seq_query.filter(Sequence.id.in_(filtered_sequence_ids))
+
+    seqs = seq_query.all()
+
+    ret = []
+    for r in seqs:
+        s = r._asdict()
+        for k, v in s.items():
+            if isinstance(v, datetime):
+                s[k] = v.date().isoformat()
+            elif isinstance(v, Decimal):
+                s[k] = int(v)
+
+        ret.append(s)
+
+    return ret
 
 
 @ns.route('/feature_pos/<string:species>/<string:ref_seq_name>/<string:feature_string>')
@@ -580,8 +592,9 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
         ref_ids.append(ref.id)
 
     sample_query = db.session.query(*attribute_query)\
-        .join(Study)\
+        .select_from(Sample)\
         .join(RefSeq, Sample.ref_seq_id == RefSeq.id)\
+        .join(Study, Study.id == Sample.study_id)\
         .join(DataSet, Sample.data_set_id == DataSet.id)\
         .filter(Sample.data_set_id.in_(ref_ids))
 
@@ -603,7 +616,8 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
         except:
             raise BadRequest('Bad filter string %s')
 
-    sample_query = apply_filters(sample_query, filter_spec)
+    if len(filter_spec) > 0:
+        sample_query = apply_filters(sample_query, filter_spec)
 
     if allele_filters is not None:
         samples_with_alleles = db.session.query(Sample.name)\

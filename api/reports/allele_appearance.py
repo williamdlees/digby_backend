@@ -10,7 +10,7 @@ import xlwt
 
 APPEARANCE_SCRIPT = 'allele_appeareance2.R'
 
-def run(format, species, genomic_samples, rep_samples, params):
+def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) == 0:
         raise BadRequest('No repertoire-derived genotypes were selected.')
 

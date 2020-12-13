@@ -6,7 +6,10 @@
       "params": [],
       "filter_params": false,
       "scope": [],
-      "format": ["pdf", "html"]
+      "format": [
+        "pdf",
+        "html"
+      ]
     },
     "rep_single_haplotype": {
       "title": "Haplotype Report",
@@ -20,7 +23,10 @@
       ],
       "filter_params": false,
       "scope": [],
-      "format": ["pdf", "html"]
+      "format": [
+        "pdf",
+        "html"
+      ]
     },
     "rep_genotype": {
       "title": "Genotype List",
@@ -31,12 +37,20 @@
           "id": "per_sample",
           "type": "select",
           "label": "Show graphs for:",
-          "options": ["Each sample", "Individual (representative sample for each subject)"]
+          "options": [
+            "Each sample",
+            "Individual (representative sample for each subject)"
+          ]
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["pdf", "html"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "pdf",
+        "html"
+      ]
     },
     "rep_genotype_heatmap": {
       "title": "Genotype Heatmap",
@@ -47,7 +61,10 @@
           "id": "per_sample",
           "type": "select",
           "label": "Show graphs for",
-          "options": ["Each sample", "Individual (representative sample for each subject)"]
+          "options": [
+            "Each sample",
+            "Individual (representative sample for each subject)"
+          ]
         },
         {
           "id": "f_kdiff",
@@ -56,8 +73,13 @@
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["pdf", "html"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "pdf",
+        "html"
+      ]
     },
     "haplo_heatmap": {
       "title": "Haplotype Heatmap",
@@ -68,13 +90,23 @@
           "id": "per_sample",
           "type": "select",
           "label": "Show graphs for",
-          "options": ["Each sample", "Individual (representative sample for each subject)"]
+          "options": [
+            "Each sample",
+            "Individual (representative sample for each subject)"
+          ]
         },
         {
           "id": "haplo_gene",
           "type": "select",
           "label": "Haplotyping Gene",
-          "options": ["IGHJ6-02_03","IGHJ6-02_03","IGHJ6-02_04","IGHJ6-03_04", "IGHD2-8-01_02", "IGHD2-21-01_02"]
+          "options": [
+            "IGHJ6-02_03",
+            "IGHJ6-02_03",
+            "IGHJ6-02_04",
+            "IGHJ6-03_04",
+            "IGHD2-8-01_02",
+            "IGHD2-21-01_02"
+          ]
         },
         {
           "id": "f_kdiff",
@@ -83,8 +115,12 @@
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["pdf"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "pdf"
+      ]
     },
     "allele_appearance": {
       "title": "Allele Appearances",
@@ -95,24 +131,38 @@
           "id": "ambiguous_alleles",
           "type": "select",
           "label": "Ambiguous Alleles",
-          "options": ["Exclude", "Include"]
+          "options": [
+            "Exclude",
+            "Include"
+          ]
         },
         {
           "id": "novel_alleles",
           "type": "select",
           "label": "Novel Alleles",
-          "options": ["Include", "Exclude"]
+          "options": [
+            "Include",
+            "Exclude"
+          ]
         },
         {
           "id": "sort_order",
           "type": "select",
           "label": "Gene Sort Order",
-          "options": ["Alphabetic", "Locus"]
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["pdf", "xls"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "pdf",
+        "xls"
+      ]
     },
     "heterozygosity": {
       "title": "Heterozygosity",
@@ -123,13 +173,19 @@
           "id": "ambiguous_alleles",
           "type": "select",
           "label": "Ambiguous Alleles",
-          "options": ["Exclude", "Include"]
+          "options": [
+            "Exclude",
+            "Include"
+          ]
         },
         {
           "id": "sort_order",
           "type": "select",
           "label": "Gene Sort Order",
-          "options": ["Alphabetic", "Locus"]
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
         },
         {
           "id": "f_kdiff",
@@ -138,8 +194,12 @@
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["html"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "html"
+      ]
     },
     "allele_usage": {
       "title": "Allele Usage",
@@ -150,13 +210,19 @@
           "id": "ambiguous_alleles",
           "type": "select",
           "label": "Ambiguous Alleles",
-          "options": ["Exclude", "Include"]
+          "options": [
+            "Exclude",
+            "Include"
+          ]
         },
         {
           "id": "sort_order",
           "type": "select",
           "label": "Gene Sort Order",
-          "options": ["Alphabetic", "Locus"]
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
         },
         {
           "id": "f_kdiff",
@@ -165,8 +231,12 @@
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["html"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "html"
+      ]
     },
     "gene_frequencies": {
       "title": "Gene Frequencies",
@@ -176,19 +246,29 @@
         {
           "id": "single_sample",
           "type": "select",
-          "label": "Samp-les Per Subject",
-          "options": ["All Available", "One Selected Sample"]
+          "label": "Samples Per Subject",
+          "options": [
+            "All Available",
+            "One Selected Sample"
+          ]
         },
         {
           "id": "calculate_by",
           "type": "select",
           "label": "Calculate Frequencies By",
-          "options": ["Number of Clones", "Number of Sequences"]
+          "options": [
+            "Number of Clones",
+            "Number of Sequences"
+          ]
         }
       ],
       "filter_params": true,
-      "scope": ["rep_sample"],
-      "format": ["pdf"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "pdf"
+      ]
     },
     "compare_datasets": {
       "title": "Compare two datasets",
@@ -196,8 +276,56 @@
       "params": [
       ],
       "filter_params": false,
-      "scope": ["rep_sample"],
-      "format": ["html"]
+      "scope": [
+        "rep_sample"
+      ],
+      "format": [
+        "html"
+      ]
+    },
+    "download_rep_data": {
+      "title": "Download Data",
+      "description": "Download currently selected sequences ",
+      "thumbnail": "",
+      "params": [
+        {
+          "id": "type",
+          "type": "select",
+          "label": "Download",
+          "options": [
+            "Sample info (CSV)",
+            "Sample files (ZIP)",
+            "Gapped sequences (FASTA)",
+            "Ungapped sequences (FASTA)"
+          ]
+        }
+      ],
+      "scope": [],
+      "format": [
+        "file"
+      ]
+    },
+    "download_gen_data": {
+      "title": "Download Data",
+      "description": "Download currently selected sequences ",
+      "thumbnail": "",
+      "params": [
+        {
+          "id": "type",
+          "type": "select",
+          "label": "Download",
+          "options": [
+            "Sample info (CSV)",
+            "Sample files (ZIP)",
+            "Gapped sequences (FASTA)",
+            "Ungapped sequences (FASTA)"
+          ]
+        }
+      ],
+      "scope": [],
+      "format": [
+        "file"
+      ]
     }
   }
 }

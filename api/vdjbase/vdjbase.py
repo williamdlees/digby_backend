@@ -519,95 +519,8 @@ class SequencesApi(Resource):
         if 'gene_name' in required_cols:
             required_cols.append('igsnper_plot_path')
 
-        sample_id_filter = None
-        filter_spec = []
-        dataset_filters = []
-
-        if args['filter']:
-            for f in json.loads(args['filter']):
-               # try:
-                if f['field'] == 'sample_id':
-                    sample_id_filter = f
-                elif f['field'] == 'dataset':
-#                        f['model'] = 'dataset_table'
-                    dataset_filters.append(f)
-                else:
-                    if f['field'] == 'similar':
-                        value = []
-                        for v in f['value']:
-                            value.append('|' + v.replace(',', '|') + '|')
-                        f['value'] = value
-                    f['model'] = valid_sequence_cols[f['field']]['model']
-                    if 'fieldname' in valid_sequence_cols[f['field']]:
-                        f['field'] = valid_sequence_cols[f['field']]['fieldname']
-                    if f['field'] in rep_sequence_bool_values:
-                        value = []
-                        for v in f['value']:
-                            value.append('1' if v == rep_sequence_bool_values[f['field']][0] else '0')
-                        f['value'] = value
-                    elif '(blank)' in f['value']:
-                        f['value'].append('')
-                    filter_spec.append(f)
-                # except:
-                  #  raise BadRequest('Bad filter string %s' % args['filter'])
-
-        if 'notes_count' in required_cols and 'notes' not in required_cols:
-            required_cols.append('notes')
-
-        ret = []
-
         datasets = dataset.split(',')
-
-        if len(dataset_filters) > 0:
-            apply_filter_to_list(datasets, dataset_filters)
-
-        for dset in datasets:
-            session = vdjbase_dbs[species][dset].session
-
-            attribute_query = []
-
-            for col in required_cols:
-                if valid_sequence_cols[col]['field'] is not None:
-                    attribute_query.append(valid_sequence_cols[col]['field'])
-
-            query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
-            query = apply_filters(query, filter_spec)
-
-            if sample_id_filter is not None:
-                required_ids = []
-                if dset in sample_id_filter['value']:
-                    for id in sample_id_filter['value'][dset]:
-                        required_ids.append(id)
-                alleles_with_samples = session.query(Allele.name)\
-                    .join(AllelesSample)\
-                    .join(Sample)\
-                    .filter(Sample.name.in_(required_ids)).all()
-
-                required_names = []
-                for a in alleles_with_samples:
-                    required_names.append(a[0])
-                query = query.filter(Allele.name.in_(required_names))
-
-            if 'notes' in required_cols:
-                query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(Allele.id)
-
-            res = query.all()
-
-            for r in res:
-                s = r._asdict()
-                for k, v in s.items():
-                    if k == 'similar' and v is not None:
-                        s[k] = v.replace('|', '')
-                s['dataset'] = dset
-
-                if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
-                    s['igsnper_plot_path'] = '/'.join([app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset, s['igsnper_plot_path']])
-                else:
-                    s['igsnper_plot_path'] = ''
-
-                ret.append(s)
-
-
+        ret = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter']))
         total_size = len(ret)
 
         uniques = {}
@@ -633,7 +546,9 @@ class SequencesApi(Resource):
         uniques['dataset'] = dataset.split(',')
 
         # For gene order, it would be a good idea if datasets from the same species agreed!
+        # really need some way of merging gene order from several sets
 
+        session = vdjbase_dbs[species][datasets[0]].session
         gene_order = session.query(Gene.name, Gene.alpha_order).all()
         gene_order = {x[0]: x[1] for x in gene_order}
 
@@ -697,6 +612,95 @@ class SequencesApi(Resource):
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size'])
         }
+
+
+def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
+    sample_id_filter = None
+    filter_spec = []
+    dataset_filters = []
+    if seq_filter:
+        for f in seq_filter:
+            try:
+                if f['field'] == 'sample_id':
+                    sample_id_filter = f
+                elif f['field'] == 'dataset':
+                    #                        f['model'] = 'dataset_table'
+                    dataset_filters.append(f)
+                else:
+                    if f['field'] == 'similar':
+                        value = []
+                        for v in f['value']:
+                            value.append('|' + v.replace(',', '|') + '|')
+                        f['value'] = value
+                    f['model'] = valid_sequence_cols[f['field']]['model']
+                    if 'fieldname' in valid_sequence_cols[f['field']]:
+                        f['field'] = valid_sequence_cols[f['field']]['fieldname']
+                    if f['field'] in rep_sequence_bool_values:
+                        value = []
+                        for v in f['value']:
+                            value.append('1' if v == rep_sequence_bool_values[f['field']][0] else '0')
+                        f['value'] = value
+                    elif '(blank)' in f['value']:
+                        f['value'].append('')
+                    filter_spec.append(f)
+            except:
+                raise BadRequest('Bad filter string: %s' % f)
+
+    if 'notes_count' in required_cols and 'notes' not in required_cols:
+        required_cols.append('notes')
+    ret = []
+    if len(dataset_filters) > 0:
+        apply_filter_to_list(datasets, dataset_filters)
+    for dset in datasets:
+        session = vdjbase_dbs[species][dset].session
+
+        attribute_query = []
+
+        for col in required_cols:
+            if valid_sequence_cols[col]['field'] is not None:
+                attribute_query.append(valid_sequence_cols[col]['field'])
+
+        query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
+        query = apply_filters(query, filter_spec)
+
+        if sample_id_filter is not None:
+            required_ids = []
+            if dset in sample_id_filter['value']:
+                for id in sample_id_filter['value'][dset]:
+                    required_ids.append(id)
+            alleles_with_samples = session.query(Allele.name) \
+                .join(AllelesSample) \
+                .join(Sample) \
+                .filter(Sample.name.in_(required_ids)).all()
+
+            required_names = []
+            for a in alleles_with_samples:
+                required_names.append(a[0])
+            query = query.filter(Allele.name.in_(required_names))
+
+        if 'notes' in required_cols:
+            query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(
+                Allele.id)
+
+        res = query.all()
+
+        for r in res:
+            s = r._asdict()
+            for k, v in s.items():
+                if k == 'similar' and v is not None:
+                    s[k] = v.replace('|', '')
+            s['dataset'] = dset
+
+            if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
+                s['igsnper_plot_path'] = '/'.join(
+                    [app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset,
+                     s['igsnper_plot_path']])
+            else:
+                s['igsnper_plot_path'] = ''
+
+            ret.append(s)
+
+    return ret
 
 
 def find_rep_filter_params(species, datasets):

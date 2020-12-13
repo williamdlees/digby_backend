@@ -12,7 +12,7 @@ from api.reports.report_utils import check_tab_file
 MULTIPLE_GENOTYPE_SCRIPT = "html_multiple_genotype_hoverText.R"
 
 
-def run(format, species, genomic_samples, rep_samples, params):
+def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) != 1:
         raise BadRequest('This report processes a single repertoire-derived genotype')
 

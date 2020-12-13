@@ -14,7 +14,7 @@ GENE_FREQUENCY_PLOT = 'Gene_Usage.R'
 
 
 
-def run(format, species, genomic_samples, rep_samples, params):
+def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) == 0:
         raise BadRequest('No repertoire-derived genotypes were selected.')
 

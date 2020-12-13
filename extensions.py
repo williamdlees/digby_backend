@@ -46,12 +46,12 @@ celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redi
 
 
 @celery.task(bind=True)
-def run_report(self, report_name, format, species, genomic_samples, rep_samples, params):
+def run_report(self, report_name, format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     runner = importlib.import_module('api.reports.' + report_name)
 
     try:
         self.update_state(state='PENDING', meta={'stage': 'preparing data'})
-        return runner.run(format, species, genomic_samples, rep_samples, params)
+        return runner.run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
     except BadRequest as bad:
         print('BadRequest raised during report processing: %s' % bad.description)
         return {'status': 'error', 'description': bad.description}

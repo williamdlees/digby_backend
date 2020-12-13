@@ -128,7 +128,7 @@ class ReportsRunApi(Resource):
                 genomic_filters = json.loads(args.genomic_filters)
 
                 if genomic_datasets is not None:
-                    genomic_samples = find_genomic_samples([Sample.name, RefSeq.name], args.species, genomic_datasets, genomic_filters)
+                    genomic_samples = find_genomic_samples([Sample.id, Sample.name, RefSeq.name], args.species, genomic_datasets, genomic_filters)
                 else:
                     genomic_samples = []
 
@@ -153,12 +153,22 @@ class ReportsRunApi(Resource):
             # maybe we should check types as well
             for p in report_defs[report_name]['params']:
                 if p['id'] not in params.keys():
-                    print("Bad Request: missing parameter %s" % p)
-                    raise BadRequest('Missing parameter: %s' % p)
+                    print("Bad Request: missing parameter %s" % p['id'])
+                    raise BadRequest('Missing parameter: %s' % p['id'])
+
+            # uncomment the following lines to debug reports. They will run in-process and you can step through them
+            # but will always return an exception to the front end
+            # modify the lines for the report to debug
+            #from api.reports.download_gen_data import run
+            #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
+            #raise BadRequest("we're debugging!")
 
             # Pass to Celery
 
-            result = run_report.delay(report_name, args.format, args.species, genomic_samples, rep_samples, params)
+            # When working with Celery, remember that the code for reports (run() and its dependencies) must be
+            # saved *and Celery restarted* for changes to take effect
+
+            result = run_report.delay(report_name, args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
             return {'id': result.id, 'status': 'queued'}
         except JSONDecodeError:
             print('Exception encountered processing JSON-encoded field: %s' % traceback.format_exc())
