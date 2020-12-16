@@ -39,6 +39,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         headers = []
 
         for name, filter in valid_filters.items():
+
             if filter['model'] is not None:
                 attribute_query.append(filter['field'])
                 headers.append(name)

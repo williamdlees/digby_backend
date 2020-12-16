@@ -112,7 +112,6 @@ class ReportsRunApi(Resource):
     @api.expect(report_arguments, validate=True)
     def get(self, report_name):
         try:
-            print("ReportsRunApi called")
             if app.config['TESTING']:
                 with open('report_request.log', 'a') as fo:
                     fo.write('%s\n' % request.url)
@@ -135,7 +134,7 @@ class ReportsRunApi(Resource):
                 rep_datasets = args.rep_datasets.split(',') if len(args.rep_datasets) else None
                 rep_filters = json.loads(args.rep_filters)
 
-                if rep_datasets is not None:
+                if rep_datasets is not None and len(rep_datasets) > 0:
                     rep_samples = find_vdjbase_samples([vdjb_Sample.name, vdjb_Sample.id], args.species, rep_datasets, rep_filters)
                 else:
                     rep_samples = []
@@ -159,7 +158,7 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # modify the lines for the report to debug
-            #from api.reports.download_gen_data import run
+            #from api.reports.download_rep_data import run
             #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
             #raise BadRequest("we're debugging!")
 

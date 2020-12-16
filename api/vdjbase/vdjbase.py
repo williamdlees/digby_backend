@@ -108,8 +108,8 @@ valid_filters = {
     'date': {'model': 'Sample', 'field': Sample.date},
     'samples_group': {'model': 'Sample', 'field': Sample.samples_group},
     'genotype': {'model': Sample, 'field': Sample.genotype},
-    'genotype_stats': {'Sample': None, 'field': Sample.genotype_stats},
-    'genotype_report': {'Sample': None, 'field': Sample.genotype_report},
+    'genotype_stats': {'model': None, 'field': Sample.genotype_stats},
+    'genotype_report': {'model': None, 'field': Sample.genotype_report},
 
     'patient_name': {'model': 'Patient', 'field': Patient.name.label('patient_name'), 'fieldname': 'name', 'sort': 'underscore'},
     'sex': {'model': 'Patient', 'field': Patient.sex},
