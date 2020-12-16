@@ -1,1 +1,1 @@
-IGH samples, processed by the 'new beta' VDJbase pipeline in October 2020
+IGH samples, processed by the 'new beta' VDJbase pipeline on 15th December 2020

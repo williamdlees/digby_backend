@@ -107,6 +107,9 @@ valid_filters = {
     'row_reads': {'model': 'Sample', 'field': Sample.row_reads, 'sort': 'numeric'},
     'date': {'model': 'Sample', 'field': Sample.date},
     'samples_group': {'model': 'Sample', 'field': Sample.samples_group},
+    'genotype': {'model': Sample, 'field': Sample.genotype},
+    'genotype_stats': {'Sample': None, 'field': Sample.genotype_stats},
+    'genotype_report': {'Sample': None, 'field': Sample.genotype_report},
 
     'patient_name': {'model': 'Patient', 'field': Patient.name.label('patient_name'), 'fieldname': 'name', 'sort': 'underscore'},
     'sex': {'model': 'Patient', 'field': Patient.sex},
@@ -233,6 +236,9 @@ class SamplesApi(Resource):
             for field in ('name', 'patient_name', 'study_name'):
                 if field not in required_cols:
                     required_cols.append(field)
+            required_cols.append('genotype')
+            required_cols.append('genotype_stats')
+            required_cols.append('genotype_report')
 
         attribute_query = [valid_filters['id']['field']]        # the query requires the first field to be from Sample
 
@@ -342,20 +348,13 @@ class SamplesApi(Resource):
                 r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name']})
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
-                dp = os.path.join(species, r['dataset'], r['study_name'], r['patient_name'])
-                if os.path.isdir(os.path.join(VDJBASE_SAMPLE_PATH, dp)):            # old format
-                    fp = os.path.join(VDJBASE_SAMPLE_PATH, dp, r['name'] + '_')
-                    sp = '/'.join(['static/study_data/VDJbase/samples', dp, r['name'] + '_'])
-                    r['genotypes']['tigger'] = sp + 'geno_H_binom.tab' if isfile(fp + 'geno_H_binom.tab') else ''
-                    r['genotypes']['ogrdbstats'] = sp + 'genotyped_mut_ogrdb_report.csv' if isfile(fp + 'genotyped_mut_ogrdb_report.csv') else ''
-                    r['genotypes']['ogrdbplot'] = sp + '_ogrdb_plots.pdf' if isfile(fp + '_ogrdb_plots.pdf') else ''
-                else:                                                               # new format
-                    dp = os.path.join(species, r['dataset'], r['study_name'], r['name']).replace('\\', '/')
-                    fp = os.path.join(VDJBASE_SAMPLE_PATH, dp, r['name']).replace('\\', '/')
-                    sp = '/'.join(['static/study_data/VDJbase/samples', dp, r['name']])
-                    r['genotypes']['tigger'] = sp + '.tsv' if isfile(fp + '.tsv') else ''
-                    r['genotypes']['ogrdbstats'] = sp + '_ogrdb_report.csv' if isfile(fp + '_ogrdb_report.csv') else ''
-                    r['genotypes']['ogrdbplot'] = sp + '_ogrdb_plots.pdf' if isfile(fp + '_ogrdb_plots.pdf') else ''
+                sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
+                r['genotypes']['tigger'] = sp + r['genotype'].replace('samples', '') if r['genotype'] else ''
+                r['genotypes']['ogrdbstats'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
+                r['genotypes']['ogrdbplot'] = sp + r['genotype_report'].replace('samples', '') if r['genotype_report'] else ''
+                del r['genotype']
+                del r['genotype_stats']
+                del r['genotype_report']
 
                 session = vdjbase_dbs[species][r['dataset']].session
                 igsnper_path = session.query(Sample.igsnper_plot_path).filter(Sample.name == r['name']).one_or_none()

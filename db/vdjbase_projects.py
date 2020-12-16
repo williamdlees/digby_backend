@@ -413,7 +413,10 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
 # This function returns that row, given the allele name
 
 def find_allele_or_similar(allele_name, session):
-    allele = session.query(Allele).filter(Allele.name == allele_name).one_or_none()
+    try:
+        allele = session.query(Allele).filter(Allele.name == allele_name).one_or_none()
+    except Exception as e:
+        print('foo')
 
     if allele is not None:
         return allele
