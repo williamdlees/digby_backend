@@ -343,7 +343,6 @@ class SamplesApi(Resource):
 
         if 'genotypes' in required_cols:
             for r in ret:
-                # TODO: this section should be changed to use database fields to find the paths.
                 r['genotypes'] = {}
                 r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name']})
 
@@ -357,13 +356,12 @@ class SamplesApi(Resource):
                 del r['genotype_report']
 
                 session = vdjbase_dbs[species][r['dataset']].session
-                igsnper_path = session.query(Sample.igsnper_plot_path).filter(Sample.name == r['name']).one_or_none()
+                igsnper_path = session.query(Sample.igsnper_plot_path, Sample.genotype_report).filter(Sample.name == r['name']).one_or_none()
 
                 if igsnper_path is not None and igsnper_path[0] is not None:
                     r['genotypes']['igsnper'] = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], igsnper_path[0]])
                 else:
                     r['genotypes']['igsnper'] = ''
-
 
 
         if 'haplotypes' in required_cols:
