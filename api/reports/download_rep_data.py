@@ -85,14 +85,16 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 session = vdjbase_dbs[species][dataset].session
                 sample_list = session.query(Sample.genotype, Sample.igsnper_plot_path).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
                 for p1, p2 in sample_list:
-                    sample_dir = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, os.path.dirname(p1.replace('samples/', '')))
-                    if sample_dir not in added_dirs:
-                        zipdir(sample_dir, fo, os.path.join(VDJBASE_SAMPLE_PATH, species))        # sample files
-                        added_dirs.append(sample_dir)
-                    igsnper_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, p2)
-                    if igsnper_path not in added_files:
-                        fo.write(igsnper_path, arcname=igsnper_path.replace(os.path.join(VDJBASE_SAMPLE_PATH, species), ''))
-                        added_files.append(igsnper_path)
+                    if p1 is not None and len(p1) > 0:
+                        sample_dir = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, os.path.dirname(p1.replace('samples/', '')))
+                        if sample_dir not in added_dirs:
+                            zipdir(sample_dir, fo, os.path.join(VDJBASE_SAMPLE_PATH, species))        # sample files
+                            added_dirs.append(sample_dir)
+                    if p2 is not None and len(p2) > 0:
+                        igsnper_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, p2)
+                        if igsnper_path not in added_files:
+                            fo.write(igsnper_path, arcname=igsnper_path.replace(os.path.join(VDJBASE_SAMPLE_PATH, species), ''))
+                            added_files.append(igsnper_path)
 
         return send_report(outfile, 'zip', attachment_filename='sample_data.zip')
 
