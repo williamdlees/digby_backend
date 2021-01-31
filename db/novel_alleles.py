@@ -53,7 +53,7 @@ def find_next_index(novels, species, dataset):
     check_for_dataset(novels, species, dataset)
     max_index = 0
     for row in novels[species][dataset]:
-        max_index = max(max_index, row['index'])
+        max_index = max(max_index, int(row['index']))
     return max_index + 1
 
 
