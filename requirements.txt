@@ -69,3 +69,4 @@ redis
 celery
 matplotlib
 seaborn
+pika

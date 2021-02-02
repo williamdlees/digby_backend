@@ -1,4 +1,6 @@
 # Services related to vdjbase repseq-based data sets
+from flask_cors import cross_origin
+
 from extensions import celery
 from flask import request, redirect, send_file
 from flask_restx import Resource, reqparse, fields, marshal, inputs
@@ -18,6 +20,7 @@ from json.decoder import JSONDecodeError
 import tempfile
 from extensions import run_report
 from celery import current_task
+import flask_cors
 
 SYSDATA = os.path.join(app.config['R_SCRIPT_PATH'], 'sysdata.rda')
 
@@ -171,12 +174,15 @@ class ReportsRunApi(Resource):
             return {'id': result.id, 'status': 'queued'}
         except JSONDecodeError:
             print('Exception encountered processing JSON-encoded field: %s' % traceback.format_exc())
+            app.logger.error('Exception encountered processing JSON-encoded field: %s' % traceback.format_exc())
             raise BadRequest('Error encountered while processing JSON-encoded field')
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
+            app.logger.error('BadRequest raised during report processing: %s' % bad.description)
             raise bad
         except Exception as e:
             print('Exception encountered processing report request: %s' % traceback.format_exc())
+            app.logger.error('Exception encountered processing report request: %s' % traceback.format_exc())
             raise BadRequest('Error encountered while processing report request: %s' % str(e))
 
 
@@ -191,14 +197,20 @@ class ReportsStatus(Resource):
 
         try:
             if status in ['SUCCESS', 'FAILURE']:
+                if status == 'FAILURE':
+                    app.logger.error('Report status FAILURE: results %s' % res.info)
+                elif res.info['status'] == 'error':
+                    app.logger.error('Report status SUCCESS, error: results %s' % res.info)
                 return {'id': job_id, 'status': status, 'results': res.get()}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
             else:
                 return {'id': job_id, 'status': status, 'info': res.info}, {'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'}
         except BadRequest as bad:
             print('BadRequest raised during report processing: %s' % bad.description)
+            app.logger.error('BadRequest raised during report processing: %s' % bad.description)
             raise bad
         except Exception as e:
             print('Exception encountered processing report request: %s' % traceback.format_exc())
+            app.logger.error('Exception encountered processing report request: %s' % traceback.format_exc())
             raise BadRequest('Error encountered while processing report request: %s' % str(e))
 
 

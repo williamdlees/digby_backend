@@ -6,7 +6,7 @@ from flask_bootstrap import Bootstrap
 from flask_admin import Admin
 from flask_cors import CORS
 import os
-import logging.handlers
+import custom_logging
 from reverse_proxied import ReverseProxied
 
 from flask_security.utils import hash_password
@@ -58,9 +58,7 @@ else:
     os.environ['R_LIBS'] = ':'.join(r_libs)
 """
 
-handler = logging.handlers.RotatingFileHandler('app.log', maxBytes=1024 * 1024)
-handler.setLevel(logging.INFO)
-app.logger.addHandler(handler)
+custom_logging.init_logging(app)
 
 mail = Mail(app)
 
@@ -99,6 +97,8 @@ app.register_blueprint(blueprint)
 
 from api.reports.reports import load_report_defs
 load_report_defs()
+
+app.logger.info('Digby backend started')
 
 
 @app.route('/', methods=['GET', 'POST'])
