@@ -13,7 +13,7 @@ class FlaskRabbitLogHandler(logging.Handler):
         self.url = url
         self.appname = appname
         self.connection = pika.BlockingConnection(
-                pika.URLParameters('amqp://vdjbase:pwmu1zxt6vnemv@arfs.lees.org.uk:5672/sysalerts'))
+                pika.URLParameters(self.url))
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue='mail')
 
