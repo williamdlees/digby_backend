@@ -8,8 +8,9 @@ secret*.cfg
 app.log
 /database model.pdf
 *.pickle
-/static/study_data/VDJbase/samples/
+/static/study_data/VDJbase
 /static/output/*
 report_request.log
 /tests/test_results
 /exports
+/uploads
