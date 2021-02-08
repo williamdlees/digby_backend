@@ -8,6 +8,7 @@ from flask_cors import CORS
 import os
 import custom_logging
 from reverse_proxied import ReverseProxied
+from db.vdjbase_db import vdjbase_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
 
 from flask_security.utils import hash_password
 from flask_sqlalchemy import SQLAlchemy
@@ -17,25 +18,21 @@ from extensions import celery
 sql_db = None
 
 
-def create_app():
-    global sql_db
-    app = Flask(__name__)
-    app.config.from_pyfile('config.cfg')
-    app.config.from_pyfile('secret.cfg')
+app = Flask(__name__)
+bootstrap = Bootstrap(app)
+app.config.from_pyfile('config.cfg')
+app.config.from_pyfile('secret.cfg')
 
-    # configure/initialize all your extensions
+# configure/initialize all your extensions
 
-    sql_db = celery.init_app(app)
-
-    return app
+sql_db = celery.init_app(app)
 
 
-app = create_app()
+
 app.wsgi_app = ReverseProxied(app.wsgi_app)
 
 CORS(app)
 
-bootstrap = Bootstrap(app)
 
 app.config['BASE_PATH'] = os.getcwd()
 
@@ -44,6 +41,9 @@ if 'STATIC_PATH' not in app.config:
 
 if 'OUTPUT_PATH' not in app.config:
     app.config['OUTPUT_PATH'] = os.path.join(app.config['STATIC_PATH'], 'output')
+
+if 'UPLOAD_PATH' not in app.config:
+    app.config['UPLOAD_PATH'] = os.path.join(app.config['BASE_PATH'], 'uploads')
 
 app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api/reports/R_scripts')
 
@@ -62,7 +62,6 @@ custom_logging.init_logging(app)
 
 mail = Mail(app)
 
-from db.vdjbase_db import vdjbase_db_init
 
 vdjbase_dbs = vdjbase_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
 
@@ -138,6 +137,26 @@ def update_genomic():
     return update_genomic_db()
 
 
+@app.route('/airrseq', methods=['GET', 'POST'])
+def airrseq():
+    return manage_airrseq(app)
+
+
+@app.route('/airrseq_import_status/<species>/<dataset>', methods=['GET', 'POST'])
+def airrseq_import_status(species, dataset):
+    return airrseq_import(species.replace(' ', '_'), dataset.replace(' ', '_'), app)
+
+
+@app.route('/airrseq_copy_live', methods=['GET', 'POST'])
+def airrseq_copy_live():
+    return airrseq_copy(app, vdjbase_dbs)
+
+
+@app.route('/airrseq_delete/<species>/<dataset>', methods=['GET', 'POST'])
+def airrseq_delete(species, dataset):
+    return airrseq_remove(species, dataset, app, vdjbase_dbs)
+
+
 @app.route('/build_gff', methods=['GET', 'POST'])
 @login_required
 def build_gff():
@@ -148,12 +167,6 @@ def build_gff():
 @login_required
 def export_vdjbase_metadata():
     return db.vdjbase_export.export_metadata()
-
-
-@app.route('/create_vdjbase_db', methods=['GET', 'POST'])
-@login_required
-def create_vdjbase_db():
-    return db.vdjbase_maint.create_databases()
 
 
 @app.route('/create_igsnp/<species>/<dataset>/', methods=['GET', 'POST'])

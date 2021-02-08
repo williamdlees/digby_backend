@@ -1,1 +1,0 @@
-IGH samples, processed by the 'legacy' VDJbase pipeline v0.1.0 in December 2018

@@ -254,7 +254,7 @@ def check_novel_aa(novels, session):
                 report_issue(novel, 'Novel AA', 'Amino Acid(s) previously unreported in this family - %s' % ", ".join(q_codons), session, low_confidence=len(q_codons) > 1)
 
         except TranslationError:
-            result.append('Error translating sequence %s or %s: %s' % (novel.name, novel.closest_ref.name, sys.exc_info()[1]))
+            result.append('Warning: in sequence %s or %s: %s' % (novel.name, novel.closest_ref.name, sys.exc_info()[1]))
 
     return result
 
@@ -462,7 +462,7 @@ def get_ref_vh_codon_usage(session):
                     if aa_seq[i] not in usage[family][i+1]:
                         usage[family][i+1].append(aa_seq[i])
             except TranslationError:
-                result.append('Error translating sequence %s: %s' % (ref.name, sys.exc_info()[1]))
+                result.append('Warning: in sequence %s: %s' % (ref.name, sys.exc_info()[1]))
 
     return usage, result
 
