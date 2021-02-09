@@ -8,7 +8,7 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import make_output_file
 import csv
 
-""" for the future
+
 trans_cols = {
     "GENE": 'gene',
     "ALLELES": 'alleles',
@@ -57,6 +57,7 @@ trans_cols = {
     "k3": 'K3',
     "k4": 'K4',
 }
+"""
 
 # Check that a tab file exists. If it does, check that the columns are correctly capitalised
 # Fix capitalisation if necessary, returning a corrected file
