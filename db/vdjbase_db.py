@@ -200,9 +200,12 @@ def do_airrseq_copy(species, dataset, description, app, vdjbase_dbs):
         os.mkdir(our_sample_path)
 
         shutil.copyfile(os.path.join(our_upload_path, 'db.sqlite3'), os.path.join(our_db_path, 'db.sqlite3'))
-        shutil.copytree(os.path.join(our_upload_path, 'samples'), os.path.join(our_sample_path, 'samples'))
-        with open(os.path.join(our_sample_path, 'db_description.txt'), 'w') as fo:
+        with open(os.path.join(our_db_path, 'db_description.txt'), 'w') as fo:
             fo.write(description)
+
+        for node in os.listdir(os.path.join(our_upload_path, 'samples')):
+            if node[0] != '.' and os.path.isdir(os.path.join(our_upload_path, 'samples', node)):
+                shutil.copytree(os.path.join(our_upload_path, 'samples', node), os.path.join(our_sample_path, node))
 
         if species not in vdjbase_dbs:
             vdjbase_dbs[species] = {}
