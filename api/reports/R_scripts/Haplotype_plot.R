@@ -11,6 +11,8 @@ library('plotly')
 library(optparse)
 library('rabhit')
 
+pdf(NULL)     # This prevents blank Rscript.pdf files being written
+
 ########################
 
 option_list = list(

@@ -44,6 +44,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                     raise BadRequest('Genotype file for sample %s/%s is missing.' % (dataset, name))
 
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
+                genotype = trans_df(genotype)
                 genotype = genotype[genotype.gene.isin(wanted_genes)]
 
                 subject_name = name if len(samples_by_dataset) == 1 else dataset + '_' + name

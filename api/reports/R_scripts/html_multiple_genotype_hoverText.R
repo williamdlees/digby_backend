@@ -73,7 +73,7 @@ output_file<-opt$output_file
 data<- read.delim(file= genotype_path ,header=TRUE,sep="\t",stringsAsFactors = F)
 
 if (!is.null(opt$samp)) {
-  data$SUBJECT <- opt$samp
+  data$subject <- opt$samp
 }
 # load the "sysdata"
 #load("/home/aviv/Rscripts/sysdata.rda")

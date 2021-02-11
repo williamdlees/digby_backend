@@ -46,24 +46,15 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                     raise BadRequest('Genotype file for sample %s/%s is missing.' % (dataset, name))
 
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
-
-                # FIXME kludge to get rid of duplicated K_DIFF col - remove when not needed
-
-                columns = genotype.columns.tolist()
-                if columns[len(columns)-1] == 'K_DIFF':
-                    genotype.drop(genotype.columns[len(genotype.columns)-1], axis=1, inplace=True)
-
-                # FIXME end
-
                 genotype = trans_df(genotype)
-                genotype = genotype[genotype.GENE.isin(wanted_genes)]
+                genotype = genotype[genotype.gene.isin(wanted_genes)]
 
                 subject_name = name if len(samples_by_dataset) == 1 else dataset + '_' + name
 
-                if 'SUBJECT' not in genotype.columns.values:
-                    genotype.insert(0, 'SUBJECT', subject_name)
+                if 'subject' not in genotype.columns.values:
+                    genotype.insert(0, 'subject', subject_name)
                 else:
-                    genotype.SUBJECT = subject_name
+                    genotype.subject = subject_name
 
                 genotypes = genotypes.append(genotype)[genotype.columns.tolist()]
 
