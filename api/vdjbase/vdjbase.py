@@ -72,7 +72,7 @@ class DataSetInfoAPI(Resource):
 
     def get(self, species, dataset):
         """Returns information and statistics on the dataset"""
-        if species not in vdjbase_dbs and dataset not in vdjbase_dbs[species]:
+        if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
             return None, 404
 
         session = vdjbase_dbs[species][dataset].session
