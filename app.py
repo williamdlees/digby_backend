@@ -97,7 +97,7 @@ app.register_blueprint(blueprint)
 from api.reports.reports import load_report_defs
 load_report_defs()
 
-app.logger.info('Digby backend started')
+app.logger.error('Digby backend started')
 
 
 @app.route('/', methods=['GET', 'POST'])
