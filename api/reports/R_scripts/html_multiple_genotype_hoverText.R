@@ -73,7 +73,7 @@ output_file<-opt$output_file
 data<- read.delim(file= genotype_path ,header=TRUE,sep="\t",stringsAsFactors = F)
 
 if (!is.null(opt$samp)) {
-  data$SUBJECT <- opt$samp
+  data$subject <- opt$samp
 }
 # load the "sysdata"
 #load("/home/aviv/Rscripts/sysdata.rda")
@@ -84,7 +84,7 @@ pseudo_ORF_genes <- as.logical(opt$with_pseudo)
 # html_output <- ifelse(html_output == "T", TRUE, FALSE)
 
 ######################### Run multiGenotype fuction ##########################################
-num_of_subjects <- length(unique(data$SUBJECT))
+num_of_subjects <- length(unique(data$subject))
 genotype_graph <- vdjbaseVis::multipleGenoytpe(gen_table = data ,html = html_output, pseudo_genes = pseudo_ORF_genes)
 
 
