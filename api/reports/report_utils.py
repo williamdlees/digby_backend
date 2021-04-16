@@ -8,7 +8,7 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import make_output_file
 import csv
 
-""" for the future
+""" for the future """
 trans_cols = {
     "GENE": 'gene',
     "ALLELES": 'alleles',
@@ -57,6 +57,7 @@ trans_cols = {
     "k3": 'K3',
     "k4": 'K4',
 }
+"""
 
 # Check that a tab file exists. If it does, check that the columns are correctly capitalised
 # Fix capitalisation if necessary, returning a corrected file
@@ -73,7 +74,7 @@ def check_tab_file(filename, dtype=None):
 
     df = trans_df(df)
 
-    filename = make_output_file(os.path.splitext(filename)[1])
+    filename = make_output_file(os.path.splitext(filename)[1].replace('.', ''))
     df.to_csv(filename, sep='\t', index=True, na_rep='NA', quoting=csv.QUOTE_NONNUMERIC, index_label=False)
 
     return filename
