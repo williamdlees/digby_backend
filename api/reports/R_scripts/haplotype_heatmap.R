@@ -4,8 +4,6 @@ library(optparse)
 
 pdf(NULL)  # stop spurious Rplots.pdf being produced
 
-# source("/home/aviv/PycharmProjects/k/website/scripts/genoHeatmap.R")
-source("genoHeatmap.R")
 ########## VDJbase server ##############
 
 option_list = list(
@@ -57,7 +55,7 @@ hapHeatmap(haplotypes, lk_cutoff = kdiff, file = output_file)
 # num_of_subjects <- length(unique(haplotypes$SUBJECT))
 # height <- num_of_subjects * 0.48 + 3 +p[[2]]*0.2+p[[3]]*0.4
 # num_of_alelles <- length(unique(haplotypes$GENOTYPED_ALLELES))
-# 
+#
 # pdf(output_file,onefile = F, width = width, height = height, family = "serif")
 # print(p[[1]])
 # dev.off()
