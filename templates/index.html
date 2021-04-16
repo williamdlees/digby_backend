@@ -3,11 +3,12 @@
 {% block title %}DIgServer{% endblock %}
 
 {% block c_body %}
+    {% if current_user.has_role('Admin') %}
     <div class='container'>
         <a href='{{ 'airrseq' }}'>Manage AIRR-Seq Data</a>
         <br>
         <a href='{{ 'airrseq_copy_live' }}'>Copy AIRR-Seq Data to Live</a>
     </div>
-
+    {%  endif %}
 
 {% endblock %}
