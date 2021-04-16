@@ -743,28 +743,30 @@ def find_rep_filter_params(species, datasets):
     return params
 
 
-PSEUDO_GENES = [
-    "IGHV2-10", "IGHV3-52", "IGHV3-47", "IGHV3-71", "IGHV3-22", "IGHV4-55", "IGHV1-68",
-                    "IGHV5-78", "IGHV3-32", "IGHV3-33-2", "IGHV3-38-3", "IGHV3-25", "IGHV3-19", "IGHV7-40", "IGHV3-63",
-                    "IGHV3-62", "IGHV3-29", "IGHV3-54", "IGHV1-38-4", "IGHV7-34-1", "IGHV1-38-4", "IGHV3-30-2",
-                    "IGHV3-69-1", "IGHV3-30-22", "IGHV1-f", "IGHV3-30-33", "IGHV3-38", "IGHV7-81", "IGHV3-35",
-                    "IGHV3-16","IGHV3-30-52","IGHV1-69D", "IGHD1-14", "IGHV3-30-42"
-]
-
 # Apply filter params to a list of samples in the context of a specific dataset
+# wanted_genes is returned in the required search order
 
 def apply_rep_filter_params(params, sample_list, session):
     if 'per_sample' in params:
         sample_list = filter_per_sample(params['per_sample'], sample_list)
-    gq = session.query(Gene)
+    if 'sort_order' in params:
+        if params['sort_order'] == 'Alphabetic':
+            gq = session.query(Gene).order_by(Gene.alpha_order)
+        else:
+            gq = session.query(Gene).order_by(Gene.locus_order)
+    else:
+        gq = session.query(Gene).order_by(Gene.alpha_order)
+
     if len(params['f_gene_types']) > 0:
         gq = gq.filter(Gene.type.in_(params['f_gene_types']))
     if len(params['f_genes']) > 0:
         gq = gq.filter(Gene.name.in_(params['f_genes']))
     if not params['f_pseudo_genes']:
-        gq = gq.filter(Gene.name.notin_(PSEUDO_GENES))
+        gq = gq.filter(Gene.pseudo_gene == 0)
     wanted_genes = gq.all()
     wanted_genes = [gene.name for gene in wanted_genes]
+    for gene in wanted_genes:
+        print(gene)
     return sample_list, wanted_genes
 
 
