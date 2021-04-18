@@ -16,7 +16,6 @@ from Bio.Data.CodonTable import TranslationError
 from sqlalchemy import not_, distinct, or_
 
 from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern, AlleleConfidenceReport, SNP, HaplotypeEvidence, SamplesHaplotype, SeqProtocol
-from sqlalchemy.sql import func
 
 import re
 import csv
@@ -63,7 +62,6 @@ def check_novel_confidence(ds_dir, session):
 def gather_novel_data(session):
     novels = session.query(Allele).filter(Allele.novel == True).all()
     for novel in novels:
-        novel.max_kdiff = session.query(func.max(AllelesSample.kdiff)).filter(AllelesSample.allele_id == novel.id)
         closest_ref = session.query(Allele).filter(Allele.name == novel.name.split('_')[0]).one_or_none()
 
         if not closest_ref:
