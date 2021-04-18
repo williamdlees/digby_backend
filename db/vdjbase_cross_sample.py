@@ -1,13 +1,14 @@
 #
 # Cross-sample processing - once sample updates are complete
 #
+import sqlite3
 
 import pandas as pd
 import os, math
 from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern
 import re
 from db.vdjbase_formats import *
-
+from sqlalchemy.sql import func
 
 
 def update_alleles_appearance(session):
@@ -18,6 +19,9 @@ def update_alleles_appearance(session):
     alleles = session.query(Allele)
 
     for allele in alleles:
+        max_kdiff = session.query(func.max(AllelesSample.kdiff)).filter(AllelesSample.allele_id == allele.id).one_or_none()[0]
+        allele.max_kdiff = max_kdiff if max_kdiff is not None else 0
+
         allele.appears = session.query(AllelesSample.patient_id).filter(AllelesSample.hap == 'geno').filter(AllelesSample.allele_id == allele.id).distinct().count()
         if allele.similar is not None and allele.similar != '':
             sims = allele.similar.split(', ')
