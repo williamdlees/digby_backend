@@ -22,6 +22,7 @@ def update_alleles_appearance(session):
     for allele in alleles:
         max_kdiff = session.query(func.max(AllelesSample.kdiff)).filter(AllelesSample.allele_id == allele.id).one_or_none()[0]
         allele.max_kdiff = max_kdiff if max_kdiff is not None else 0
+        print(max_kdiff)
 
         allele.appears = session.query(AllelesSample.patient_id).filter(AllelesSample.hap == 'geno').filter(AllelesSample.allele_id == allele.id).distinct().count()
         if allele.similar is not None and allele.similar != '':
