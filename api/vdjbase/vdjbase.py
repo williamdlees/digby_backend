@@ -765,8 +765,6 @@ def apply_rep_filter_params(params, sample_list, session):
         gq = gq.filter(Gene.pseudo_gene == 0)
     wanted_genes = gq.all()
     wanted_genes = [gene.name for gene in wanted_genes]
-    for gene in wanted_genes:
-        print(gene)
     return sample_list, wanted_genes
 
 

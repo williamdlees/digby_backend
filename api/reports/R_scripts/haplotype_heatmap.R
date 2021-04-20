@@ -48,14 +48,4 @@ kdiff <- opt$Kdiff
 # load the "sysdata"
 load(opt$sysdata_file)
 
-#num_of_genes <- length(unique(haplotypes$GENE))
-#width <- num_of_genes * 0.24 + 1.5
 hapHeatmap(haplotypes, lk_cutoff = kdiff, file = output_file)
-
-# num_of_subjects <- length(unique(haplotypes$SUBJECT))
-# height <- num_of_subjects * 0.48 + 3 +p[[2]]*0.2+p[[3]]*0.4
-# num_of_alelles <- length(unique(haplotypes$GENOTYPED_ALLELES))
-#
-# pdf(output_file,onefile = F, width = width, height = height, family = "serif")
-# print(p[[1]])
-# dev.off()

@@ -48,7 +48,7 @@ kdiff <- as.numeric(opt$Kdiff)
 html_output <- as.logical(opt$is_html) # for pdf set "F"
 
 if (html_output) {
-  #num_of_genes <- length(unique(genotypes$GENE))
+  #num_of_genes <- length(unique(genotypes$gene))
   #width <- num_of_genes * 0.24 + 1.5
   vdjbaseVis::genoHeatmap_html(genotypes, lk_cutoff = kdiff,
                                file = file.path(normalizePath(dirname(output_file)),basename(output_file)))

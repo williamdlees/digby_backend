@@ -2,11 +2,6 @@
 # html new colors
 
 # required libraries
-library("ggplot2")
-library("tigger")
-library("dplyr")
-library("mltools")  #need to install for igguest
-library('plotly')
 #### load variables: ####
 library(optparse)
 library("vdjbaseVis")

@@ -1,29 +1,6 @@
 # Or - Create Multiple Genotype Graphs html/pdf("T"/"F").
 
-#### need packeges: ####
-#install.packages(c("mltools","optparse"))
-#for function "bin_data"
-library('mltools')
-#for "do.call" function
-library('base')
-# for "get_legend" function
-library('cowplot')
-library('ggplot2')
-#library('caroline')
 library(optparse)
-library(magrittr) # need to run every time you start R and want to use %>%
-library(stats)
-library(dplyr)    # alternative, this also loads %>%
-#colors
-library(RColorBrewer)
-library(wesanderson)
-library(scales)
-library('tigger')
-library('plotly')
-# dcd
-library(stringr)
-#drop NA
-library(tidyr)
 library(vdjbaseVis)
 
 ########## VDJbase server ##############
@@ -75,8 +52,7 @@ data<- read.delim(file= genotype_path ,header=TRUE,sep="\t",stringsAsFactors = F
 if (!is.null(opt$samp)) {
   data$subject <- opt$samp
 }
-# load the "sysdata"
-#load("/home/aviv/Rscripts/sysdata.rda")
+
 load(opt$sysdata_file)
 
 html_output <- as.logical(opt$is_html)  # for pdf set "F"
