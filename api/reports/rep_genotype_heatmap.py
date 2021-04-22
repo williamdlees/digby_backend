@@ -3,16 +3,16 @@
 from werkzeug.exceptions import BadRequest
 
 from api.reports.report_utils import trans_df
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, Gene
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
+from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, get_multiple_order_file
 import pandas as pd
 
 
 HEATMAP_GENOTYPE_SCRIPT = "genotype_heatmap.R"
-
 
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
@@ -25,9 +25,15 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     html = (format == 'html')
 
     samples_by_dataset = {}
+    chain = None
+
     for rep_sample in rep_samples:
         if rep_sample['dataset'] not in samples_by_dataset:
             samples_by_dataset[rep_sample['dataset']] = []
+            if chain is None:
+                chain = rep_sample['chain']
+            elif chain != rep_sample['chain']:
+                raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
         samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
 
     genotypes = pd.DataFrame()
@@ -46,14 +52,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                     raise BadRequest('Genotype file for sample %s/%s is missing.' % (dataset, name))
 
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
-
-                # FIXME kludge to get rid of duplicated K_DIFF col - remove when not needed
-
-                columns = genotype.columns.tolist()
-                if columns[len(columns)-1] == 'K_DIFF':
-                    genotype.drop(genotype.columns[len(genotype.columns)-1], axis=1, inplace=True)
-
-                # FIXME end
 
                 genotype = trans_df(genotype)
                 genotype = genotype[genotype.gene.isin(wanted_genes)]
@@ -78,13 +76,17 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     else:
         attachment_filename = None
 
+    locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
+    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=True)
+
     output_path = make_output_file('html' if html else 'pdf')
     file_type = 'T' if html else 'F'
     cmd_line = ["-i", geno_path,
                 "-o", output_path,
-                "-s", SYSDATA,
                 "-t", file_type,
-                "-k", str(params['f_kdiff'])]
+                "-k", str(params['f_kdiff']),
+                "-c", chain,
+                "-g", gene_order_file]
 
     if run_rscript(HEATMAP_GENOTYPE_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format, attachment_filename)

@@ -2,6 +2,8 @@
 
 from flask import request
 from flask_restx import Resource, reqparse, fields, marshal, inputs
+
+from api.reports.report_utils import make_output_file
 from api.restx import api
 from sqlalchemy import inspect, func, cast, literal, String, select, union_all
 from math import ceil
@@ -778,6 +780,53 @@ def filter_per_sample(per_sample, sample_list):
                 pp_list.append([name, genotype, patient_id])
         sample_list = pp_list
     return sample_list
+
+
+def get_order_file(species, dataset, locus_order=True):
+    file_name = os.path.join(app.config['OUTPUT_PATH'], '%s_%s_%s_order.tsv' % (species, dataset, 'locus' if locus_order else 'alpha'))
+
+    if not os.path.isfile(file_name):
+        session = vdjbase_dbs[species][dataset].session
+        gene_order = session.query(Gene.name, Gene.alpha_order).all()
+        gene_order = {x[0]: x[1] for x in gene_order}
+
+        with open(file_name, 'w') as fo:
+            fo.write('\n'.join(gene_order))
+
+    return file_name
+
+
+# interleave content from multiple files, or return one of them if they are all the same
+def get_multiple_order_file(species, datasets, locus_order=True):
+    gene_order = []
+    added = False
+
+    for dataset in datasets:
+        with open(get_order_file(species, dataset, locus_order), 'r') as fi:
+            if len(gene_order) == 0:
+                gene_order = fi.read().split('\n')
+            else:
+                this_order = fi.read().split('\n')
+                prev = ''
+
+                for gene in this_order:
+                    if gene not in gene_order:
+                        if prev in gene_order:
+                            gene_order.insert(gene_order.index(prev), gene)
+                        else:
+                            gene_order.append(gene)
+                        added = True
+
+    if added:
+        file_name = make_output_file('tsv')
+
+        with open(file_name, 'w') as fo:
+            fo.write('\n'.join(gene_order))
+    else:
+        print(list(datasets))
+        file_name = get_order_file(species, list(datasets)[0], locus_order)
+
+    return file_name
 
 
 

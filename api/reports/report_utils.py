@@ -5,8 +5,10 @@
 import os.path
 import pandas as pd
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import make_output_file
 import csv
+import tempfile
+from app import app
+
 
 """ for the future """
 trans_cols = {
@@ -87,4 +89,12 @@ def trans_df(df):
         df = df.rename(columns=trans)
 
     return df
+
+
+# Make a unique file in the output directory
+def make_output_file(format):
+    with tempfile.NamedTemporaryFile(suffix='.' + format, dir=app.config['OUTPUT_PATH'], delete=False) as fo:
+        output_path = fo.name
+        fo.close()
+    return output_path
 

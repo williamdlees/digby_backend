@@ -1,7 +1,8 @@
 # Genotype report for a single RepSeq sample
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.reports import run_rscript, send_report
+from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample
 import os
@@ -31,7 +32,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
 
     sample_path = check_tab_file(sample_path)
-    report_path = personal_genotype(rep_sample['name'], sample_path, html)
+    report_path = personal_genotype(rep_sample['name'], sample_path, rep_sample['chain'], html)
 
     if format == 'pdf':
         attachment_filename = '%s_%s_%s_genotype.pdf' % (species, rep_sample['dataset'], rep_sample['name'])
@@ -41,14 +42,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     return send_report(report_path, format, attachment_filename)
 
 
-def personal_genotype(sample_name, genotype_file, html=True):
+def personal_genotype(sample_name, genotype_file, chain, html=True):
     output_path = make_output_file('html' if html else 'pdf')
     file_type = 'T' if html else 'F'
     cmd_line = ["-i", genotype_file,
                 "-o", output_path,
-                "-s", SYSDATA,
                 "-t", file_type,
-                "--samp", sample_name]
+                "--samp", sample_name,
+                "-c", chain]
 
     if run_rscript(MULTIPLE_GENOTYPE_SCRIPT, cmd_line) and os.path.getsize(output_path) > 0:
         return output_path

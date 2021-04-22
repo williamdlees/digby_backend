@@ -4,7 +4,8 @@ from werkzeug.exceptions import BadRequest
 
 from api.genomic.genomic import genomic_sequence_filters, find_genomic_samples, genomic_sample_filters, \
     find_genomic_sequences
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.feature_db import Sample
 import csv

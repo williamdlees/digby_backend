@@ -2,7 +2,8 @@
 from collections import defaultdict
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, Patient, AllelesPattern, GenesDistribution
 import os
