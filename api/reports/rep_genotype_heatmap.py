@@ -23,19 +23,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Invalid format requested')
 
     html = (format == 'html')
-
-    samples_by_dataset = {}
-    chain = None
-
-    for rep_sample in rep_samples:
-        if rep_sample['dataset'] not in samples_by_dataset:
-            samples_by_dataset[rep_sample['dataset']] = []
-            if chain is None:
-                chain = rep_sample['chain']
-            elif chain != rep_sample['chain']:
-                raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
-
+    chain, samples_by_dataset = collate_samples(rep_samples)
     genotypes = pd.DataFrame()
 
     for dataset in samples_by_dataset.keys():
@@ -77,7 +65,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         attachment_filename = None
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
-    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=True)
+    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=locus_order)
 
     output_path = make_output_file('html' if html else 'pdf')
     file_type = 'T' if html else 'F'
@@ -86,11 +74,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 "-t", file_type,
                 "-k", str(params['f_kdiff']),
                 "-c", chain,
-                "-g", gene_order_file]
+                "-g", gene_order_file
+                ]
 
     if run_rscript(HEATMAP_GENOTYPE_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format, attachment_filename)
     else:
         raise BadRequest('No output from report')
+
 
 

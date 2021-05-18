@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
+from api.reports.report_utils import make_output_file, collate_samples
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, Patient, AllelesPattern
 import os
@@ -20,12 +20,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Invalid format requested')
 
     kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
-
-    samples_by_dataset = {}
-    for rep_sample in rep_samples:
-        if rep_sample['dataset'] not in samples_by_dataset:
-            samples_by_dataset[rep_sample['dataset']] = []
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
+    chain, samples_by_dataset = collate_samples(rep_samples)
 
     # Format we need to produce is [(gene_name, hetero count, homo count),...]
 
@@ -46,10 +41,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             .filter(Allele.name.notlike('%Del%')) \
             .filter(Allele.name.notlike('%OR%')) \
             .filter(Sample.name.in_(sample_list)) \
-            .filter(AllelesSample.kdiff >= kdiff) \
-            .order_by(Gene.locus_order, Patient.id, Allele.id)
+            .filter(AllelesSample.kdiff >= kdiff)
 
-        if(params['ambiguous_alleles'] == 'Exclude'):
+        if 'sort_order' in params and params['sort_order'] == 'Locus':
+            query = query.order_by(Gene.locus_order, Patient.id, Allele.id)
+        else:
+            query = query.order_by(Gene.alpha_order, Patient.id, Allele.id)
+
+        if params['ambiguous_alleles'] == 'Exclude':
             query = query.filter(Allele.is_single_allele == True)
 
         allele_sample_recs = query.all()
@@ -82,7 +81,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 # If we have both an unambiguous allele and an ambiguous allele containing that unambiguous one,
                 # drop the unambiguous one because it is already counted
 
-                if(params['ambiguous_alleles'] != 'Exclude'):
+                if params['ambiguous_alleles'] != 'Exclude':
                     patterns = session.query(AllelesPattern.pattern_id)\
                         .filter(AllelesPattern.allele_in_p_id.in_(patient_allele_ids))\
                         .filter(AllelesPattern.pattern_id.in_(patient_allele_ids))\
@@ -110,7 +109,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     cmd_line = ["-i", haplo_path,
                 "-o", output_path,
-                "-s", SYSDATA]
+                "-c", chain,
+                ]
 
     if run_rscript(HETEROZYGOSITY_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format)

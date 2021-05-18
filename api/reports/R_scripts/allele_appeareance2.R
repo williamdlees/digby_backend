@@ -6,7 +6,7 @@ library(optparse)
 library('purrr')
 library('readxl')
 library(stringr)
-library("vdjbaseVis")
+library("vdjbasevis")
 library(reshape2)
 
 option_list = list(

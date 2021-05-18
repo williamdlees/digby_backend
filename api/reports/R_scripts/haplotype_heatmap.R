@@ -11,10 +11,12 @@ option_list = list(
               help="excel file name", metavar="character"),
   make_option(c("-o", "--output_file"), type="character", default=NULL,
               help="graph.pdf file name", metavar="character"),
-  make_option(c("-s", "--sysdata_file"), type="character", default=NULL,
-              help="sysdata file name", metavar="character"),
   make_option(c("-k", "--Kdiff"), type="character", default=NULL,
-              help="The minimal kdiff", metavar="character")
+              help="The minimal kdiff", metavar="character"),
+  make_option(c("-c", "--chain"), type="character", default="IGH",
+              help="chain: IGH, IGK, IGL, TRB, TRA"),
+  make_option(c("-g", "--gene_order_file"), type="character", default=NULL,
+              help="genes listed in desired order (tsv file)")
 )
 
 opt_parser = OptionParser(option_list=option_list);
@@ -28,10 +30,6 @@ if (is.null(opt$output_file)){
   stop("output reference file must be supplied", call.=FALSE)
 }
 
-if (is.null(opt$sysdata_file)){
-  stop("sysdata file must be supplied", call.=FALSE)
-}
-
 if (is.null(opt$Kdiff)){
   stop("the minimal kdiff vaue must be supplied", call.=FALSE)
 }
@@ -39,13 +37,17 @@ if (is.null(opt$Kdiff)){
 ######### loading data(use melt function) #############
 
 # read genotype table
-haplotypes_path<-opt$input_file
-output_file<-opt$output_file
+haplotypes_path <- opt$input_file
+output_file <- opt$output_file
 haplotypes <- read.delim(file=haplotypes_path ,header=TRUE,sep="\t",stringsAsFactors = F)
 names(haplotypes)[c(1,2,5:ncol(haplotypes))] <- tolower(names(haplotypes)[c(1,2,5:ncol(haplotypes))])
 kdiff <- opt$Kdiff
 
-# load the "sysdata"
-load(opt$sysdata_file)
+if (!is.null(opt$gene_order_file)){
+    gene_order = read.delim(file=opt$gene_order_file, header=FALSE, sep="\t", stringsAsFactors = F)
+    gene_order = gene_order$V1
+} else {
+    gene_order = NULL
+}
 
 hapHeatmap(haplotypes, lk_cutoff = kdiff, file = output_file)

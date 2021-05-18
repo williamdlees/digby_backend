@@ -278,6 +278,15 @@
             "Number of Clones",
             "Number of Sequences"
           ]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
         }
       ],
       "filter_params": true,

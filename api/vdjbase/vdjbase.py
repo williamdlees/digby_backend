@@ -787,8 +787,11 @@ def get_order_file(species, dataset, locus_order=True):
 
     if not os.path.isfile(file_name):
         session = vdjbase_dbs[species][dataset].session
-        gene_order = session.query(Gene.name, Gene.alpha_order).all()
-        gene_order = {x[0]: x[1] for x in gene_order}
+        if locus_order:
+            gene_order = session.query(Gene.name).order_by(Gene.locus_order).all()
+        else:
+            gene_order = session.query(Gene.name).order_by(Gene.alpha_order).all()
+        gene_order = [x[0] for x in gene_order]
 
         with open(file_name, 'w') as fo:
             fo.write('\n'.join(gene_order))

@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
+from api.reports.report_utils import make_output_file, collate_samples
 
 from api.reports.report_utils import trans_df
 from app import app, vdjbase_dbs
@@ -23,19 +23,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Invalid format requested')
 
     html = (format == 'html')
-
-    samples_by_dataset = {}
-    chain = None
-
-    for rep_sample in rep_samples:
-        if rep_sample['dataset'] not in samples_by_dataset:
-            samples_by_dataset[rep_sample['dataset']] = []
-            if chain is None:
-                chain = rep_sample['chain']
-            elif chain != rep_sample['chain']:
-                raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
-
+    chain, samples_by_dataset = collate_samples(rep_samples)
     genotypes = []
 
     for dataset in samples_by_dataset.keys():
@@ -84,7 +72,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         pseudo = 'T'
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
-    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=True)
+    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=locus_order)
 
     output_path = make_output_file('html' if html else 'pdf')
 
