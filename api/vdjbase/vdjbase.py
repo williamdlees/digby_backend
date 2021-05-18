@@ -662,6 +662,14 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
         query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
         query = apply_filters(query, filter_spec)
 
+        if 'notes' in required_cols:
+            query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(
+                Allele.id)
+
+        res = query.all()
+
+        required_names = []
+
         if sample_id_filter is not None:
             required_ids = []
             if dset in sample_id_filter['value']:
@@ -672,32 +680,26 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                 .join(Sample) \
                 .filter(Sample.name.in_(required_ids)).all()
 
-            required_names = []
             for a in alleles_with_samples:
                 required_names.append(a[0])
-            query = query.filter(Allele.name.in_(required_names))
-
-        if 'notes' in required_cols:
-            query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(
-                Allele.id)
-
-        res = query.all()
+            # query = query.filter(Allele.name.in_(required_names))
 
         for r in res:
-            s = r._asdict()
-            for k, v in s.items():
-                if k == 'similar' and v is not None:
-                    s[k] = v.replace('|', '')
-            s['dataset'] = dset
+            if len(required_names) == 0 or r.name in required_names:
+                s = r._asdict()
+                for k, v in s.items():
+                    if k == 'similar' and v is not None:
+                        s[k] = v.replace('|', '')
+                s['dataset'] = dset
 
-            if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
-                s['igsnper_plot_path'] = '/'.join(
-                    [app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset,
-                     s['igsnper_plot_path']])
-            else:
-                s['igsnper_plot_path'] = ''
+                if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
+                    s['igsnper_plot_path'] = '/'.join(
+                        [app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset,
+                         s['igsnper_plot_path']])
+                else:
+                    s['igsnper_plot_path'] = ''
 
-            ret.append(s)
+                ret.append(s)
 
     return ret
 
