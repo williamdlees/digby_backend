@@ -2,6 +2,8 @@
 
 from flask import request
 from flask_restx import Resource, reqparse, fields, marshal, inputs
+
+from api.reports.report_utils import make_output_file
 from api.restx import api
 from sqlalchemy import inspect, func, cast, literal, String, select, union_all
 from math import ceil
@@ -660,6 +662,14 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
         query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
         query = apply_filters(query, filter_spec)
 
+        if 'notes' in required_cols:
+            query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(
+                Allele.id)
+
+        res = query.all()
+
+        required_names = []
+
         if sample_id_filter is not None:
             required_ids = []
             if dset in sample_id_filter['value']:
@@ -670,32 +680,26 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                 .join(Sample) \
                 .filter(Sample.name.in_(required_ids)).all()
 
-            required_names = []
             for a in alleles_with_samples:
                 required_names.append(a[0])
-            query = query.filter(Allele.name.in_(required_names))
-
-        if 'notes' in required_cols:
-            query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(
-                Allele.id)
-
-        res = query.all()
+            # query = query.filter(Allele.name.in_(required_names))
 
         for r in res:
-            s = r._asdict()
-            for k, v in s.items():
-                if k == 'similar' and v is not None:
-                    s[k] = v.replace('|', '')
-            s['dataset'] = dset
+            if len(required_names) == 0 or r.name in required_names:
+                s = r._asdict()
+                for k, v in s.items():
+                    if k == 'similar' and v is not None:
+                        s[k] = v.replace('|', '')
+                s['dataset'] = dset
 
-            if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
-                s['igsnper_plot_path'] = '/'.join(
-                    [app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset,
-                     s['igsnper_plot_path']])
-            else:
-                s['igsnper_plot_path'] = ''
+                if 'igsnper_plot_path' in s and s['igsnper_plot_path'] is not None and len(s['igsnper_plot_path']) > 0:
+                    s['igsnper_plot_path'] = '/'.join(
+                        [app.config['BACKEND_LINK'], 'static/study_data/VDJbase/samples', species, dset,
+                         s['igsnper_plot_path']])
+                else:
+                    s['igsnper_plot_path'] = ''
 
-            ret.append(s)
+                ret.append(s)
 
     return ret
 
@@ -743,26 +747,26 @@ def find_rep_filter_params(species, datasets):
     return params
 
 
-PSEUDO_GENES = [
-    "IGHV2-10", "IGHV3-52", "IGHV3-47", "IGHV3-71", "IGHV3-22", "IGHV4-55", "IGHV1-68",
-                    "IGHV5-78", "IGHV3-32", "IGHV3-33-2", "IGHV3-38-3", "IGHV3-25", "IGHV3-19", "IGHV7-40", "IGHV3-63",
-                    "IGHV3-62", "IGHV3-29", "IGHV3-54", "IGHV1-38-4", "IGHV7-34-1", "IGHV1-38-4", "IGHV3-30-2",
-                    "IGHV3-69-1", "IGHV3-30-22", "IGHV1-f", "IGHV3-30-33", "IGHV3-38", "IGHV7-81", "IGHV3-35",
-                    "IGHV3-16","IGHV3-30-52","IGHV1-69D", "IGHD1-14", "IGHV3-30-42"
-]
-
 # Apply filter params to a list of samples in the context of a specific dataset
+# wanted_genes is returned in the required search order
 
 def apply_rep_filter_params(params, sample_list, session):
     if 'per_sample' in params:
         sample_list = filter_per_sample(params['per_sample'], sample_list)
-    gq = session.query(Gene)
+    if 'sort_order' in params:
+        if params['sort_order'] == 'Alphabetic':
+            gq = session.query(Gene).order_by(Gene.alpha_order)
+        else:
+            gq = session.query(Gene).order_by(Gene.locus_order)
+    else:
+        gq = session.query(Gene).order_by(Gene.alpha_order)
+
     if len(params['f_gene_types']) > 0:
         gq = gq.filter(Gene.type.in_(params['f_gene_types']))
     if len(params['f_genes']) > 0:
         gq = gq.filter(Gene.name.in_(params['f_genes']))
     if not params['f_pseudo_genes']:
-        gq = gq.filter(Gene.name.notin_(PSEUDO_GENES))
+        gq = gq.filter(Gene.pseudo_gene == 0)
     wanted_genes = gq.all()
     wanted_genes = [gene.name for gene in wanted_genes]
     return sample_list, wanted_genes
@@ -778,6 +782,56 @@ def filter_per_sample(per_sample, sample_list):
                 pp_list.append([name, genotype, patient_id])
         sample_list = pp_list
     return sample_list
+
+
+def get_order_file(species, dataset, locus_order=True):
+    file_name = os.path.join(app.config['OUTPUT_PATH'], '%s_%s_%s_order.tsv' % (species, dataset, 'locus' if locus_order else 'alpha'))
+
+    if not os.path.isfile(file_name):
+        session = vdjbase_dbs[species][dataset].session
+        if locus_order:
+            gene_order = session.query(Gene.name).order_by(Gene.locus_order).all()
+        else:
+            gene_order = session.query(Gene.name).order_by(Gene.alpha_order).all()
+        gene_order = [x[0] for x in gene_order]
+
+        with open(file_name, 'w') as fo:
+            fo.write('\n'.join(gene_order))
+
+    return file_name
+
+
+# interleave content from multiple files, or return one of them if they are all the same
+def get_multiple_order_file(species, datasets, locus_order=True):
+    gene_order = []
+    added = False
+
+    for dataset in datasets:
+        with open(get_order_file(species, dataset, locus_order), 'r') as fi:
+            if len(gene_order) == 0:
+                gene_order = fi.read().split('\n')
+            else:
+                this_order = fi.read().split('\n')
+                prev = ''
+
+                for gene in this_order:
+                    if gene not in gene_order:
+                        if prev in gene_order:
+                            gene_order.insert(gene_order.index(prev), gene)
+                        else:
+                            gene_order.append(gene)
+                        added = True
+
+    if added:
+        file_name = make_output_file('tsv')
+
+        with open(file_name, 'w') as fo:
+            fo.write('\n'.join(gene_order))
+    else:
+        print(list(datasets))
+        file_name = get_order_file(species, list(datasets)[0], locus_order)
+
+    return file_name
 
 
 

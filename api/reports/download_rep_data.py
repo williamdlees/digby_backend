@@ -1,7 +1,8 @@
 # Download data for rep-seq samples
 from Bio import SeqIO
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
 import csv

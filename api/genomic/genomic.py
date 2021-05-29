@@ -573,6 +573,7 @@ class SamplesAPI(Resource):
             'pages': ceil((total_size*1.0)/args['page_size'])
         }
 
+
 def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_filters):
     sp = db.session.query(Species.id).filter(Species.name == species).one_or_none()
 

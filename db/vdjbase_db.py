@@ -111,8 +111,15 @@ def manage_airrseq(app):
     return render_template('airrseq.html', item_table=ItemTable(items), form=form)
 
 
+class Job:
+    def update_state(self, meta="", state=""):
+        print('meta: %s state: %s' % (meta['value'], state))
+
+
 def airrseq_import(species, dataset, app):
-    result = airrseq_import_celery.delay(species, dataset, app.config['UPLOAD_PATH'], app.config['STATIC_PATH'])
+    # result = airrseq_import_celery.delay(species, dataset, app.config['UPLOAD_PATH'], app.config['STATIC_PATH'])
+    create_single_database(Job(), species, dataset, app.config['UPLOAD_PATH'])
+    return ""
     return render_template('airrseq_import_status.html', species=species, dataset=dataset, id=result.id)
 
 

@@ -2,14 +2,9 @@
 # html new colors
 
 # required libraries
-library("ggplot2")
-library("tigger")
-library("dplyr")
-library("mltools")  #need to install for igguest
-library('plotly')
 #### load variables: ####
 library(optparse)
-library("vdjbaseVis")
+library("vdjbasevis")
 
 ########################
 
@@ -18,10 +13,12 @@ option_list = list(
               help="excel file name", metavar="character"),
   make_option(c("-o", "--output_file"), type="character", default=NULL,
               help="graph.pdf file name", metavar="character"),
-  make_option(c("-s", "--sysdata_file"), type="character", default=NULL,
-              help="sysdata file name", metavar="character"),
   make_option(c("-t", "--is_html"), type="character", default=NULL,
-              help="type of file F - pdf T - html")
+              help="type of file F - pdf T - html"),
+  make_option(c("-c", "--chain"), type="character", default="IGH",
+              help="chain: IGH, IGK, IGL, TRB, TRA"),
+  make_option(c("-g", "--gene_order_file"), type="character", default=NULL,
+              help="genes listed in desired order (tsv file)")
 )
 
 opt_parser = OptionParser(option_list=option_list);
@@ -35,10 +32,6 @@ if (is.null(opt$output_file)){
   stop("output reference file must be supplied", call.=FALSE)
 }
 
-if (is.null(opt$sysdata_file)){
-  stop("sys file name must be supplied", call.=FALSE)
-}
-
 if (is.null(opt$is_html)){
   stop("type of file must be supplied", call.=FALSE)
 }
@@ -47,13 +40,20 @@ if (is.null(opt$is_html)){
 # read genotype table
 input_file<-opt$input_file
 output_file<-opt$output_file
-load(opt$sysdata_file)
 
 html_output <- opt$is_html  # for pdf set "F"
 html_output <- ifelse(html_output == "T", TRUE, FALSE)
 
 frequencies <- read.delim(input_file, header=TRUE, sep="\t",stringsAsFactors = T)
-gene_usage_graph <- geneUsage(frequencies, plot_style="ggplot")
+
+if (!is.null(opt$gene_order_file)){
+    gene_order = read.delim(file=opt$gene_order_file, header=FALSE, sep="\t", stringsAsFactors = F)
+    gene_order = gene_order$V1
+} else {
+    gene_order = NULL
+}
+
+gene_usage_graph <- geneUsage(frequencies, chain = opt$chain, plot_style="ggplot", ordered_genes = gene_order)
 
 if (html_output) {
   htmlwidgets::saveWidget(gene_usage_graph , file.path(normalizePath(dirname(output_file)),basename(output_file)), background = "white", selfcontained = F)

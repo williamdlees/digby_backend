@@ -3,7 +3,9 @@
 from werkzeug.exceptions import BadRequest
 
 from api.reports.report_utils import check_tab_file
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.report_utils import make_output_file
+
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype
 import os
@@ -53,7 +55,6 @@ def personal_haplotype(sample_name, haplotype_file, html=True):
     file_type = 'T' if html else 'F'
     cmd_line = ["-i", haplotype_file,
                 "-o", output_path,
-                "-s", SYSDATA,
                 "-t", file_type,
                 "--samp", sample_name]
 

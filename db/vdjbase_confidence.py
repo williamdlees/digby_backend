@@ -292,7 +292,7 @@ def check_snp_in_short(novels, session):
 
     for novel in short_studies_only:
         min_snp = session.query(SNP).filter(SNP.allele_id == novel.id).order_by(SNP.pos).limit(1).one_or_none()
-        if min_snp.pos <= 40:
+        if min_snp is not None and min_snp.pos <= 40:
             sample_names = session.query(Sample.name)\
                 .join(AllelesSample)\
                 .join(Allele)\

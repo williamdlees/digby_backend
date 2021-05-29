@@ -5,10 +5,12 @@
 import os.path
 import pandas as pd
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import make_output_file
 import csv
+import tempfile
+from app import app
 
-""" for the future
+
+""" for the future """
 trans_cols = {
     "GENE": 'gene',
     "ALLELES": 'alleles',
@@ -57,6 +59,7 @@ trans_cols = {
     "k3": 'K3',
     "k4": 'K4',
 }
+"""
 
 # Check that a tab file exists. If it does, check that the columns are correctly capitalised
 # Fix capitalisation if necessary, returning a corrected file
@@ -73,7 +76,7 @@ def check_tab_file(filename, dtype=None):
 
     df = trans_df(df)
 
-    filename = make_output_file(os.path.splitext(filename)[1])
+    filename = make_output_file(os.path.splitext(filename)[1].replace('.', ''))
     df.to_csv(filename, sep='\t', index=True, na_rep='NA', quoting=csv.QUOTE_NONNUMERIC, index_label=False)
 
     return filename
@@ -86,4 +89,30 @@ def trans_df(df):
         df = df.rename(columns=trans)
 
     return df
+
+
+# Make a unique file in the output directory
+def make_output_file(format):
+    with tempfile.NamedTemporaryFile(suffix='.' + format, dir=app.config['OUTPUT_PATH'], delete=False) as fo:
+        output_path = fo.name
+        fo.close()
+    return output_path
+
+
+# Collate samples from different datasets and determine chain
+
+def collate_samples(rep_samples):
+    samples_by_dataset = {}
+    chain = None
+
+    for rep_sample in rep_samples:
+        if rep_sample['dataset'] not in samples_by_dataset:
+            samples_by_dataset[rep_sample['dataset']] = []
+            if chain is None:
+                chain = rep_sample['chain']
+            elif chain != rep_sample['chain']:
+                raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
+        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
+
+    return chain, samples_by_dataset
 

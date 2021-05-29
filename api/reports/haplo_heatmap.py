@@ -2,12 +2,13 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import trans_df
-from api.reports.reports import SYSDATA, run_rscript, send_report, make_output_file
+from api.reports.report_utils import trans_df, collate_samples
+from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
+from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, get_multiple_order_file
 import pandas as pd
 
 HEATMAP_HAPLOTYPE_SCRIPT = "haplotype_heatmap.R"
@@ -22,12 +23,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     html = (format == 'html')
 
-    samples_by_dataset = {}
-    for rep_sample in rep_samples:
-        if rep_sample['dataset'] not in samples_by_dataset:
-            samples_by_dataset[rep_sample['dataset']] = []
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
-
+    chain, samples_by_dataset = collate_samples(rep_samples)
     haplotypes = pd.DataFrame()
 
     for dataset in samples_by_dataset.keys():
@@ -49,8 +45,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
             haplotype = pd.read_csv(sample_path, sep='\t', dtype=str)
             haplotype = trans_df(haplotype)
-            haplotype = haplotype[haplotype.GENE.isin(wanted_genes)]
-            haplotype['SUBJECT'] = name if len(samples_by_dataset) == 1 else dataset + '_' + name
+            haplotype = haplotype[haplotype.gene.isin(wanted_genes)]
+            haplotype['subject'] = name if len(samples_by_dataset) == 1 else dataset + '_' + name
             haplotypes = pd.concat([haplotypes, haplotype], keys=None, ignore_index=True)[haplotype.columns.tolist()]
 
     if len(haplotypes) == 0:
@@ -63,11 +59,16 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     if not params['f_kdiff'] or params['f_kdiff'] == '':
         params['f_kdiff'] = 0
 
+    locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
+    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=locus_order)
+
     output_path = make_output_file('html' if html else 'pdf')
     cmd_line = ["-i", haplo_path,
                 "-o", output_path,
-                "-s", SYSDATA,
-                "-k", str(params['f_kdiff'])]
+                "-k", str(params['f_kdiff']),
+                "-c", chain,
+                "-g", gene_order_file
+                ]
 
     if run_rscript(HEATMAP_HAPLOTYPE_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format, attachment_filename)
