@@ -76,12 +76,12 @@ def calculate_gene_frequencies(ds_dir, session):
 
             frequencies_by_seq[gene] = 0
             for x in count_seq.split(INT_SEP):
-                frequencies_by_seq[gene] += int(x)
+                frequencies_by_seq[gene] += int(float(x))
             family_total_seq[family] += frequencies_by_seq[gene]
 
             frequencies_by_clone[gene] = 0
             for x in count_clone.split(INT_SEP):
-                frequencies_by_clone[gene] += int(x)
+                frequencies_by_clone[gene] += int(float(x))
             family_total_clone[family] += frequencies_by_clone[gene]
 
         # calculate the frequency of each gene acording to the family

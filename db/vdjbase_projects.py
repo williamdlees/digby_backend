@@ -93,7 +93,7 @@ def import_studies(ds_dir, species, dataset, session):
                     session.add(p)
             except Exception as e:
                 print('Exception processing SeqProtocol record %s' % json.dumps(sp, default=str))
-                print('Corresponding Study record is %s' % json.dumps(sd), default=str)
+                print('Corresponding Study record is %s' % json.dumps(sd, default=str))
                 traceback.print_exc(limit=2, file=sys.stdout)
                 print("\n\n")
 
@@ -339,12 +339,15 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
     :param inputfile: the path to the genotype
     :param sample_id: sample id
     """
+    print(inputfile)
     haplo = "geno"
     genotype = pd.read_csv(inputfile, sep="\t")
     allele_pattern = re.compile("^[0-9]{2}$")
     mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c]$")
+    ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
 
     for index, row in genotype.iterrows():
+        # print(row[GENE_COLUMN])
         gene = row[GENE_COLUMN]
         kdiff = row[GENOTYPE_KDIFF_COLUMN]
 
@@ -356,20 +359,23 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
             elif ("del" in allele.lower()):
                 allele = "Del"
 
+
             # check if the allele exist in the genotype according to the clone size
             if allele != "Del":
-                clone_size = int(row[FREQ_BY_CLONE].split(INT_SEP)[index])
+                clone_size = int(float(str(row[FREQ_BY_CLONE]).split(INT_SEP)[index]))
                 if not clone_size:
                     continue
 
             # parse allele, handling old ambiguous style (01_02) and new bp style
             ambig_alleles = ''
             allele_snps = ''
+            ext_snps = ''
             base_allele = allele
 
             if '_' in allele:
                 ambig_alleles = []
                 allele_snps = []
+                ext_snps = []
 
                 base_allele = allele.split('_')[0]
                 rep = allele.split("_")[1:]
@@ -379,9 +385,12 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                         ambig_alleles.append(r)
                     elif re.search(mut_pattern, r):
                         allele_snps.append(r)
+                    elif re.search(ext_mut_pattern, r):
+                        ext_snps.append(r)
 
                 ambig_alleles = '_'.join(ambig_alleles)
                 allele_snps = '_'.join(allele_snps)
+                ext_snps = '_'.join(ext_snps)
 
             base_allele_name = gene + "*" + base_allele
             pipeline_name = ''
@@ -395,6 +404,12 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                 base_allele_name = base_allele_name.replace('bp', '')
                 pipeline_names[pipeline_name] = base_allele_name
                 print('%s is not listed in ambiguous_allele_names.csv: assuming it corresponds to %s' % (pipeline_name, base_allele_name))
+            elif 'ap' in base_allele_name:        # will only happen if one of the 'bp' alleles has not been put in ambiguous_allele_names.csv
+                # fudge for time being
+                pipeline_name = base_allele_name
+                base_allele_name = base_allele_name.replace('ap', '')
+                pipeline_names[pipeline_name] = base_allele_name
+                print('%s is not listed in ambiguous_allele_names.csv: assuming it corresponds to %s' % (pipeline_name, base_allele_name))
 
             if len(ambig_alleles) > 0:
                 base_allele_name += '_' + ambig_alleles
@@ -405,6 +420,11 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                 base_allele_name += '_' + allele_snps
                 if len(pipeline_name) > 0:
                     pipeline_name += '_' + allele_snps
+
+            if len(ext_snps) > 0:
+                base_allele_name += '_' + ext_snps
+                if len(pipeline_name) > 0:
+                    pipeline_name += '_' + ext_snps
 
             add2sample(base_allele_name, sample_id, haplo, patient_id, kdiff, pipeline_name, session)
 
@@ -474,6 +494,8 @@ def new_allele(allele_name, session):
 
     allele_pattern = re.compile("^[0-9]{2}$")
     mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c]$")
+    ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
+    nt_pattern = re.compile("[A,G,T,C,a,g,t,c]+")
     gid = base_allele.gene_id
     seq = base_allele.seq
     seq = "".join(seq.split())
@@ -520,6 +542,18 @@ def new_allele(allele_name, session):
             place = int(r[1:][:len(r) - 2]) - 1
             seq = seq[:place] + r[len(r) - 1] + seq[place + 1:]
             is_novel_allele = True
+
+        elif re.search(ext_mut_pattern, r):
+            final_allele_name += '_' + r
+            nts = re.search(nt_pattern, r)
+            first = int(r[:nts.span()[0]])
+            last = int(r[nts.span()[1]:])
+            new_seq = seq[:first - 1] + r[nts.span()[0]:nts.span()[1]]
+            if len(seq) > len(new_seq):
+                new_seq += seq[len(new_seq) - len(seq):]
+            seq = new_seq
+            is_novel_allele = True
+
 
     same_seq_allele = session.query(Allele).filter(Allele.seq == seq).one_or_none()    # we only expect one - one row in Allele for each sequence
 
@@ -603,7 +637,9 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):
                 if sample.name in filename:
                     if 'haplotype.' in filename:
-                        haplo_gene = filename.replace('_haplotype.tab', '').replace('_haplotype.tsv', '').split('_gene-')[1]
+                        haplo_gene = filename.replace('_haplotype.tab', '')
+                        haplo_gene = haplo_gene.replace('_haplotype.tsv', '')
+                        haplo_gene = haplo_gene.split('_gene-')[1]
                         process_haplotype(os.path.join(sample_dir, filename).replace('\\', '/'), sample, haplo_gene, session)
                     elif 'ogrdb_plots' in filename:
                         sample.genotype_report = os.path.join(sample_dir, filename).replace('\\', '/')

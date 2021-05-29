@@ -4,6 +4,8 @@
 import os.path
 import os
 import shutil
+import sys
+import traceback
 import zipfile
 
 from sqlalchemy import create_engine
@@ -59,8 +61,9 @@ def create_single_database(job, species, dataset, upload_path):
         result.extend(calculate_patterns(session))
         job.update_state(state='PENDING', meta={'value': 'Creating confidence reports'})
         result.extend(check_novel_confidence(ds_dir, session))
-    except DbCreationError as e:
+    except Exception as e:
         result.append(e.args[0])
+        traceback.print_exc(limit=2, file=sys.stdout)
         success = False
     finally:
         db_connection.close()
