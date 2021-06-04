@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import trans_df
+from api.reports.report_utils import trans_df, collate_samples
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
