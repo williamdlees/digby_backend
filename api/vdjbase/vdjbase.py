@@ -710,15 +710,19 @@ def find_rep_filter_params(species, datasets):
 
     genes = []
     gene_types = []
+    haplotypes = []
 
     for dataset in datasets:
         session = vdjbase_dbs[species][dataset].session
         g_q = session.query(Gene.name, Gene.type).all()
         genes.extend((res[0] for res in g_q))
         gene_types.extend((res[1] for res in g_q))
+        h_q = session.query(HaplotypesFile.by_gene).distinct()
+        haplotypes.extend(res[0] for res in h_q)
 
     genes = sorted(set(genes))
     gene_types = sorted(set(gene_types))
+    haplotypes = sorted(set(haplotypes))
 
     params = [
         {
@@ -744,7 +748,7 @@ def find_rep_filter_params(species, datasets):
         }
     ])
 
-    return params
+    return params, haplotypes
 
 
 # Apply filter params to a list of samples in the context of a specific dataset

@@ -117,14 +117,7 @@
           "id": "haplo_gene",
           "type": "select",
           "label": "Haplotyping Gene",
-          "options": [
-            "IGHJ6-02_03",
-            "IGHJ6-02_03",
-            "IGHJ6-02_04",
-            "IGHJ6-03_04",
-            "IGHD2-8-01_02",
-            "IGHD2-21-01_02"
-          ]
+          "options": []
         },
         {
           "id": "f_kdiff",

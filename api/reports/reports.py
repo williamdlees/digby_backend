@@ -62,13 +62,20 @@ class ReportsApi(Resource):
                 rep_datasets = None
 
             genomic_filter_params = find_genomic_filter_params(args.species, genomic_datasets) if genomic_datasets is not None else []
-            rep_filter_params = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else []
+            rep_filter_params, rep_haplotypes = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else ([], [])
 
             available_reports = {}
 
-            for k,v in report_defs.items():
+            for k, v in report_defs.items():
                 if len(set(v['scope']) & scope):
                     available_reports[k] = v
+
+            if len(rep_haplotypes) > 0:
+                for k, v in available_reports.items():
+                    if 'params' in v.keys():
+                        for i in range(len(v['params'])):
+                            if v['params'][i]['id'] == 'haplo_gene':
+                                available_reports[k]['params'][i]['options'] = rep_haplotypes
 
             combined_filter_params = {}
 
