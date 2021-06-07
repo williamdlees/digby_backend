@@ -54,8 +54,11 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         else:
             query = query.order_by(Gene.alpha_order, Patient.id, Allele.id)
 
+        if params['novel_alleles'] == 'Exclude':
+            query = query.filter(Allele.novel == 0)
+
         if params['ambiguous_alleles'] == 'Exclude':
-            query = query.filter(Allele.is_single_allele == True)
+            query = query.filter(Allele.is_single_allele == 1)
 
         allele_recs = query.all()
 

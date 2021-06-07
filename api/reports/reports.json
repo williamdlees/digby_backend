@@ -227,6 +227,15 @@
           ]
         },
         {
+          "id": "novel_alleles",
+          "type": "select",
+          "label": "Novel Alleles",
+          "options": [
+            "Include",
+            "Exclude"
+          ]
+        },
+        {
           "id": "sort_order",
           "type": "select",
           "label": "Gene Sort Order",

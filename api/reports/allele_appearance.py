@@ -39,8 +39,15 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                             .filter(Allele.id == AllelesSample.allele_id)\
                             .filter(Gene.id == Allele.gene_id)\
                             .filter(Sample.name.in_(sample_list))\
-                            .filter(Gene.name.in_(wanted_genes)).all()
+                            .filter(Gene.name.in_(wanted_genes))
 
+        if params['novel_alleles'] == 'Exclude':
+            appearances = appearances.filter(Allele.novel == 0)
+
+        if params['ambiguous_alleles'] == 'Exclude':
+            appearances = appearances.filter(Allele.is_single_allele == 1)
+
+        appearances = appearances.all()
 
         for app in appearances:
             pid, gene, allele, sample, locus_order, alpha_order = app
