@@ -15,9 +15,13 @@ import csv
 import traceback
 import json
 import sys
+from sqlalchemy import func
 
 
-from sqlalchemy import update
+# a table of compound genes used in the pipeline, eg TRBV3-12, and their equiv in VDJbase eg TRBV3-1/2
+# the table is not stored in the database ..yet.. because it's only needed during intake
+compound_genes = {}
+
 
 def import_studies(ds_dir, species, dataset, session):
     result = []
@@ -301,17 +305,41 @@ def process_genotypes(ds_dir, species, dataset, session):
         with open(os.path.join(ds_dir, 'reference/ambiguous_allele_names.csv'), 'r') as fi:
             reader = csv.DictReader(fi)
             for row in reader:
+                if len(row['PATTERN']) == 1:
+                    row['PATTERN'] = '0' + row['PATTERN']   # thanks Excel
+                pipeline_name = row['GENE'] + '*' + row['PATTERN']
                 if len(row['ALLELES']) == 1:
                     allele = '0' + row['ALLELES']
+                elif '.' in row['ALLELES']:
+                    allele_list = row['ALLELES'].replace(' ', '').split(',')
+                    for a in allele_list:
+                        if '.' not in a:
+                            result.append('Error in ambiguous allele definition for %s: each item must have a dot.' % row['GENE'])
+                            break
+                    gene_num = allele_list[0].split('.')[0]
+                    row['GENE'] = row['GENE'].split('-')[0] + '-' + gene_num
+                    alleles = []
+                    for item in allele_list:
+                        a, n = item.split('.')
+                        if a != gene_num:
+                            alleles.append('%s.%s' % (a, n))
+                        else:
+                            alleles.append(n)
+                    allele = '_'.join(alleles)
                 elif ',' in row['ALLELES'] or ' ' in row['ALLELES']:
                     allele = row['ALLELES'].replace(' ', '').replace(',', '_')
                 else:
                     allele = row['ALLELES']
 
-                pipeline_name = row['GENE'] + '*' + row['PATTERN']
                 allele_name = row['GENE'] + '*' + allele
                 allele_names[allele_name] = pipeline_name
                 pipeline_names[pipeline_name] = allele_name
+
+                gene_name = allele_name.split('*')[0]
+                pipeline_gene_name = pipeline_name.split('*')[0]
+
+                if gene_name != pipeline_gene_name:
+                    add_compound_gene(session, allele_name, pipeline_gene_name)
 
     for sample in samples:
         genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
@@ -347,7 +375,6 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
     ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
 
     for index, row in genotype.iterrows():
-        # print(row[GENE_COLUMN])
         gene = row[GENE_COLUMN]
         kdiff = row[GENOTYPE_KDIFF_COLUMN]
 
@@ -481,8 +508,11 @@ def add2sample (allele_name, sample_id, haplo, pid, kdiff, pipeline_name, sessio
     if asc == 0:
         session.add(alleles_sample)
 
+
 def new_allele(allele_name, session):
-    base_allele = find_allele_or_similar(allele_name.split("_")[0], session)
+    ambiguous_alleles = [allele_name.split("*")[1].split("_")[0]]
+    base_name = allele_name.split("_")[0]
+    base_allele = find_allele_or_similar(base_name, session)
 
     if base_allele is None:
         # check for duplicate (D) allele
@@ -493,6 +523,7 @@ def new_allele(allele_name, session):
         raise DbCreationError('Error processing allele %s: base allele not in reference set' % allele_name)
 
     allele_pattern = re.compile("^[0-9]{2}$")
+    gene_pattern = re.compile(".+\.[0-9]{2}$")
     mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c]$")
     ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
     nt_pattern = re.compile("[A,G,T,C,a,g,t,c]+")
@@ -503,19 +534,24 @@ def new_allele(allele_name, session):
     final_allele_name = allele_name.split("_")[0]
     rep = allele_name.lower().split("_")[1:]
     is_novel_allele = False
-    ambiguous_alleles = [allele_name.split("*")[1].split("_")[0]]
     for r in rep:
-        if re.search(allele_pattern, r):
+        if re.search(allele_pattern, r) or re.search(gene_pattern, r):
             if r not in ambiguous_alleles:
                 final_allele_name += "_" + r
                 allele_seq_1 = seq
-                allele2_name = allele_name.split("*")[0] + "*" + r # r = allele for example 01
 
+                if '.' not in r:
+                    base_name = allele_name.split("*")[0]
+                    a_name = r
+                else:
+                    base_name = allele_name.split('-')[0] + '-' + r.split('.')[0]
+                    a_name = r.split('.')[1]
+
+                allele2_name = base_name + "*" + a_name
                 allele2 = find_allele_or_similar(allele2_name, session)
 
                 if allele2 is None:
-                    allele2_D_name = allele_name.split("*")[0] + "D*" + r # r = allele for example 01
-                    allele2 = find_allele_or_similar(allele2_D_name, session)
+                    allele2 = find_allele_or_similar(base_name + "D*" + a_name, session)
 
                 if allele2 is None:
                     raise DbCreationError('Error processing allele %s: base allele %s not in reference set' % (allele_name, allele2_name))
@@ -553,7 +589,6 @@ def new_allele(allele_name, session):
                 new_seq += seq[len(new_seq) - len(seq):]
             seq = new_seq
             is_novel_allele = True
-
 
     same_seq_allele = session.query(Allele).filter(Allele.seq == seq).one_or_none()    # we only expect one - one row in Allele for each sequence
 
@@ -597,6 +632,46 @@ def new_allele(allele_name, session):
         session.refresh(allele)
 
     return allele
+
+
+# Construct and add a 'compound gene', e.g. TRBV5/6, based on an allele name, eg TRBV6-5*01_6.01_6.02_6.03
+def add_compound_gene(session, vdjbase_allele_name, pipeline_gene_name):
+    if pipeline_gene_name in compound_genes:
+        return
+
+    # construct the compound gene from the allele extensions
+
+    root = vdjbase_allele_name.split('-')[0]
+    exts = vdjbase_allele_name.split('_')[1:]
+    nums = []
+    num = vdjbase_allele_name.split('-')[1]
+    num = num.split('*')[0]
+    nums.append(num)
+    for ext in exts:
+        if '.' in ext:
+            num = ext.split('.')[0]
+            if num not in nums:
+                nums.append(num)
+
+    vdjbase_gene_name = root + '-' + '/'.join(nums)
+    compound_genes[pipeline_gene_name] = vdjbase_gene_name
+
+    max_locus_order = session.query(func.max(Gene.locus_order)).one_or_none()[0]
+    max_alpha_order = session.query(func.max(Gene.locus_order)).one_or_none()[0]
+    species = session.query(Gene.species).filter(Gene.locus_order == max_locus_order).one_or_none()[0]
+
+    print('Adding %s' % vdjbase_gene_name)
+
+    g = Gene(
+        name=vdjbase_gene_name,
+        type=vdjbase_gene_name[:4],
+        family=vdjbase_gene_name.split('-')[0],
+        species=species,
+        locus_order=max_locus_order+1,
+        alpha_order=max_alpha_order+1
+    )
+    session.add(g)
+    session.commit()
 
 
 # Add Allele records for *Del

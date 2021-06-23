@@ -11,6 +11,7 @@ from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribut
 import re
 from db.vdjbase_formats import *
 from sqlalchemy.sql import func
+from db.vdjbase_projects import compound_genes
 
 
 def update_alleles_appearance(session):
@@ -78,12 +79,12 @@ def calculate_gene_frequencies(ds_dir, session):
                 count_clone = str(count_clone)
 
             frequencies_by_seq[gene] = 0
-            for x in count_seq.split(INT_SEP):
+            for x in str(count_seq).split(INT_SEP):
                 frequencies_by_seq[gene] += int(float(x))
             family_total_seq[family] += frequencies_by_seq[gene]
 
             frequencies_by_clone[gene] = 0
-            for x in count_clone.split(INT_SEP):
+            for x in str(count_clone).split(INT_SEP):
                 frequencies_by_clone[gene] += int(float(x))
             family_total_clone[family] += frequencies_by_clone[gene]
 
@@ -102,9 +103,18 @@ def calculate_gene_frequencies(ds_dir, session):
                 frequencies_by_clone[gene] /= float(family_total_clone[family])
 
         for gene in frequencies_by_seq.keys():
+            # if we can't find an id for the gene in the file, look for a compound gene
+
+            gene_id = None
+
+            if gene in gene_ids_by_name:
+                gene_id = gene_ids_by_name[gene]
+            elif gene in compound_genes:
+                gene_id = gene_ids_by_name[compound_genes[gene]]
+
             gd = GenesDistribution(
                 frequency=frequencies_by_clone[gene],
-                gene_id=gene_ids_by_name[gene],
+                gene_id=gene_id,
                 patient_id=sample.patient_id,
                 sample_id=sample.id,
                 count_by_clones=True,
@@ -113,7 +123,7 @@ def calculate_gene_frequencies(ds_dir, session):
 
             gd = GenesDistribution(
                 frequency=frequencies_by_seq[gene],
-                gene_id=gene_ids_by_name[gene],
+                gene_id=gene_id,
                 patient_id=sample.patient_id,
                 sample_id=sample.id,
                 count_by_clones=False,

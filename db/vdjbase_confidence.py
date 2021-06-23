@@ -150,8 +150,18 @@ def allele_copy_stats():
 # Collect haplotyping info on novel alleles, store in HaplotypeEvidence
 def gather_haplo_data(novels, ds_dir, session):
     sample_haplotypes = session.query(SamplesHaplotype).all()
+    alleles = session.query(Allele.name, Allele.pipeline_name).all()
+
+    vdjbase_allele = {}
+
+    for allele in alleles:
+        if allele.pipeline_name:
+            for pa in allele.pipeline_name.split(', '):
+                pa = pa.split('*')[0] + '*' + pa.split('*')[1].lower()
+                vdjbase_allele[pa] = allele.name
 
     for sample_haplotype in sample_haplotypes:
+        print(sample_haplotype.haplotypes_files.file)
         with open(os.path.join(ds_dir, sample_haplotype.haplotypes_files.file), 'r', newline='') as fi:
             reader = csv.reader(fi, dialect='excel-tab')
             header = True
@@ -174,7 +184,12 @@ def gather_haplo_data(novels, ds_dir, session):
                 for allele in haplotyped:
                     if '_' in allele:
                         name = row[1] + '*' + allele.lower()
+
+                        if name in vdjbase_allele:
+                            name = vdjbase_allele[name]
+
                         n = session.query(Allele).filter(Allele.name == name).one_or_none()
+
                         if n:
                             allele_names = row[4].split(',')
                             allele_counts = [row[7], row[9], row[11], row[13]]
@@ -191,6 +206,9 @@ def gather_haplo_data(novels, ds_dir, session):
                             )
                             session.add(he)
                         else:
+                            if 'ap01_g291c_t296c_c314t' in name:
+                                print('foo')
+                            print('foo')
                             print('Allele %s is present in haplotype file %s but is not in the Alleles table' % (name, sample_haplotype.haplotypes_files.file))
 
     for novel in novels:

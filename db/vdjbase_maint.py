@@ -41,6 +41,7 @@ def create_single_database(job, species, dataset, upload_path):
     success = True
 
     try:
+
         job.update_state(state='PENDING', meta={'value': 'Unzipping data files'})
         result.extend(extract_files(job, ds_dir, species, dataset))
         job.update_state(state='PENDING', meta={'value': 'Importing reference alleles'})
@@ -59,6 +60,7 @@ def create_single_database(job, species, dataset, upload_path):
         result.extend(calculate_gene_frequencies(ds_dir, session))
         job.update_state(state='PENDING', meta={'value': 'Calculating patterns'})
         result.extend(calculate_patterns(session))
+
         job.update_state(state='PENDING', meta={'value': 'Creating confidence reports'})
         result.extend(check_novel_confidence(ds_dir, session))
     except Exception as e:
