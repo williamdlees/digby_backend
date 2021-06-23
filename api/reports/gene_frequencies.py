@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file, collate_samples
+from api.reports.report_utils import make_output_file, collate_samples, chunk_list
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, Patient, AllelesPattern, GenesDistribution
 import os
@@ -12,7 +12,7 @@ from sqlalchemy import func
 import pandas as pd
 
 GENE_FREQUENCY_PLOT = 'Gene_Usage.R'
-
+SAMPLE_CHUNKS = 400
 
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
@@ -28,34 +28,33 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     # Format we need to produce is [(gene_name, hetero count, homo count),...]
 
-    chunk = 30
     genes_frequencies = defaultdict(list)
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
-        sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id)\
-            .filter(Sample.name.in_(samples_by_dataset[dataset]))\
-            .filter(Sample.samples_group >= single_sample_filter)\
-            .all()
-        sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
-        sample_list = [s[0] for s in sample_list]
 
-        i = 0
-        sample_list_len = len(sample_list)
+        for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id)\
+                .filter(Sample.name.in_(sample_chunk))\
+                .filter(Sample.samples_group >= single_sample_filter)\
+                .all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            sample_list = [s[0] for s in sample_list]
 
-        while i < sample_list_len:
+            i = 0
+            sample_list_len = len(sample_list)
+
             frequencies = session.query(GenesDistribution.sample_id, Gene.name, GenesDistribution.frequency)\
                 .join(Gene)\
                 .join(Sample)\
                 .filter(GenesDistribution.count_by_clones == calc_by_clone)\
                 .filter(Gene.name.in_(wanted_genes)) \
-                .filter(Sample.name.in_(sample_list[i:min(sample_list_len, i + chunk)])) \
+                .filter(Sample.name.in_(sample_list)) \
                 .all()
 
             for frequency in frequencies:
                 genes_frequencies[frequency[1]].append(round(float(frequency[2]), 2))
 
-            i += chunk
 
 
     labels = ['GENE', 'FREQ']

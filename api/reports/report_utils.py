@@ -116,3 +116,8 @@ def collate_samples(rep_samples):
 
     return chain, samples_by_dataset
 
+# split a list into chunks of length n
+
+def chunk_list(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]

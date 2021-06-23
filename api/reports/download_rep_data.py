@@ -2,7 +2,7 @@
 from Bio import SeqIO
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
+from api.reports.report_utils import make_output_file, chunk_list
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
 import csv
@@ -16,6 +16,7 @@ from api.vdjbase.vdjbase import valid_filters
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+SAMPLE_CHUNKS = 500
 
 def zipdir(path, ziph, arc_root):
     # ziph is zipfile handle
@@ -48,18 +49,20 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         rows = []
         for dataset in samples_by_dataset.keys():
             session = vdjbase_dbs[species][dataset].session
-            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
-            sample_list = [s[0] for s in sample_list]
 
-            results = session.query(*attribute_query)\
-                .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
-                .join(Patient, Patient.id == Sample.patient_id)\
-                .join(SeqProtocol)\
-                .join(TissuePro)\
-                .join(Study, Sample.study_id == Study.id)\
-                .filter(Sample.name.in_(sample_list)).all()
+            for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+                sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+                sample_list = [s[0] for s in sample_list]
 
-            rows.extend(results)
+                results = session.query(*attribute_query)\
+                    .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
+                    .join(Patient, Patient.id == Sample.patient_id)\
+                    .join(SeqProtocol)\
+                    .join(TissuePro)\
+                    .join(Study, Sample.study_id == Study.id)\
+                    .filter(Sample.name.in_(sample_list)).all()
+
+                rows.extend(results)
 
         outfile = make_output_file('csv')
         with open(outfile, 'w', newline='') as fo:
@@ -84,18 +87,19 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             for dataset in samples_by_dataset.keys():
                 print('adding dataset')
                 session = vdjbase_dbs[species][dataset].session
-                sample_list = session.query(Sample.genotype, Sample.igsnper_plot_path).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
-                for p1, p2 in sample_list:
-                    if p1 is not None and len(p1) > 0:
-                        sample_dir = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, os.path.dirname(p1.replace('samples/', '')))
-                        if sample_dir not in added_dirs:
-                            zipdir(sample_dir, fo, os.path.join(VDJBASE_SAMPLE_PATH, species))        # sample files
-                            added_dirs.append(sample_dir)
-                    if p2 is not None and len(p2) > 0:
-                        igsnper_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, p2)
-                        if igsnper_path not in added_files:
-                            fo.write(igsnper_path, arcname=igsnper_path.replace(os.path.join(VDJBASE_SAMPLE_PATH, species), ''))
-                            added_files.append(igsnper_path)
+                for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+                    sample_list = session.query(Sample.genotype, Sample.igsnper_plot_path).filter(Sample.name.in_(sample_chunk)).all()
+                    for p1, p2 in sample_list:
+                        if p1 is not None and len(p1) > 0:
+                            sample_dir = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, os.path.dirname(p1.replace('samples/', '')))
+                            if sample_dir not in added_dirs:
+                                zipdir(sample_dir, fo, os.path.join(VDJBASE_SAMPLE_PATH, species))        # sample files
+                                added_dirs.append(sample_dir)
+                        if p2 is not None and len(p2) > 0:
+                            igsnper_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, p2)
+                            if igsnper_path not in added_files:
+                                fo.write(igsnper_path, arcname=igsnper_path.replace(os.path.join(VDJBASE_SAMPLE_PATH, species), ''))
+                                added_files.append(igsnper_path)
 
         return send_report(outfile, 'zip', attachment_filename='sample_data.zip')
 

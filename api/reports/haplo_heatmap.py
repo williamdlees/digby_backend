@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import trans_df, collate_samples
+from api.reports.report_utils import trans_df, collate_samples, chunk_list
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
@@ -12,6 +12,7 @@ from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, ge
 import pandas as pd
 
 HEATMAP_HAPLOTYPE_SCRIPT = "haplotype_heatmap.R"
+SAMPLE_CHUNKS = 400
 
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
@@ -28,14 +29,18 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
-        sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
-        sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
-        sample_list = [s[0] for s in sample_list]
-        haplos = session.query(Sample.name, HaplotypesFile.file)\
-            .filter(Sample.name.in_(sample_list))\
-            .join(SamplesHaplotype, Sample.id == SamplesHaplotype.samples_id)\
-            .filter(SamplesHaplotype.haplotypes_files_id == HaplotypesFile.id)\
-            .filter(HaplotypesFile.by_gene == params['haplo_gene']).all()
+
+        haplos = []
+        for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            sample_list = [s[0] for s in sample_list]
+            haplo_query = session.query(Sample.name, HaplotypesFile.file)\
+                .filter(Sample.name.in_(sample_list))\
+                .join(SamplesHaplotype, Sample.id == SamplesHaplotype.samples_id)\
+                .filter(SamplesHaplotype.haplotypes_files_id == HaplotypesFile.id)\
+                .filter(HaplotypesFile.by_gene == params['haplo_gene'])
+            haplos.extend(haplo_query.all())
 
         for name, filename in haplos:
             sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, filename.replace('samples/', ''))

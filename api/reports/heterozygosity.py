@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file, collate_samples
+from api.reports.report_utils import make_output_file, collate_samples, chunk_list
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, Patient, AllelesPattern
 import os
@@ -11,6 +11,8 @@ from sqlalchemy import func
 import pandas as pd
 
 HETEROZYGOSITY_SCRIPT = 'Heterozygous.R'
+SAMPLE_CHUNKS = 400
+
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) == 0:
@@ -28,30 +30,33 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
-        sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
-        sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
-        sample_list = [s[0] for s in sample_list]
+        allele_sample_recs = []
 
-        query = session.query(Gene.name, Patient.id, Allele.id, Sample.name, Gene.locus_order, AllelesSample.kdiff, Allele.name) \
-            .join(Allele, Gene.id == Allele.gene_id) \
-            .join(AllelesSample, Allele.id == AllelesSample.allele_id) \
-            .join(Sample, Sample.id == AllelesSample.sample_id) \
-            .join(Patient, Patient.id == Sample.patient_id) \
-            .filter(Gene.name.in_(wanted_genes)) \
-            .filter(Allele.name.notlike('%Del%')) \
-            .filter(Allele.name.notlike('%OR%')) \
-            .filter(Sample.name.in_(sample_list)) \
-            .filter(AllelesSample.kdiff >= kdiff)
+        for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            sample_list = [s[0] for s in sample_list]
 
-        if 'sort_order' in params and params['sort_order'] == 'Locus':
-            query = query.order_by(Gene.locus_order, Patient.id, Allele.id)
-        else:
-            query = query.order_by(Gene.alpha_order, Patient.id, Allele.id)
+            query = session.query(Gene.name, Patient.id, Allele.id, Sample.name, Gene.locus_order, AllelesSample.kdiff, Allele.name) \
+                .join(Allele, Gene.id == Allele.gene_id) \
+                .join(AllelesSample, Allele.id == AllelesSample.allele_id) \
+                .join(Sample, Sample.id == AllelesSample.sample_id) \
+                .join(Patient, Patient.id == Sample.patient_id) \
+                .filter(Gene.name.in_(wanted_genes)) \
+                .filter(Allele.name.notlike('%Del%')) \
+                .filter(Allele.name.notlike('%OR%')) \
+                .filter(Sample.name.in_(sample_list)) \
+                .filter(AllelesSample.kdiff >= kdiff)
 
-        if params['ambiguous_alleles'] == 'Exclude':
-            query = query.filter(Allele.is_single_allele == True)
+            if 'sort_order' in params and params['sort_order'] == 'Locus':
+                query = query.order_by(Gene.locus_order, Patient.id, Allele.id)
+            else:
+                query = query.order_by(Gene.alpha_order, Patient.id, Allele.id)
 
-        allele_sample_recs = query.all()
+            if params['ambiguous_alleles'] == 'Exclude':
+                query = query.filter(Allele.is_single_allele == True)
+
+            allele_sample_recs.extend(query.all())
 
         # As the result is indexed, run over each gene in turn, count the number of alleles found in each patient, update h_counts accordingly
 

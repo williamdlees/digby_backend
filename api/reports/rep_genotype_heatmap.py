@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import trans_df, collate_samples
+from api.reports.report_utils import trans_df, collate_samples, chunk_list
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
@@ -13,6 +13,7 @@ import pandas as pd
 
 
 HEATMAP_GENOTYPE_SCRIPT = "genotype_heatmap.R"
+SAMPLE_CHUNKS = 400
 
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
@@ -28,7 +29,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
-        sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
+
+        sample_list = []
+        for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list.extend(session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all())
 
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
 

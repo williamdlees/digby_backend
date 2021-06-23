@@ -1,8 +1,8 @@
-# Allele APpearances report
+# Allele Appearances report
 
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
+from api.reports.report_utils import make_output_file, chunk_list
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele
 import os
@@ -10,6 +10,7 @@ from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
 import xlwt
 
 APPEARANCE_SCRIPT = 'allele_appeareance2.R'
+SAMPLE_CHUNKS = 400
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) == 0:
@@ -30,24 +31,27 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
-        sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
-        sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
-        sample_list = [s[0] for s in sample_list]
+        appearances = []
 
-        appearances = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.name, Gene.locus_order, Gene.alpha_order)\
-                            .filter(Sample.id == AllelesSample.sample_id)\
-                            .filter(Allele.id == AllelesSample.allele_id)\
-                            .filter(Gene.id == Allele.gene_id)\
-                            .filter(Sample.name.in_(sample_list))\
-                            .filter(Gene.name.in_(wanted_genes))
+        for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            sample_list = [s[0] for s in sample_list]
 
-        if params['novel_alleles'] == 'Exclude':
-            appearances = appearances.filter(Allele.novel == 0)
+            app_query = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.name, Gene.locus_order, Gene.alpha_order)\
+                                .filter(Sample.id == AllelesSample.sample_id)\
+                                .filter(Allele.id == AllelesSample.allele_id)\
+                                .filter(Gene.id == Allele.gene_id)\
+                                .filter(Sample.name.in_(sample_list))\
+                                .filter(Gene.name.in_(wanted_genes))
 
-        if params['ambiguous_alleles'] == 'Exclude':
-            appearances = appearances.filter(Allele.is_single_allele == 1)
+            if params['novel_alleles'] == 'Exclude':
+                app_query = app_query.filter(Allele.novel == 0)
 
-        appearances = appearances.all()
+            if params['ambiguous_alleles'] == 'Exclude':
+                app_query = app_query.filter(Allele.is_single_allele == 1)
+
+            appearances.extend(app_query.all())
 
         for app in appearances:
             pid, gene, allele, sample, locus_order, alpha_order = app
