@@ -490,7 +490,7 @@ def add2sample (allele_name, sample_id, haplo, pid, kdiff, pipeline_name, sessio
 
     allele = find_allele_or_similar(allele_name, session)
     if allele is None:
-        allele = new_allele(allele_name, session)
+        allele = new_allele(allele_name, pipeline_name, session)
 
     if len(pipeline_name) > 0:
         if len(allele.pipeline_name) == 0:
@@ -509,7 +509,7 @@ def add2sample (allele_name, sample_id, haplo, pid, kdiff, pipeline_name, sessio
         session.add(alleles_sample)
 
 
-def new_allele(allele_name, session):
+def new_allele(allele_name, pipeline_name, session):
     ambiguous_alleles = [allele_name.split("*")[1].split("_")[0]]
     base_name = allele_name.split("_")[0]
     base_allele = find_allele_or_similar(base_name, session)
@@ -522,12 +522,21 @@ def new_allele(allele_name, session):
     if base_allele is None:
         raise DbCreationError('Error processing allele %s: base allele not in reference set' % allele_name)
 
+    # Check for a compound gene in the pipeline name, set gene id accordingly
+    base_gene = pipeline_name.split('*')[0]
+    if base_gene in compound_genes:
+        try:
+            gene_id = session.query(Gene.id).filter(Gene.name == compound_genes[base_gene]).one_or_none()[0]
+        except Exception as e:
+            print('foo')
+    else:
+        gene_id = base_allele.gene_id
+
     allele_pattern = re.compile("^[0-9]{2}$")
     gene_pattern = re.compile(".+\.[0-9]{2}$")
     mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c]$")
     ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
     nt_pattern = re.compile("[A,G,T,C,a,g,t,c]+")
-    gid = base_allele.gene_id
     seq = base_allele.seq
     seq = "".join(seq.split())
 
@@ -618,7 +627,7 @@ def new_allele(allele_name, session):
             name=final_allele_name,
             seq=seq,
             seq_len=str(len(seq)),
-            gene_id=gid,
+            gene_id=gene_id,
             is_single_allele=len(ambiguous_alleles)==1,
             appears=0,
             low_confidence=False,
