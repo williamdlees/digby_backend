@@ -45,7 +45,7 @@ class FlaskCelery(Celery):
 celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redis://localhost:6379/0')
 
 
-@celery.task(bind=True)
+@celery.task(bind=True, time_limit=600)
 def run_report(self, report_name, format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     runner = importlib.import_module('api.reports.' + report_name)
 
