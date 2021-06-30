@@ -2,9 +2,8 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import trans_df, collate_samples, chunk_list, find_primer_translations, translate_primer_alleles, translate_primer_genes
+from api.reports.report_utils import make_output_file, trans_df, collate_samples, chunk_list, find_primer_translations, translate_primer_alleles, translate_primer_genes
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype
 import os

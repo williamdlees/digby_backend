@@ -2,10 +2,9 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import check_tab_file
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
-
+from api.reports.report_utils import make_output_file, check_tab_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
+import pandas as pd
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype
 import os
@@ -25,6 +24,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     html = (format == 'html')
 
     session = vdjbase_dbs[species][rep_sample['dataset']].session
+    primer_trans, gene_subs = find_primer_translations(session)
+
     p = session.query(HaplotypesFile.file)\
         .join(SamplesHaplotype)\
         .join(Sample)\
@@ -38,6 +39,18 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
 
     sample_path = check_tab_file(sample_path)
+
+    # translate pipeline allele names to VDJbase allele names
+    haplotype = pd.read_csv(sample_path, sep='\t', dtype=str)
+
+    col_names = list(haplotype.columns.values)
+    for i in (2, 3, 4):
+        haplotype[col_names[i]] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(haplotype['gene'], haplotype[col_names[i]])]
+
+    haplotype['gene'] = [translate_primer_genes(x, gene_subs) for x in haplotype['gene']]
+    sample_path = make_output_file('tsv')
+    haplotype.to_csv(sample_path, sep='\t', index=False)
+
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
     gene_order_file = get_order_file(species, rep_sample['dataset'], locus_order=locus_order)
 

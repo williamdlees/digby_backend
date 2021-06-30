@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file, collate_samples
+from api.reports.report_utils import make_output_file, collate_samples, find_primer_translations, translate_primer_alleles, translate_primer_genes
 
 from api.reports.report_utils import trans_df
 from app import app, vdjbase_dbs
@@ -28,6 +28,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
+        primer_trans, gene_subs = find_primer_translations(session)
         sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
 
@@ -41,6 +42,12 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
                 genotype = trans_df(genotype)
                 genotype = genotype[genotype.gene.isin(wanted_genes)]
+
+                # translate pipeline allele names to VDJbase allele names
+                for col in ['alleles', 'GENOTYPED_ALLELES']:
+                    genotype[col] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(genotype['gene'], genotype[col])]
+
+                genotype['gene'] = [translate_primer_genes(x, gene_subs) for x in genotype['gene']]
 
                 subject_name = name if len(samples_by_dataset) == 1 else dataset + '_' + name
 

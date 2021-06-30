@@ -4,7 +4,7 @@ from werkzeug.exceptions import BadRequest
 
 from api.reports.report_utils import trans_df, collate_samples, chunk_list
 from api.reports.reports import SYSDATA, run_rscript, send_report
-from api.reports.report_utils import make_output_file
+from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, Gene
 import os
@@ -29,6 +29,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
+        primer_trans, gene_subs = find_primer_translations(session)
 
         sample_list = []
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
@@ -47,6 +48,12 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
                 genotype = trans_df(genotype)
                 genotype = genotype[genotype.gene.isin(wanted_genes)]
+
+                # translate pipeline allele names to VDJbase allele names
+                for col in ['alleles', 'GENOTYPED_ALLELES']:
+                    genotype[col] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(genotype['gene'], genotype[col])]
+
+                genotype['gene'] = [translate_primer_genes(x, gene_subs) for x in genotype['gene']]
 
                 subject_name = name if len(samples_by_dataset) == 1 else dataset + '_' + name
 
