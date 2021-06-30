@@ -193,6 +193,23 @@ def import_studies(ds_dir, species, dataset, session):
                 print("\n\n")
 
     session.commit()
+
+    # Warn if there are duplicated read counts
+
+    reads = session.query(Sample.name, Sample.row_reads).all()
+    read_dict = {}
+    dupes_found = False
+
+    for sample_name, count in reads:
+        if count in read_dict:
+            print('WARNING: DUPLICATED READ COUNT IN %s, %s' % (sample_name, read_dict[count]))
+            dupes_found = True
+        else:
+            read_dict[count] = sample_name
+
+    if dupes_found:
+        result.append('DUPLICATE READ COUNTS FOUND - CHECK THE LOGS')
+
     result.append('Import completed!')
     return result
 
@@ -360,7 +377,6 @@ def process_genotypes(ds_dir, species, dataset, session):
     return result
 
 
-
 def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_names, session):
     """
     Upload genotype to sample.
@@ -525,10 +541,7 @@ def new_allele(allele_name, pipeline_name, session):
     # Check for a compound gene in the pipeline name, set gene id accordingly
     base_gene = pipeline_name.split('*')[0]
     if base_gene in compound_genes:
-        try:
-            gene_id = session.query(Gene.id).filter(Gene.name == compound_genes[base_gene]).one_or_none()[0]
-        except Exception as e:
-            print('foo')
+        gene_id = session.query(Gene.id).filter(Gene.name == compound_genes[base_gene]).one_or_none()[0]
     else:
         gene_id = base_allele.gene_id
 

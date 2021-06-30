@@ -123,6 +123,15 @@
           "id": "f_kdiff",
           "type": "decimal",
           "label": "Min Kdiff"
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
         }
       ],
       "filter_params": true,

@@ -23,9 +23,23 @@ from db.vdjbase_exceptions import *
 
 Session = sessionmaker()
 
-def create_single_database(job, species, dataset, upload_path):
+def create_single_database(job, species, dataset, upload_path, in_situ=False):
     result = []
-    ds_dir = os.path.join(upload_path, species, dataset)
+
+    # if called from UI, create/unpack in uploads directory
+    # if called fromcommand line, create in situ from files without unpacking
+
+    if not in_situ:
+        ds_dir = os.path.join(upload_path, species, dataset)
+        try:
+            job.update_state(state='PENDING', meta={'value': 'Unzipping data files'})
+            result.extend(extract_files(job, ds_dir, species, dataset))
+        except Exception as e:
+            result.append(e.args[0])
+            traceback.print_exc(limit=2, file=sys.stdout)
+            return False, result
+    else:
+        ds_dir = upload_path
 
     db_file = os.path.join(ds_dir, 'db.sqlite3')
 
@@ -42,8 +56,6 @@ def create_single_database(job, species, dataset, upload_path):
 
     try:
 
-        job.update_state(state='PENDING', meta={'value': 'Unzipping data files'})
-        result.extend(extract_files(job, ds_dir, species, dataset))
         job.update_state(state='PENDING', meta={'value': 'Importing reference alleles'})
         result.extend(import_reference_alleles(os.path.join(ds_dir, 'reference'), session, species))
         job.update_state(state='PENDING', meta={'value': 'Importing studies'})
@@ -88,5 +100,4 @@ def extract_files(job, ds_dir, species, dataset):
     result.append('Processing %s/%s' %(species, dataset))
 
     return result
-
 

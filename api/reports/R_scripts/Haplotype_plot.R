@@ -55,7 +55,14 @@ if (!is.null(opt$samp)) {
 }
 names(haplo_db_J6)[c(1,2,5:ncol(haplo_db_J6))] <- tolower(names(haplo_db_J6)[c(1,2,5:ncol(haplo_db_J6))])
 
-haplotype_graph <- plotHaplotype(haplo_db_J6, html_output = html_output, text_size = 11)
+if (!is.null(opt$gene_order_file)){
+    gene_order = read.delim(file=opt$gene_order_file, header=FALSE, sep="\t", stringsAsFactors = F)
+    gene_order = gene_order$V1
+} else {
+    gene_order = NULL
+}
+
+haplotype_graph <- plotHaplotype(haplo_db_J6, html_output = html_output, text_size = 11, genes_order = gene_order, chain = opt$chain)
 
 if (html_output) {
   htmlwidgets::saveWidget(haplotype_graph , file.path(normalizePath(dirname(output_file)),basename(output_file)), background = "white", selfcontained = F)

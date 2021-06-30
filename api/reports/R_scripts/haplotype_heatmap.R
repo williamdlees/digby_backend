@@ -50,4 +50,4 @@ if (!is.null(opt$gene_order_file)){
     gene_order = NULL
 }
 
-hapHeatmap(haplotypes, lk_cutoff = kdiff, file = output_file)
+hapHeatmap(haplotypes, lk_cutoff = kdiff, file = output_file, genes_order=gene_order, chain=opt$chain)

@@ -57,12 +57,12 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     if len(genotypes) > 20:
         raise BadRequest('Please select at most 20 genotypes, or use the Genotype Heatmap report.')
 
-    geno_path = make_output_file('csv')
+    geno_path = make_output_file('tsv')
     genotypes = pd.concat(genotypes)
     genotypes.to_csv(geno_path, sep='\t')
 
     if format == 'pdf':
-        attachment_filename = '%s_%s_%s_genotype.pdf' % (species, rep_sample['dataset'], rep_sample['name'])
+        attachment_filename = '%s_sampled_genotype.pdf' % (species)
     else:
         attachment_filename = None
 

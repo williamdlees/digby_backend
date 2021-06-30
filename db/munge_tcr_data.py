@@ -26,7 +26,7 @@ def munge(project, dir, yml_file):
 
     haplo_path = os.path.join(dir, 'haplotypes')
     for file in listdir(haplo_path):
-        name_els = file.split('_')
+        name_els = file.replace('_MC1', '').split('_')      # remove MC1 from some names in P20 June run
         file = join(haplo_path, file)
         if isfile(file) and project in file:
             sample = name_els[0] + '_' + name_els[1] + '_' + name_els[2]

@@ -2,7 +2,7 @@
 
 from werkzeug.exceptions import BadRequest
 
-from api.reports.report_utils import trans_df, collate_samples, chunk_list
+from api.reports.report_utils import trans_df, collate_samples, chunk_list, find_primer_translations, translate_primer_alleles, translate_primer_genes
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
@@ -29,6 +29,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
+        primer_trans, gene_subs = find_primer_translations(session)
 
         haplos = []
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
@@ -52,12 +53,21 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             haplotype = trans_df(haplotype)
             haplotype = haplotype[haplotype.gene.isin(wanted_genes)]
             haplotype['subject'] = name if len(samples_by_dataset) == 1 else dataset + '_' + name
+
+            # translate pipeline allele names to VDJbase allele names
+
+            col_names = list(haplotype.columns.values)
+            for i in (2, 3, 4):
+                haplotype[col_names[i]] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(haplotype['gene'], haplotype[col_names[i]])]
+
+            haplotype['gene'] = [translate_primer_genes(x, gene_subs) for x in haplotype['gene']]
+
             haplotypes = pd.concat([haplotypes, haplotype], keys=None, ignore_index=True)[haplotype.columns.tolist()]
 
     if len(haplotypes) == 0:
         raise BadRequest('No records matching the filter criteria were found.')
 
-    haplo_path = make_output_file('csv')
+    haplo_path = make_output_file('tsv')
     haplotypes.to_csv(haplo_path, sep='\t', index=False)
     attachment_filename = '%s_haplotype_heatmap.pdf' % species
 
@@ -66,7 +76,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
     gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=locus_order)
-
     output_path = make_output_file('html' if html else 'pdf')
     cmd_line = ["-i", haplo_path,
                 "-o", output_path,

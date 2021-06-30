@@ -7,6 +7,8 @@ import pandas as pd
 from werkzeug.exceptions import BadRequest
 import csv
 import tempfile
+from db.vdjbase_model import Allele
+
 from app import app
 
 
@@ -121,3 +123,41 @@ def collate_samples(rep_samples):
 def chunk_list(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
+# functions to translate from pipeline allele names (in the tigger/rabhit files) and vdjbase names
+
+def find_primer_translations(session):
+    trans = {}
+    alleles = session.query(Allele.name, Allele.pipeline_name).all()
+    for name, pipeline_name in alleles:
+        if pipeline_name is not None and len(pipeline_name) > 0:
+            for pn in pipeline_name.replace(' ', '').split(','):
+                trans[pn] = name
+
+    gene_subs = {}
+
+    for pn, gn in trans.items():
+        pg = pn.split('*')[0]
+        gg = gn.split('*')[0]
+
+        if pg != gg:
+            gene_subs[pg] = gg
+
+    return (trans, gene_subs)
+
+
+def translate_primer_alleles(gene, alleles, primer_trans):
+    ret = []
+    if alleles is not None and isinstance(alleles, str) and len(alleles) > 0:
+        for allele in alleles.replace(' ', '').split(','):
+            full_name = gene + '*' + allele
+            if full_name in primer_trans and primer_trans[full_name] is not None and '*' in primer_trans[full_name]:
+                ret.append(primer_trans[full_name].split('*')[1])
+            else:
+                ret.append(allele)
+
+    return '' if len(ret) == 0 else ','.join(ret)
+
+
+def translate_primer_genes(gene, gene_subs):
+    return gene_subs[gene] if gene in gene_subs else gene

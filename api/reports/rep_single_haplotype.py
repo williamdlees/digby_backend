@@ -9,8 +9,7 @@ from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH
-
+from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, get_multiple_order_file, get_order_file
 
 PERSONAL_HAPLOTYPE_SCRIPT = 'Haplotype_plot.R'
 
@@ -39,8 +38,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
 
     sample_path = check_tab_file(sample_path)
+    locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
+    gene_order_file = get_order_file(species, rep_sample['dataset'], locus_order=locus_order)
 
-    report_path = personal_haplotype(rep_sample['name'], sample_path, html)
+    report_path = personal_haplotype(rep_sample['name'], sample_path, gene_order_file, html)
 
     if format == 'pdf':
         attachment_filename = '%s_%s_%s_%s_haplotype.pdf' % (species, rep_sample['dataset'], rep_sample['name'], params['haplo_gene'])
@@ -50,12 +51,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     return send_report(report_path, format, attachment_filename)
 
 
-def personal_haplotype(sample_name, haplotype_file, html=True):
+def personal_haplotype(sample_name, haplotype_file, gene_order_file, html=True):
     output_path = make_output_file('html' if html else 'pdf')
     file_type = 'T' if html else 'F'
     cmd_line = ["-i", haplotype_file,
                 "-o", output_path,
                 "-t", file_type,
+                "-g", gene_order_file,
                 "--samp", sample_name]
 
     if run_rscript(PERSONAL_HAPLOTYPE_SCRIPT, cmd_line) and os.path.getsize(output_path) > 0:

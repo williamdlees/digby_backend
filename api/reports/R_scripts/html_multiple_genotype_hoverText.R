@@ -2,10 +2,12 @@
 
 library(optparse)
 library(vdjbasevis)
+library(stringr)
+library(plotly)
 
 ########## VDJbase server ##############
 
-pdf(NULL)     # This prevents blank Rscript.pdf files being written
+#pdf(NULL)     # This prevents blank Rscript.pdf files being written
 
 option_list = list(
   make_option(c("-i", "--input_file"), type="character", default=NULL,
@@ -60,16 +62,18 @@ if (!is.null(opt$gene_order_file)){
 
 html_output <- as.logical(opt$is_html)  # for pdf set "F"
 
+
 ######################### Run multiGenotype fuction ##########################################
 num_of_subjects <- length(unique(data$subject))
 genotype_graph <- vdjbasevis::multipleGenoytpe(geno_table=data, chain=chain, ordered_genes=gene_order, html=html_output)
 
+save.image(file='foo.rdata')
 
 if (html_output) {
   htmlwidgets::saveWidget(genotype_graph[[1]] , file.path(normalizePath(dirname(output_file)),basename(output_file)), background = "white", selfcontained = F)
 } else {
   pdf(output_file,onefile = F, width = genotype_graph[[3]], height = genotype_graph[[2]], family = "serif")
-  print(genotype_graph[[1]])
+  print(genotype_graph)
   dev.off()
   embedFonts(output_file)
 }
