@@ -690,7 +690,8 @@ def add_compound_gene(session, vdjbase_allele_name, pipeline_gene_name):
         family=vdjbase_gene_name.split('-')[0],
         species=species,
         locus_order=max_locus_order+1,
-        alpha_order=max_alpha_order+1
+        alpha_order=max_alpha_order+1,
+        pseudo_gene=False
     )
     session.add(g)
     session.commit()
