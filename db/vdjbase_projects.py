@@ -621,6 +621,11 @@ def new_allele(allele_name, pipeline_name, session):
         if (temp == final_allele_name):
             allele = same_seq_allele
         else:
+            # if we're adding a gene-ambiguous allele, it should be come the allele name
+
+            if '.' in final_allele_name.split('*')[1]:
+                final_allele_name, temp = temp, final_allele_name
+
             if sim is not None and len(sim) > 0:
                 if (final_allele_name in sim):
                     allele = same_seq_allele
@@ -631,8 +636,9 @@ def new_allele(allele_name, pipeline_name, session):
 
         if not allele:
             allele_table = Allele.__table__
-            stmt = allele_table.update().where(allele_table.c.seq == seq).values(similar=sim)
+            stmt = allele_table.update().where(allele_table.c.seq == seq).values(similar=sim, name = temp)
             session.execute(stmt)
+            session.commit()
             allele = session.query(Allele).filter(Allele.seq == seq).one_or_none()
 
     else:

@@ -129,6 +129,9 @@ def chunk_list(lst, n):
 def find_primer_translations(session):
     trans = {}
     alleles = session.query(Allele.name, Allele.pipeline_name).all()
+
+    check23 = []
+
     for name, pipeline_name in alleles:
         if pipeline_name is not None and len(pipeline_name) > 0:
             for pn in pipeline_name.replace(' ', '').split(','):
@@ -137,13 +140,29 @@ def find_primer_translations(session):
     gene_subs = {}
 
     for pn, gn in trans.items():
-        pg = pn.split('*')[0]
-        gg = gn.split('*')[0]
+        pg, pa = pn.split('*')
+        gg, ga = gn.split('*')
 
         if pg != gg:
-            gene_subs[pg] = gg
+            if pg not in gene_subs:
+                n = gg.split('-')[1]
+                gene_subs[pg] = [gg.split('-')[0], [n]]
+            else:
+                n = gg.split('-')[1]
+                if n not in gene_subs[pg][1]:
+                    gene_subs[pg][1].append(n)
+            for a in ga.split('_'):
+                if '.' in a:
+                    n = a.split('.')[0]
+                    if n not in gene_subs[pg][1]:
+                        gene_subs[pg][1].append(n)
 
-    return (trans, gene_subs)
+    for k, v in gene_subs.items():
+        gene_subs[k][1].sort()
+        gene_subs[k][1] = [str(x) for x in gene_subs[k][1]]
+        gene_subs[k] = gene_subs[k][0] + '-' + '/'.join(gene_subs[k][1])
+
+    return trans, gene_subs
 
 
 def translate_primer_alleles(gene, alleles, primer_trans):
