@@ -50,7 +50,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
             haplotype = pd.read_csv(sample_path, sep='\t', dtype=str)
             haplotype = trans_df(haplotype)
-            haplotype = haplotype[haplotype.gene.isin(wanted_genes)]
             haplotype['subject'] = name if len(samples_by_dataset) == 1 else dataset + '_' + name
 
             # translate pipeline allele names to VDJbase allele names
@@ -60,6 +59,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 haplotype[col_names[i]] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(haplotype['gene'], haplotype[col_names[i]])]
 
             haplotype['gene'] = [translate_primer_genes(x, gene_subs) for x in haplotype['gene']]
+            haplotype = haplotype[haplotype.gene.isin(wanted_genes)]
 
             haplotypes = pd.concat([haplotypes, haplotype], keys=None, ignore_index=True)[haplotype.columns.tolist()]
 

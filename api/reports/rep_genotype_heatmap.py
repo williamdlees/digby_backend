@@ -47,13 +47,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
 
                 genotype = trans_df(genotype)
-                genotype = genotype[genotype.gene.isin(wanted_genes)]
 
                 # translate pipeline allele names to VDJbase allele names
                 for col in ['alleles', 'GENOTYPED_ALLELES']:
                     genotype[col] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(genotype['gene'], genotype[col])]
 
                 genotype['gene'] = [translate_primer_genes(x, gene_subs) for x in genotype['gene']]
+                genotype = genotype[genotype.gene.isin(wanted_genes)]
 
                 subject_name = name if len(samples_by_dataset) == 1 else dataset + '_' + name
 
