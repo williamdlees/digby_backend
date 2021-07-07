@@ -797,16 +797,16 @@ def filter_per_sample(per_sample, sample_list):
 def get_order_file(species, dataset, locus_order=True):
     file_name = os.path.join(app.config['OUTPUT_PATH'], '%s_%s_%s_order.tsv' % (species, dataset, 'locus' if locus_order else 'alpha'))
 
-    if not os.path.isfile(file_name):
-        session = vdjbase_dbs[species][dataset].session
-        if locus_order:
-            gene_order = session.query(Gene.name).order_by(Gene.locus_order).all()
-        else:
-            gene_order = session.query(Gene.name).order_by(Gene.alpha_order).all()
-        gene_order = [x[0] for x in gene_order]
+    #if not os.path.isfile(file_name):
+    session = vdjbase_dbs[species][dataset].session
+    if locus_order:
+        gene_order = session.query(Gene.name).order_by(Gene.locus_order).all()
+    else:
+        gene_order = session.query(Gene.name).order_by(Gene.alpha_order).all()
+    gene_order = [x[0] for x in gene_order]
 
-        with open(file_name, 'w') as fo:
-            fo.write('\n'.join(gene_order))
+    with open(file_name, 'w') as fo:
+        fo.write('\n'.join(gene_order))
 
     return file_name
 
