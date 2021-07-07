@@ -41,11 +41,11 @@ def munge(project, dir, yml_file):
             copyfile(file, target)
 
 
-munge('P4', '../TCR_June_2021_2/DS1', 'DS1.yml')
-munge('P16', '../TCR_June_2021_2/DS2', 'P16.yml')
-munge('P17', '../TCR_June_2021_2/DS2', 'P17.yml')
-munge('P18', '../TCR_June_2021_2/DS2', 'P18.yml')
-munge('P19', '../TCR_June_2021_2/DS3', 'P19.yml')
-munge('P20', '../TCR_June_2021_2/DS4', 'P20.yml')
+munge('P4', '../TCR_July_2021/DS1', 'DS1.yml')
+munge('P16', '../TCR_July_2021/DS2', 'P16.yml')
+munge('P17', '../TCR_July_2021/DS2', 'P17.yml')
+munge('P18', '../TCR_July_2021/DS2', 'P18.yml')
+munge('P19', '../TCR_July_2021/DS3', 'P19.yml')
+munge('P20', '../TCR_July_2021/DS4', 'P20.yml')
 
 

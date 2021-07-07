@@ -10,8 +10,8 @@ parser.add_argument('dataset_name', help='data set name')
 args = parser.parse_args()
 
 class Job:
-    def update_state(self, meta="", state=""):
-        print('meta: %s state: %s' % (meta['value'], state))
+    def update_state(self, meta=None, state=None):
+        print('status: %s' % meta['value'])
 
 
 create_single_database(Job(), args.species, args.dataset_name, os.getcwd(), True)

@@ -479,13 +479,13 @@ def find_allele_or_similar(allele_name, session):
     try:
         allele = session.query(Allele).filter(Allele.name == allele_name).one_or_none()
     except Exception as e:
-        print('foo')
+        print('Multiple rows found for allele %s: check fasta files in reference directory.' % allele_name)
 
     if allele is not None:
         return allele
 
     allele = session.query(Allele).filter(Allele.similar.ilike(("%|" + allele_name + "|%"))).one_or_none()
-    return allele if allele is not None else None
+    return allele
 
 
 # Add a row to AllelesSample reflecting the presence of this allele in the sample.

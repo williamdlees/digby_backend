@@ -20,6 +20,8 @@ from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribut
 import re
 import csv
 
+from db.vdjbase_projects import find_allele_or_similar
+
 
 def check_novel_confidence(ds_dir, session):
     result = ['Running confidence checks']
@@ -188,7 +190,7 @@ def gather_haplo_data(novels, ds_dir, session):
                         if name in vdjbase_allele:
                             name = vdjbase_allele[name]
 
-                        n = session.query(Allele).filter(Allele.name == name).one_or_none()
+                        n = find_allele_or_similar(name, session)
 
                         if n:
                             allele_names = row[4].split(',')
@@ -206,9 +208,24 @@ def gather_haplo_data(novels, ds_dir, session):
                             )
                             session.add(he)
                         else:
-                            if 'ap01_g291c_t296c_c314t' in name:
-                                print('foo')
-                            print('foo')
+                            # check for 'either this or that' format, which is not an error but we will ignore.
+                            # the format consists of two allele numbers separated by underscores and possibly with nucleotide variants
+                            # .. the key is two int'gers, representing allele numbers, with no dots, therefore not the ambiguous gene format
+
+                            if '.' not in allele:
+                                allele_count = 0
+
+                                for frag in allele.split('_'):
+                                    try:
+                                        x = int(frag)
+                                        allele_count += 1
+                                    except:
+                                        pass
+
+                                if allele_count > 1:
+                                    print('either/or format in %s ignored' % name)
+                                    continue
+
                             print('Allele %s is present in haplotype file %s but is not in the Alleles table' % (name, sample_haplotype.haplotypes_files.file))
 
     for novel in novels:

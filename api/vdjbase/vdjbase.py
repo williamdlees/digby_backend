@@ -97,7 +97,13 @@ class DataSetInfoAPI(Resource):
             Study.reference,
             Study.accession_reference
         ).all()
-        stats['studies'] = [row._asdict() for row in studies]
+        stats['studies'] = []
+
+        for row in studies:
+            row = row._asdict()
+            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.name == row['name']).count()
+            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.name == row['name']).count()
+            stats['studies'].append(row)
 
         return stats
 
