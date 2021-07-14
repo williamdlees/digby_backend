@@ -6,7 +6,7 @@ from api.reports.report_utils import make_output_file, find_primer_translations,
 from app import app, vdjbase_dbs
 from db.vdjbase_model import Sample
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH
+from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, get_multiple_order_file, get_order_file
 from api.reports.report_utils import check_tab_file
 import pandas as pd
 
@@ -45,7 +45,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     sample_path = make_output_file('tsv')
     genotype.to_csv(sample_path, sep='\t', index=False)
 
-    report_path = personal_genotype(rep_sample['name'], sample_path, rep_sample['chain'], html)
+    locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
+    gene_order_file = get_order_file(species, rep_sample['dataset'], locus_order=locus_order)
+
+    report_path = personal_genotype(rep_sample['name'], sample_path, rep_sample['chain'], gene_order_file, html)
 
     if format == 'pdf':
         attachment_filename = '%s_%s_%s_genotype.pdf' % (species, rep_sample['dataset'], rep_sample['name'])
@@ -55,13 +58,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     return send_report(report_path, format, attachment_filename)
 
 
-def personal_genotype(sample_name, genotype_file, chain, html=True):
+def personal_genotype(sample_name, genotype_file, chain, gene_order_file, html=True):
     output_path = make_output_file('html' if html else 'pdf')
     file_type = 'T' if html else 'F'
     cmd_line = ["-i", genotype_file,
                 "-o", output_path,
                 "-t", file_type,
                 "--samp", sample_name,
+                "-g", gene_order_file,
                 "-c", chain]
 
     if run_rscript(MULTIPLE_GENOTYPE_SCRIPT, cmd_line) and os.path.getsize(output_path) > 0:

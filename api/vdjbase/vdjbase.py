@@ -352,7 +352,7 @@ class SamplesApi(Resource):
         if 'genotypes' in required_cols:
             for r in ret:
                 r['genotypes'] = {}
-                r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name']})
+                r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name'], 'sort_order': 'Locus'})
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
                 sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
@@ -389,7 +389,7 @@ class SamplesApi(Resource):
                         sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], filename])
                         if isfile(fp):
                             r['haplotypes'][hap] = {}
-                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name'], 'hap_gene': hap})
+                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name'], 'hap_gene': hap, 'sort_order' : 'Locus'})
                             r['haplotypes'][hap]['rabhit'] = sp
                 else:
                     r['haplotypes'] = ''
