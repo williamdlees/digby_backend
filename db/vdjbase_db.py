@@ -53,6 +53,15 @@ def vdjbase_db_init(vdjbase_db_path):
                         vdjbase_dbs[species] = {}
                     vdjbase_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
                     vdjbase_dbs[species][name + '_description'] = description
+
+    # sort datasets of each species
+
+    for species in vdjbase_dbs:
+        vdjbase_dbs[species] = dict(sorted(vdjbase_dbs[species].items(), key=lambda kv: kv[0]))
+
+    # put Human at the front
+    vdjbase_dbs = dict(sorted(vdjbase_dbs.items(), key=lambda kv: 'aaaaa' if kv[0] == 'Human' else kv[0]))
+
     return vdjbase_dbs
 
 
