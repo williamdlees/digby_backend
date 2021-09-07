@@ -60,6 +60,27 @@ def find_datasets(species):
     return datasets
 
 
+@ns.route('/all_novels')
+class NovelsApi(Resource):
+
+    def get(self):
+        """ Returns the list all novel alleles across all datasets """
+        ret = {}
+        species = get_vdjbase_species()
+        for sp in species:
+            if sp in vdjbase_dbs:
+                for ds_name, ds in vdjbase_dbs[sp].items():
+                    if '_description' not in ds_name:
+                        session = ds.session
+                        novels = session.query(Allele).filter(Allele.novel == 1).all()
+
+                        if novels:
+                            for novel in novels:
+                                ret['>' + novel.name + '|' + sp + '|' + ds_name] = novel.seq
+
+        return ret
+
+
 @ns.route('/ref_seqs/<string:species>')
 class DataSetAPI(Resource):
     def get(self, species):
