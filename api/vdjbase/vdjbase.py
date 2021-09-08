@@ -76,7 +76,7 @@ class NovelsApi(Resource):
 
                         if novels:
                             for novel in novels:
-                                ret['>' + novel.name + '|' + sp + '|' + ds_name] = novel.seq
+                                ret['>' + novel.name + '|' + sp + '|' + ds_name] = (novel.seq, novel.appears)
 
         return ret
 
