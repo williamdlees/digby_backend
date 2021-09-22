@@ -39,6 +39,10 @@ if (is.null(opt$is_html)){
   stop("type of file must be supplied", call.=FALSE)
 }
 
+if (is.null(opt$chain)){
+  stop("chain must be supplied", call.=FALSE)
+}
+
 ######### loading data to data frame (use melt function) #############
 
 # read genotype table
