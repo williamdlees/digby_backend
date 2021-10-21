@@ -369,6 +369,8 @@ def process_genotypes(ds_dir, species, dataset, session):
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
+            if '681' in genotype_file:
+                print('foo')
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
@@ -405,6 +407,10 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
 
             # check if the allele exist in the genotype according to the clone size
             if allele != "Del":
+                # check for bug found in TRB genotypes
+                if len(str(row[FREQ_BY_CLONE]).split(INT_SEP)) <= index:
+                    print('Error: FREQ_BY_CLONE for gene %s does not have enough values' % gene)
+                    continue
                 clone_size = int(float(str(row[FREQ_BY_CLONE]).split(INT_SEP)[index]))
                 if not clone_size:
                     continue
