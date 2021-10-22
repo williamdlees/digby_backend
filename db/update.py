@@ -20,22 +20,25 @@ def update_genomic_db():
 
 
 def create_genomic():
-    export_dir = os.path.join(app.config['EXPORT_DIR'], 'genomic_metadata')
-    if not os.path.isdir(export_dir):
+    genomic_dir = os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic')
+    if not os.path.isdir(genomic_dir):
         return 'genomic_metadata folder does not exist - aborting'
 
-    novels = load_novel_alleles(os.path.join(export_dir, 'vdjbase_novel_alleles.csv'))
+    novels = load_novel_alleles(os.path.join(genomic_dir, 'vdjbase_novel_alleles.csv'))
     results = []
 
-    for item in os.listdir(export_dir):
-        if os.path.isdir(os.path.join(export_dir, item)) and item[0] != '.':
-            s_dir = os.path.join(export_dir, item)
-            for s_item in os.listdir(s_dir):
-                s_item_ext = os.path.splitext(s_item)[1]
-                if os.path.isfile(os.path.join(s_dir, s_item)) and s_item[0] != '.' and s_item_ext in ['.yml', '.yaml']:
-                    results.append(create_datasets(os.path.join(s_dir, s_item), novels))
+    for item in os.listdir(genomic_dir):
+        if os.path.isdir(os.path.join(genomic_dir, item)) and item[0] != '.':
+            s_dir = os.path.join(genomic_dir, item)
+            for s_subdir in os.listdir(s_dir):
+                s_subdir = os.path.join(s_dir, s_subdir)
+                if os.path.isdir(s_subdir) and s_subdir != '.' and s_subdir != '..':
+                    for s_item in os.listdir(s_subdir):
+                        s_item_ext = os.path.splitext(s_item)[1]
+                        if os.path.isfile(os.path.join(s_subdir, s_item)) and s_item[0] != '.' and s_item_ext in ['.yml', '.yaml']:
+                            results.append(create_datasets(os.path.join(s_subdir, s_item), novels))
 
-    save_novel_alleles(novels, os.path.join(export_dir, 'vdjbase_novel_alleles.csv'))
+    save_novel_alleles(novels, os.path.join(genomic_dir, 'vdjbase_novel_alleles.csv'))
     return '\n'.join(results)
 
 

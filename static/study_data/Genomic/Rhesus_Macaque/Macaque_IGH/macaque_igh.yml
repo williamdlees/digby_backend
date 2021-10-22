@@ -1,0 +1,340 @@
+Reference_sets: 
+    Rhesus Macaque: cirelli_IGH.fasta
+Macaque_IGH:
+    rheMac10 Assembly:
+        Dataset: Macaque_IGH
+        Study: Rhemac10
+        Sample: rheMac10 Assembly
+        Sample_description: AG07107 Genome sequencing and assembly
+        Type: Assembly
+        Annotation_file: cirelli_matches_rhemac10.csv
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-15
+        Institute: Washington University School of Medicine
+        Study_description: Strict evolutionary conservation followed rapid gene loss on human and rhesus Y chromosomes
+        Researcher: David C Page 
+        Reference: https://pubmed.ncbi.nlm.nih.gov/22367542/
+        Contact: jhughes@wi.mit.edu
+        Assembly_id: GCF_003339765.1
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/assembly/GCF_003339765.1/
+        Assembly_file: igh_rhemac10_chr-7165128660-169868564.fasta 
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 165128660
+        End_CoOrd: 169868564    
+    RUp15_IGH_000533F:
+        Dataset: Macaque_IGH
+        Study: RUp15
+        Sample: RUp15_IGH_000533F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000533F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000533F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000533F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_000756F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_000756F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000756F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000756F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000756F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_000842F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_000842F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000842F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000842F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000842F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_000853F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_000853F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000853F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000853F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000853F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_000885F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_000885F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000885F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000885F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000885F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_000891F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_000891F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Type: Contig
+        Study: RUp15
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000891F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000891F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000891F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_000945F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_000945F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Type: Contig
+        Study: RUp15
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>000945F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 000945F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>000945F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_001099F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_001099F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>001099F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 001099F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>001099F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_001102F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_001102F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Type: Contig
+        Study: RUp15
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>001102F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 001102F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>001102F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_001164F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_001164F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>001164F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 001164F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>001164F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_001179F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_001179F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>001179F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 001179F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>001179F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_001372F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_001372F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>001372F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 001372F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>001372F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+    RUp15_IGH_001388F:
+        Dataset: Macaque_IGH
+        Sample: RUp15_IGH_001388F
+        Sample_description: Diploid assembly of Macaca mulatta breed Indian rhesus macaque isolate RUp15
+        Study: RUp15
+        Type: Contig
+        Annotation_file: cirelli_matches_LJI_IGHVDJ.csv>001388F
+        Annotation_format: VDJbase
+        Species: Rhesus Macaque
+        Locus: IGH
+        Date: 2019-01-11
+        Institute: La Jolla Institute for Immunology
+        Study_description: Slow Delivery Immunization Enhances HIV Neutralizing Antibody and Germinal Center Responses via Modulation of Immunodominance
+        Researcher: Shane Crotty
+        Reference: https://pubmed.ncbi.nlm.nih.gov/31080066/
+        Contact: shane@lji.org
+        Assembly_id: 001388F
+        Assembly_reference: https://www.ncbi.nlm.nih.gov/Traces/wgs/SBKD01?display=contigs
+        Assembly_file: LJI_Rh.PacBio_All.IGH.Contigs.fasta>001388F|quiver
+        Annotation_method: VDJbase
+        Annotation_reference: https://github.com/williamdlees/digger
+        Chromosome: 7
+        Start_CoOrd: 
+        End_CoOrd: 
+

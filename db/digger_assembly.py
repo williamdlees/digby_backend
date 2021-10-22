@@ -144,7 +144,7 @@ def process_digger_record(sample_data, sample_dir, novels):
 
                 if allele is None:
                     functional = 'U'
-                    if row['functional'] == 'functional':
+                    if row['functional'].lower() == 'functional':
                         functional = 'F'
                     elif row['functional'] == 'pseudo':
                         functional = 'P'
