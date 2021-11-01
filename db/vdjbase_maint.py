@@ -27,7 +27,7 @@ def create_single_database(job, species, dataset, upload_path, in_situ=False):
     result = []
 
     # if called from UI, create/unpack in uploads directory
-    # if called fromcommand line, create in situ from files without unpacking
+    # if called from command line, create in situ from files without unpacking
 
     if not in_situ:
         ds_dir = os.path.join(upload_path, species, dataset)

@@ -29,6 +29,14 @@ def check_novel_confidence(ds_dir, session):
 
     gather_haplo_data(novels, ds_dir, session)
 
+    # write novel alleles and sequences to a reference file so that it can be compared with other releases
+
+    write_novels(novels, os.path.join(ds_dir, 'novels.fasta'))
+
+    # check that novels are correctly represented in ogrdb files
+
+    check_ogrdbstats_for_novels(novels, ds_dir)
+
     #   Check for deletion on other chromosome, or novel allele present on both chromosomes
     check_for_singleton_infs(novels, ds_dir, session)
 
@@ -498,4 +506,58 @@ def get_ref_vh_codon_usage(session):
                 result.append('Warning: in sequence %s: %s' % (ref.name, sys.exc_info()[1]))
 
     return usage, result
+
+
+# Write novel alleles to FASTA
+def write_novels(novels, filename):
+    novel_dict = {}
+
+    for novel in novels:
+        novel_dict[novel.name] = novel.seq
+
+    with open(filename, 'w') as fo:
+        for name in sorted(list(novel_dict.keys())):
+            fo.write('>%s\n%s\n' % (name, novel_dict[name]))
+
+
+# check novels are correctly listed in the ogrdbstats files
+def check_ogrdbstats_for_novels(novels, ds_dir):
+    ogrdbstats_to_check = {}
+
+    for novel in novels:
+        for sample in novel.samples:
+            if sample.sample.genotype_stats not in ogrdbstats_to_check:
+                ogrdbstats_to_check[sample.sample.genotype_stats] = []
+            ogrdbstats_to_check[sample.sample.genotype_stats].append(novel.name)
+
+    for stat_file, expected in ogrdbstats_to_check.items():
+        check_novels_in_ogrdbstats(os.path.join(ds_dir, stat_file), expected)
+
+
+# check that an ogrdbstats file contains exactly the novel alleles that it should
+def check_novels_in_ogrdbstats(filename, expected):
+    non_novels_in_file = []
+    novels_in_file = []
+
+    with open(filename, 'r') as fi:
+        reader = csv.DictReader(fi)
+        for row in reader:
+            if len(row['closest_reference']) > 0:
+                novels_in_file.append(row['sequence_id'].upper())
+            else:
+                non_novels_in_file.append(row['sequence_id'].upper())
+
+    missing_novels = []
+    novels_as_non = []
+
+    for name in expected:
+        name = name.upper()
+        if name not in novels_in_file:
+            if name in non_novels_in_file:
+                novels_as_non.append(name)
+            else:
+                missing_novels.append(name)
+
+    if len(missing_novels) or len(novels_as_non):
+        print('Error in ogrdbstats %s:\nmissing novels %s, novels listed as non-novel: %s' % (filename, ','.join(missing_novels), ','.join(novels_as_non)))
 
