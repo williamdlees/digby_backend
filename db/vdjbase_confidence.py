@@ -329,8 +329,6 @@ def check_snp_in_short(novels, session):
         .join(SeqProtocol)\
         .filter(Allele.novel == True)\
         .filter(SeqProtocol.sequencing_length == 'Full').all()
-    print(len(long_study_alleles))
-    print(len(novels))
     short_studies_only = list(set(novels) - set(long_study_alleles))
 
     for novel in short_studies_only:
@@ -528,7 +526,7 @@ def check_ogrdbstats_for_novels(novels, ds_dir):
         for sample in novel.samples:
             if sample.sample.genotype_stats not in ogrdbstats_to_check:
                 ogrdbstats_to_check[sample.sample.genotype_stats] = []
-            ogrdbstats_to_check[sample.sample.genotype_stats].append(novel.name)
+            ogrdbstats_to_check[sample.sample.genotype_stats].append(novel)
 
     for stat_file, expected in ogrdbstats_to_check.items():
         check_novels_in_ogrdbstats(os.path.join(ds_dir, stat_file), expected)
@@ -547,16 +545,22 @@ def check_novels_in_ogrdbstats(filename, expected):
             else:
                 non_novels_in_file.append(row['sequence_id'].upper())
 
+    novels_in_file = set(novels_in_file)
+    non_novels_in_file = set(non_novels_in_file)
     missing_novels = []
     novels_as_non = []
 
-    for name in expected:
-        name = name.upper()
-        if name not in novels_in_file:
-            if name in non_novels_in_file:
-                novels_as_non.append(name)
+    for xp in expected:
+        names = [xp.name.upper()]
+        if len(xp.similar) > 0:
+            names.extend([alias.upper() for alias in xp.similar.split('|') if len(alias) > 0])
+        names = set(names)
+
+        if len(names & novels_in_file) == 0:
+            if len(names & non_novels_in_file) > 0:
+                novels_as_non.append('|'.join(list(names)))
             else:
-                missing_novels.append(name)
+                missing_novels.append('|'.join(list(names)))
 
     if len(missing_novels) or len(novels_as_non):
         print('Error in ogrdbstats %s:\nmissing novels %s, novels listed as non-novel: %s' % (filename, ','.join(missing_novels), ','.join(novels_as_non)))

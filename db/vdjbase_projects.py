@@ -369,8 +369,6 @@ def process_genotypes(ds_dir, species, dataset, session):
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
-            if '681' in genotype_file:
-                print('foo')
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
@@ -477,6 +475,7 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
 
             add2sample(base_allele_name, sample_id, haplo, patient_id, kdiff, pipeline_name, session)
 
+
 # Each unique sequence is only present on one single row in Allele. If multiple allele names
 # correspond to the same sequence, they are listed in that row in the 'similar' field.
 # This function returns that row, given the allele name
@@ -528,6 +527,7 @@ def add2sample (allele_name, sample_id, haplo, pid, kdiff, pipeline_name, sessio
         .filter(AllelesSample.hap == haplo).count()
 
     if asc == 0:
+        if alleles_sample.allele_id == 666:
         session.add(alleles_sample)
 
 
