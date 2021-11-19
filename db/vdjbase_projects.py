@@ -527,9 +527,7 @@ def add2sample (allele_name, sample_id, haplo, pid, kdiff, pipeline_name, sessio
         .filter(AllelesSample.hap == haplo).count()
 
     if asc == 0:
-        if alleles_sample.allele_id == 666:
         session.add(alleles_sample)
-
 
 def new_allele(allele_name, pipeline_name, session):
     ambiguous_alleles = [allele_name.split("*")[1].split("_")[0]]
