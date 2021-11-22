@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, Blueprint
+from flask import Flask, render_template, request, flash, Blueprint, redirect, url_for
 from flask_migrate import Migrate
 from flask_security import Security, SQLAlchemyUserDatastore, login_required
 from flask_mail import Mail
@@ -102,26 +102,36 @@ app.logger.error('Digby backend started')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    if user_datastore.find_role('Admin') is None:
+        return redirect(url_for('create_user'))
+
     return render_template('index.html', current_user=current_user)
 
 
 @app.route('/create_user', methods=['GET', 'POST'])
 def create_user():
-    if user_datastore.find_role('Admin') is None:                       # First live user gets admin rights
-        user = user_datastore.create_user(email="admin@vdjbase.org", password=hash_password("admin"))
-        sql_db.session.commit()
-        user_datastore.create_role(name='Admin')                        # You will want to remove this in any real application!
-        user_datastore.add_role_to_user(user, 'Admin')          # You will want to remove this in any real application!
-        sql_db.session.commit()
-        return "User created"
-    else:
-        return "User not created"
+    if user_datastore.find_role('Admin') is not None:
+        return redirect('/')
+
+    form = FirstAccountForm()
+
+    if request.method == 'POST':
+        if form.validate():
+            user = user_datastore.create_user(email=form.email.data, password=hash_password(form.password.data), name=form.name.data)
+            sql_db.session.commit()
+            user_datastore.create_role(name='Admin')
+            user_datastore.add_role_to_user(user, 'Admin')
+            sql_db.session.commit()
+            flash("User created")
+            return redirect('/')
+
+    return render_template('security/first_account.html', form=form)
 
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    form = ProfileForm(obj = current_user)
+    form = ProfileForm(obj=current_user)
     form.email = ''
     if request.method == 'POST':
         if form.validate():

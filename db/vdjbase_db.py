@@ -28,7 +28,7 @@ class ContentProvider():
     session = None
 
     def __init__(self, path):
-        self.db = create_engine('sqlite:///' + path + '?check_same_thread=false', echo=False, pool_threadlocal=True)
+        self.db = create_engine('sqlite:///' + path + '?check_same_thread=false', echo=False)
         self.connection = self.db.connect()
         self.session = Session(bind=self.connection)
 
