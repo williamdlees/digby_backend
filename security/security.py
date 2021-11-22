@@ -12,10 +12,12 @@ class ExtendedRegisterForm(RegisterForm):
     address = StringField('Institutional Address', [DataRequired()])
     accepted_terms = BooleanField(Markup('I accept the <a href="/render_page/privacy_statement.html" target="_blank">Privacy</a> and <a href="/render_page/licensing_statement.html" target="_blank">Licensing</a> statements'))
 
+
 class ProfileForm(FlaskForm):
     name = StringField('Full Name', [DataRequired()])
     address = StringField('Institutional Address', [DataRequired()])
     phone = StringField('Preferred telephone number', [DataRequired()])
+
 
 def save_Profile(db, object, form, new=False):
     object.name = form.name.data
@@ -26,6 +28,7 @@ def save_Profile(db, object, form, new=False):
         db.session.add(object)
 
     db.session.commit()
+
 
 class FirstAccountForm(FlaskForm):
     name = StringField('Full Name', [DataRequired()])
