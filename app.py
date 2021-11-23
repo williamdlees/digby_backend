@@ -77,6 +77,7 @@ from api.restx import api
 from api.genomic.genomic import ns as genomic
 from api.vdjbase.vdjbase import ns as vdjbase
 from api.reports.reports import ns as reports
+from api.system.system import ns as system
 
 from db.feature_db import *
 from db.update import update_genomic_db
@@ -92,6 +93,7 @@ api.init_app(blueprint)
 api.add_namespace(genomic)
 api.add_namespace(vdjbase)
 api.add_namespace(reports)
+api.add_namespace(system)
 app.register_blueprint(blueprint)
 
 from api.reports.reports import load_report_defs
