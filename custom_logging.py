@@ -5,7 +5,7 @@ import logging.handlers
 from flask import request
 from flask import has_request_context
 import sys
-
+from mail_log_handler import FlaskMailLogHandler
 from rabbit_log import FlaskRabbitLogHandler
 
 class RequestFormatter(logging.Formatter):
@@ -26,7 +26,8 @@ formatter = RequestFormatter(
     '%(remote_addr)s %(url)s\n%(message)s\n'
 )
 
-def init_logging(app):
+
+def init_logging(app, mail):
     root = logging.getLogger()
     root.setLevel(logging.INFO)
 
@@ -40,6 +41,12 @@ def init_logging(app):
         mq_handler.setLevel(logging.ERROR)
         mq_handler.setFormatter(formatter)
         root.addHandler(mq_handler)
+
+    if app.config['MAIL_LOG']:
+        mail_handler = FlaskMailLogHandler(mail, app.config['MAIL_USERNAME'], ['william@lees.org.uk'], 'Error from digby-dev')
+        mail_handler.setLevel(logging.ERROR)
+        mail_handler.setFormatter(formatter)
+        root.addHandler(mail_handler)
 
     handler = logging.handlers.RotatingFileHandler(app.config['LOGPATH'], maxBytes=1024 * 1024)
     handler.setLevel(int(app.config['LOGLEVEL']))

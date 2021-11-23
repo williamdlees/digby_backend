@@ -27,8 +27,6 @@ app.config.from_pyfile('secret.cfg')
 
 sql_db = celery.init_app(app)
 
-
-
 app.wsgi_app = ReverseProxied(app.wsgi_app)
 
 CORS(app)
@@ -58,9 +56,9 @@ else:
     os.environ['R_LIBS'] = ':'.join(r_libs)
 """
 
-custom_logging.init_logging(app)
 
 mail = Mail(app)
+custom_logging.init_logging(app, mail)
 
 
 vdjbase_dbs = vdjbase_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
@@ -99,7 +97,8 @@ app.register_blueprint(blueprint)
 from api.reports.reports import load_report_defs
 load_report_defs()
 
-app.logger.error('Digby backend started')
+with app.app_context():
+    app.logger.error('Digby backend started')
 
 
 @app.route('/', methods=['GET', 'POST'])
