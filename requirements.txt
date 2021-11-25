@@ -102,7 +102,7 @@ rstcheck==3.3.1
 scipy==1.7.1
 seaborn==0.11.2
 selenium==3.141.0
-setuptools==52.0.0.post20210125
+setuptools>=58.0.0
 six==1.16.0
 snooty-lextudio==1.11.5
 snowballstemmer==2.1.0
