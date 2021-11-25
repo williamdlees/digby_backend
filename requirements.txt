@@ -69,3 +69,4 @@ celery
 matplotlib
 seaborn
 pika
+mysqldb
