@@ -43,7 +43,7 @@ def init_logging(app, mail):
         root.addHandler(mq_handler)
 
     if app.config['MAIL_LOG']:
-        mail_handler = FlaskMailLogHandler(mail, app.config['MAIL_USERNAME'], ['william@lees.org.uk'], 'Error from digby-dev')
+        mail_handler = FlaskMailLogHandler(mail, app.config['MAIL_USERNAME'], ['william@lees.org.uk'], 'Error from %s' % app.config['INSTANCE'])
         mail_handler.setLevel(logging.ERROR)
         mail_handler.setFormatter(formatter)
         root.addHandler(mail_handler)
