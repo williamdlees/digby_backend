@@ -62,7 +62,7 @@ custom_logging.init_logging(app, mail)
 
 # Avoid multiple 'starting' messages by sending one only if our pid is 1, which it will be for a docker-based installation
 
-if os.getpid() == 1:
+:quit()if os.getpid() == 1:
     with app.app_context():
         app.logger.error('INFO: Digby back-end starting')
 
