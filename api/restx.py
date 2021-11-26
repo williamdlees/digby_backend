@@ -11,7 +11,7 @@ api = Api(version='1.0', title='DIgServer API', description='API for Ig Receptor
 @api.errorhandler
 def default_error_handler(e):
     message = 'An unhandled exception occurred.'
-    app.logger.exception(message)
+    app.logger.error(message)
 
     if not app.config['DEBUG']:
         return {'message': message}, 500
