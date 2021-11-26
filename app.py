@@ -63,7 +63,8 @@ custom_logging.init_logging(app, mail)
 # Avoid multiple 'starting' messages by sending one only if our pid is 1, which it will be for a docker-based installation
 
 if os.getpid() == 1:
-    app.logger.error('INFO: Digby back-end starting')
+    with app.app_context():
+        app.logger.error('INFO: Digby back-end starting')
 
 vdjbase_dbs = vdjbase_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
 
