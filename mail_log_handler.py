@@ -7,7 +7,8 @@
 import logging
 
 from flask_mail import Message
-
+from flask.globals import current_app, _app_ctx_stack
+from flask import Flask
 
 class FlaskMailLogHandler(logging.Handler):
 
@@ -19,11 +20,17 @@ class FlaskMailLogHandler(logging.Handler):
         self.subject = subject
 
     def emit(self, record):
-        self.mail.send(
-            Message(
-                sender=self.sender,
-                recipients=self.recipients,
-                body=self.format(record),
-                subject=self.subject
+        if _app_ctx_stack.top is None:
+            # we are outside the application context. Need to build one to send the mail
+            app = Flask(__name__)
+        else:
+            app = current_app
+        with app.app_context():
+            self.mail.send(
+                Message(
+                    sender=self.sender,
+                    recipients=self.recipients,
+                    body=self.format(record),
+                    subject=self.subject
+                )
             )
-        )
