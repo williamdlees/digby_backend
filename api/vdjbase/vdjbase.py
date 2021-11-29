@@ -49,7 +49,6 @@ class SpeciesApi(Resource):
 
     def get(self):
         """ Returns the list of species for which information is held """
-        return 1.0/0.0
         return list(set(vdjbase_dbs.keys()) | set(get_genomic_species()))
 
 
