@@ -96,6 +96,11 @@ app.register_blueprint(blueprint)
 from api.reports.reports import load_report_defs
 load_report_defs()
 
+from flask_jwt_extended import JWTManager
+
+app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+jwt = JWTManager(app)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():

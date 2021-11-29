@@ -1,5 +1,7 @@
 # Services related to vdjbase repseq-based data sets
 import requests
+from flask import jsonify
+from flask_jwt_extended import create_access_token, set_access_cookies
 from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
 import json
@@ -35,3 +37,15 @@ class ConfigApi(Resource):
                         config[rec['slug']] = '%sposts?categories=%s' % (wp_url[wanted_slug], rec['id'])
 
         return config
+
+
+@ns.route("/login/<username>/<password>")
+class LoginApi(Resource):
+    def get(self, username, password):
+        if username == app.config['JWT_USER'] and password == app.config['JWT_PASSWORD']:
+            access_token = create_access_token(identity="example_user")
+            response = jsonify({"msg": "login successful", "token": access_token})
+            set_access_cookies(response, access_token)
+        else:
+            response = jsonify({"msg": "invalid username or password"}), 401
+        return response
