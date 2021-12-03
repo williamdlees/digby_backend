@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, Blueprint, redirect, url_for
+from flask import Flask, render_template, request, flash, Blueprint, redirect, url_for, send_from_directory
 from flask_migrate import Migrate
 from flask_security import Security, SQLAlchemyUserDatastore, login_required
 from flask_mail import Mail
@@ -18,8 +18,10 @@ from extensions import celery
 sql_db = None
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
+app.static_url_path = '/static'
 bootstrap = Bootstrap(app)
+app.static_url_path = None
 app.config.from_pyfile('config.cfg')
 app.config.from_pyfile('secret.cfg')
 
@@ -74,7 +76,7 @@ from api.restx import api
 from api.genomic.genomic import ns as genomic
 from api.vdjbase.vdjbase import ns as vdjbase
 from api.reports.reports import ns as reports
-from api.system.system import ns as system
+from api.system.system import ns as system, digby_protected
 
 from db.feature_db import *
 from db.update import update_genomic_db
@@ -98,7 +100,7 @@ load_report_defs()
 
 from flask_jwt_extended import JWTManager
 
-app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 jwt = JWTManager(app)
 
 
@@ -108,6 +110,12 @@ def index():
         return redirect(url_for('create_user'))
 
     return render_template('index.html', current_user=current_user)
+
+
+@app.route('/static/<path:path>', methods=['GET', 'POST'])
+@digby_protected()
+def static(path):
+    return send_from_directory(app.config['STATIC_PATH'], path)
 
 
 @app.route('/create_user', methods=['GET', 'POST'])

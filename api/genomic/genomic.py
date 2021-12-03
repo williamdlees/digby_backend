@@ -6,6 +6,8 @@ from api.restx import api
 from sqlalchemy import inspect, or_, func, distinct
 from math import ceil
 from werkzeug.exceptions import BadRequest
+
+from api.system.system import digby_protected
 from app import sql_db as db
 from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence, DataSet
 import json
@@ -27,7 +29,7 @@ ns = api.namespace('genomic', description='Genomic data and annotations')
 @ns.route('/species')
 @api.response(404, 'No species available!')
 class SpeciesApi(Resource):
-
+    @digby_protected()
     def get(self):
         """ Returns the list of species for which information is held """
         sp = db.session.query(Species).all()
@@ -38,7 +40,7 @@ class SpeciesApi(Resource):
 
 @ns.route('/assemblies/<string:species>/<string:data_sets>')
 class AssemblyAPI(Resource):
-
+    @digby_protected()
     def get(self, species, data_sets):
         """ Returns the list of annotated assemblies for the selected species and datasets """
         data_sets = data_sets.split(',')
@@ -56,7 +58,7 @@ class AssemblyAPI(Resource):
 @ns.route('/data_sets/<string:species>')
 @api.response(404, 'No data sets available for that species.')
 class DataSetAPI(Resource):
-
+    @digby_protected()
     def get(self, species):
         """ Returns the list of data sets for the selected species """
         sp = db.session.query(Species).filter_by(name=species).one_or_none()
@@ -68,6 +70,7 @@ class DataSetAPI(Resource):
 
 @ns.route('/sample_info/<string:species>/<string:study_name>/<string:sample>')
 class SampleInfoApi(Resource):
+    @digby_protected()
     def get(self, species, study_name, sample):
         """ Returns information on the selected sample """
 
@@ -181,6 +184,7 @@ OPERATORS = {
 @ns.route('/sequences/<string:species>/<string:genomic_datasets>')
 @api.response(404, 'Reference sequence not found.')
 class SequencesAPI(Resource):
+    @digby_protected()
     @api.expect(filter_arguments, validate=True)
     def get(self, species, genomic_datasets):
         """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
@@ -400,6 +404,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
 @ns.route('/feature_pos/<string:species>/<string:ref_seq_name>/<string:feature_string>')
 @api.response(404, 'Reference sequence not found.')
 class FeaturePosAPI(Resource):
+    @digby_protected()
     def get(self, species, ref_seq_name, feature_string):
         """ Returns the position of the first feature matching the specified string """
 
@@ -457,6 +462,7 @@ genomic_sample_filters = {
 @ns.route('/samples/<string:species>/<string:genomic_datasets>')
 @api.response(404, 'Reference sequence not found.')
 class SamplesAPI(Resource):
+    @digby_protected()
     @api.expect(filter_arguments, validate=True)
     def get(self, species, genomic_datasets):
         """ Returns a list of samples that provide results against the selected reference or multiple references (separate multiple reference names with ',')  """
