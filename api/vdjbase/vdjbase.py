@@ -16,6 +16,8 @@ import os.path
 from os.path import isfile
 from db.filter_list import apply_filter_to_list
 
+from api.system.system import digby_protected
+
 from app import vdjbase_dbs, app, db
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
 
@@ -46,7 +48,7 @@ def get_vdjbase_species():
 
 @ns.route('/species')
 class SpeciesApi(Resource):
-
+    @digby_protected()
     def get(self):
         """ Returns the list of species for which information is held """
         return list(set(vdjbase_dbs.keys()) | set(get_genomic_species()))
@@ -62,7 +64,7 @@ def find_datasets(species):
 
 @ns.route('/all_novels')
 class NovelsApi(Resource):
-
+    @digby_protected()
     def get(self):
         """ Returns the list all novel alleles across all datasets """
         ret = {}
@@ -83,6 +85,7 @@ class NovelsApi(Resource):
 
 @ns.route('/ref_seqs/<string:species>')
 class DataSetAPI(Resource):
+    @digby_protected()
     def get(self, species):
         """ Returns the list of datasets available for the selected species """
         if species in vdjbase_dbs:
@@ -90,9 +93,10 @@ class DataSetAPI(Resource):
         else:
             return list()
 
+
 @ns.route('/dataset_info/<string:species>/<string:dataset>')
 class DataSetInfoAPI(Resource):
-
+    @digby_protected()
     def get(self, species, dataset):
         """Returns information and statistics on the dataset"""
         if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
@@ -201,6 +205,7 @@ rep_sample_bool_values = {
 
 @ns.route('/sample_info/<string:species>/<string:dataset>/<string:sample>')
 class SampleInfoApi(Resource):
+    @digby_protected()
     def get(self, species, dataset, sample):
         """ Returns information on the selected sample """
 
@@ -242,6 +247,7 @@ filter_arguments.add_argument('cols', type=str)
 
 @ns.route('/samples/<string:species>/<string:dataset>')
 class SamplesApi(Resource):
+    @digby_protected()
     @api.expect(filter_arguments, validate=True)
     def get(self, species, dataset):
         """ Returns the list of samples in the selected dataset """
@@ -521,6 +527,7 @@ rep_sequence_bool_values = {
 
 @ns.route('/sequences/<string:species>/<string:dataset>')
 class SequencesApi(Resource):
+    @digby_protected()
     @api.expect(filter_arguments, validate=True)
     def get(self, species, dataset):
         """ Returns the list of sequences in the selected datasets """

@@ -8,6 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 api = Api(version='1.0', title='DIgServer API', description='API for Ig Receptor gene data')
 
+
 @api.errorhandler
 def default_error_handler(e):
     message = 'An unhandled exception occurred.'

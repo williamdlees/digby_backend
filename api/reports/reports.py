@@ -1,6 +1,7 @@
 # Services related to vdjbase repseq-based data sets
 from flask_cors import cross_origin
 
+from api.system.system import digby_protected
 from extensions import celery
 from flask import request, redirect, send_file
 from flask_restx import Resource, reqparse, fields, marshal, inputs
@@ -43,6 +44,7 @@ report_list_arguments.add_argument('rep_datasets', type=str)
 @ns.route('/reports/list')
 @api.response(404, 'No reports available!')
 class ReportsApi(Resource):
+    @digby_protected()
     @api.expect(report_list_arguments, validate=True)
     def get(self):
         try:
@@ -62,7 +64,7 @@ class ReportsApi(Resource):
                 rep_datasets = None
 
             genomic_filter_params = find_genomic_filter_params(args.species, genomic_datasets) if genomic_datasets is not None else []
-            rep_filter_params, rep_haplotypes = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else ([], [])
+            rep_filter_params, rep_haplotypes = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else [], []
 
             available_reports = {}
 
@@ -88,7 +90,7 @@ class ReportsApi(Resource):
                             elif 'options' in param:
                                 combined_filter_params[param['id']]['options'] = list(set(combined_filter_params[param['id']]['options'] + param['options']))
                         except:
-                            print('foo')
+                            print('error in query for reports list: invlaid parameters')
 
             return {
                 'reports': available_reports,
@@ -119,6 +121,7 @@ report_arguments.add_argument('params', type=str)
 @ns.route('/reports/run/<string:report_name>')
 @api.response(404, 'Malformed request')
 class ReportsRunApi(Resource):
+    @digby_protected()
     @api.expect(report_arguments, validate=True)
     def get(self, report_name):
         try:
@@ -196,6 +199,7 @@ class ReportsRunApi(Resource):
 @ns.route('/reports/status/<string:job_id>')
 @api.response(404, 'Malformed request')
 class ReportsStatus(Resource):
+    @digby_protected()
     def get(self, job_id):
         res = celery.AsyncResult(job_id)
         status = res.status
