@@ -113,8 +113,14 @@ def index():
 
 
 @app.route('/static/<path:path>', methods=['GET', 'POST'])
-@digby_protected()
 def static(path):
+    if '/gff' in path:
+        return send_from_gff(path)
+    else:
+        return send_from_directory(app.config['STATIC_PATH'], path)
+
+@digby_protected()
+def send_from_gff(path):
     return send_from_directory(app.config['STATIC_PATH'], path)
 
 

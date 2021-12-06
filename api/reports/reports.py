@@ -64,7 +64,7 @@ class ReportsApi(Resource):
                 rep_datasets = None
 
             genomic_filter_params = find_genomic_filter_params(args.species, genomic_datasets) if genomic_datasets is not None else []
-            rep_filter_params, rep_haplotypes = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else [], []
+            (rep_filter_params, rep_haplotypes) = find_rep_filter_params(args.species, rep_datasets) if rep_datasets is not None else ([], [])
 
             available_reports = {}
 

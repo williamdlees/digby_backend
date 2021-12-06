@@ -782,7 +782,7 @@ def find_rep_filter_params(species, datasets):
         }
     ])
 
-    return params, haplotypes
+    return (params, haplotypes)
 
 
 # Apply filter params to a list of samples in the context of a specific dataset
