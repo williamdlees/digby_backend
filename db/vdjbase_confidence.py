@@ -457,7 +457,7 @@ def report_issue(novel, issue_category, issue_notes, session, low_confidence=Tru
     session.add(issue)
     if low_confidence:
         novel.low_confidence = True
-    print("%s: %s: %s: %d: %.2f" % (novel.name, issue_category, issue_notes, novel.appears, novel.max_kdiff))
+    # print("%s: %s: %s: %d: %.2f" % (novel.name, issue_category, issue_notes, novel.appears, novel.max_kdiff))
 
 
 # find the 1-based index of a nucleotide in a gapped  sequence, given its index in the ungapped sequence
