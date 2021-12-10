@@ -19,7 +19,7 @@ from db.filter_list import apply_filter_to_list
 from api.system.system import digby_protected
 
 from app import vdjbase_dbs, app, db
-from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
+from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
 
 from db.feature_db import Species   # don't import any tables that would conflict with vdjbase!
 
@@ -81,6 +81,89 @@ class NovelsApi(Resource):
                                 ret['>' + novel.name + '|' + sp + '|' + ds_name] = (novel.seq, novel.appears)
 
         return ret
+
+
+@ns.route('/novels/<string:species>/<string:dataset>')
+class NovelsSpApi(Resource):
+    @digby_protected()
+    def get(self, species, dataset):
+        """ Returns details of full-length novel alleles in a single dataset"""
+        if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
+            return None, 404
+
+        session = vdjbase_dbs[species][dataset].session
+        novels = session.query(Allele)\
+            .join(AllelesSample)\
+            .join(Sample)\
+            .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
+            .filter(Allele.novel == True)\
+            .filter(Allele.is_single_allele == True)\
+            .filter(SeqProtocol.sequencing_length == 'Full')\
+            .all()
+
+        results = {}
+        for novel in novels:
+            result = {
+                'name': novel.name,
+                'subject_count': len(set([sample.patient_id for sample in novel.samples])),
+                'j_haplotypes': 0,
+                'd_haplotypes': 0,
+                'hetero_alleleic_j_haplotypes': 0,
+                'example': '',
+                'sequence': '',
+            }
+
+            haplos = session.query(HaplotypeEvidence)\
+                .join(Sample)\
+                .filter(HaplotypeEvidence.allele_id == novel.id)\
+                .all()
+
+            d_haps = 0
+            j_haps = 0
+            hetero_haps = 0
+            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.name}
+
+            for haplo in haplos:
+                gene_type = 'D' if 'D' in haplo.hap_gene else 'J'
+                if gene_type == 'D':
+                    d_haps += 1
+                else:
+                    j_haps += 1
+
+                counts = haplo.counts.split('),')
+                hetero = len(counts) > 1
+
+                if hetero and gene_type == 'J':
+                    hetero_haps += 1
+
+                novel_allele = novel.name.split('*')[1].upper()
+                novel_count = 0
+
+                try:
+                    for count in counts:
+                        if novel_allele + ' ' in count:
+                            count = count.split('(')[1]
+                            novel_counts = count.replace(')', '').replace(' ', '')
+                            novel_count = max([int(c) for c in novel_counts.split(',')])
+                except:
+                    print('Error in parsing haplotype counts: %s' % haplo.counts)
+                    novel_count = 0
+
+                if best_hap['gene_type'] == '' \
+                    or (best_hap['gene_type'] == 'D' and gene_type == 'J') \
+                    or (best_hap['hetero'] and not hetero) \
+                    or best_hap['count'] < novel_count:
+                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.name}
+
+            result['j_haplotypes'] = j_haps
+            result['d_haplotypes'] = d_haps
+            result['hetero_alleleic_j_haplotypes'] = hetero_haps
+            result['example'] = best_hap['example']
+            result['sequence'] = novel.seq
+
+            results[result['name']] = result
+
+        return results
 
 
 @ns.route('/ref_seqs/<string:species>')
