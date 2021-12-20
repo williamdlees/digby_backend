@@ -77,8 +77,12 @@ class NovelsApi(Resource):
                         novels = session.query(Allele).filter(Allele.novel == 1).all()
 
                         if novels:
+                            if sp not in ret:
+                                ret[sp] = {}
+                            if ds_name not in ret[sp]:
+                                ret[sp][ds_name] = {}
                             for novel in novels:
-                                ret['>' + novel.name + '|' + sp + '|' + ds_name] = (novel.seq, novel.appears)
+                                ret[sp][ds_name][novel.name] = (novel.seq.replace('.', ''), novel.appears)
 
         return ret
 
