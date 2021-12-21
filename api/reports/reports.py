@@ -153,7 +153,10 @@ class ReportsRunApi(Resource):
                     rep_samples = []
                 params = json.loads(args.params)
 
-            except:
+                if 'f_kdiff' in params and (not params['f_kdiff'] or params['f_kdiff'] == ' '):
+                    params['f_kdiff'] = 0
+
+            except Exception as e:
                 print("Bad Request: error parsing arguments")
                 raise BadRequest("Malformed request")
 
@@ -228,7 +231,6 @@ class ReportsStatus(Resource):
 # R Script Runner
 def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
     current_task.update_state(state='PENDING', meta={'stage': 'running report'})
-
     cmd_line = ['Rscript', os.path.join(app.config['R_SCRIPT_PATH'], script)]
     cmd_line.extend(args)
     print("Running Rscript: '%s'\n" % ' '.join(cmd_line))

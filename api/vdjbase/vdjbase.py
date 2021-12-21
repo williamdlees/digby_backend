@@ -827,7 +827,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
 
 def find_rep_filter_params(species, datasets):
     if species not in vdjbase_dbs or set(datasets).difference(set(vdjbase_dbs[species])):
-        return []
+        return ([], [])
 
     genes = []
     gene_types = []
