@@ -7,7 +7,7 @@ from api.genomic.genomic import genomic_sequence_filters, find_genomic_samples, 
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
-from db.feature_db import Sample
+from db.genomic_db import Sample
 import csv
 import zipfile
 import os

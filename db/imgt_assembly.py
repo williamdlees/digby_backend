@@ -1,30 +1,25 @@
 from lxml import html
 import requests
-from db.shared import delete_dependencies
 
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleSequence, Study
-from db.save_genomic import save_genomic_dataset_details, save_genomic_study, save_genomic_sample, add_feature_to_ref, \
+from db.genomic_db import RefSeq, Feature, Sequence, Sample, SampleSequence, Study
+from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_study, save_genomic_sample, add_feature_to_ref, \
     save_genomic_sequence, save_genomic_ref_seq, feature_type
 
 
-def process_imgt_assembly(sample_data):
-    results = []
+def process_imgt_assembly(session, sample_data):
     needed_items = ['Assembly_id', 'Assembly_reference']
 
     valid_entry = True
     for needed_item in needed_items:
         if needed_item not in sample_data:
-            results.append('%s not specified' % (needed_item))
+            print('%s not specified' % (needed_item))
             valid_entry = False
 
     if not valid_entry:
-        return '\n'.join(results)
+        return
 
-    # delete_dependencies(None)
-    delete_dependencies(sample_data['Species'])
-
-    results.append("Importing %s / %s" % (sample_data['Species'], sample_data['Sample']))
+    print("Importing %s / %s" % (sample_data['Species'], sample_data['Sample']))
 
     page = requests.get(sample_data['URL'])
     tree = html.fromstring(page.content)

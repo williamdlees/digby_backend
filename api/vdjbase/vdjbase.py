@@ -21,7 +21,7 @@ from api.system.system import digby_protected
 from app import vdjbase_dbs, app, db
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
 
-from db.feature_db import Species   # don't import any tables that would conflict with vdjbase!
+from db.genomic_db import Species   # don't import any tables that would conflict with vdjbase!
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 

@@ -10,7 +10,7 @@ from Bio import SeqIO
 import yaml
 from app import app, db
 import sys
-from db.feature_db import Sequence, Species
+from db.genomic_db import Sequence, Species
 from db.shared import delete_dependencies
 
 # Replace IMGT records in the database

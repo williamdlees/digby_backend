@@ -1,72 +1,28 @@
-from db.novel_alleles import find_novel_allele, assign_novel_gene
-from db.shared import delete_dependencies
-from Bio import SeqIO
+from receptor_utils import simple_bio_seq as simple
 import os.path
 import csv
-from app import db
-from db.feature_db import Species, RefSeq, Feature, Sequence, Sample, SampleSequence, Study
-from db.save_genomic import save_genomic_dataset_details, save_genomic_study, save_genomic_sample, add_feature_to_ref, \
-    save_genomic_sequence, save_genomic_ref_seq, feature_type, find_allele_by_seq
+from db.genomic_db import RefSeq, Feature, Sequence, Subject, SubjectSequence, Study
+from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_study, add_feature_to_ref, \
+    save_genomic_sequence, save_genomic_ref_seq, feature_type, find_allele_by_seq, get_ref_set, find_or_assign_allele
 
 
-def process_digger_record(sample_data, sample_dir, novels):
-    results = []
-    needed_items = ['Assembly_id', 'Assembly_reference', 'Annotation_file', 'Assembly_file', 'Chromosome', 'Start_CoOrd',
-                    'End_CoOrd', 'Sample_description', 'Study_description', 'Annotation_method', 'Annotation_reference',
-                    'Study']
+def process_digger_record(session, study, assembly, dataset_dir, subject, annotation_file):
+    print(f"Importing assembly {assembly.identifier} for subject {subject.identifier}")
 
-    valid_entry = True
-    for needed_item in needed_items:
-        if needed_item not in sample_data:
-            results.append('%s not specified' % (needed_item))
-            valid_entry = False
-
-    if not valid_entry:
-        return '\n'.join(results)
-
-    results.append("Importing %s / %s" % (sample_data['Species'], sample_data['Sample']))
-
-    if '>' not in sample_data['Assembly_file']:
-        sequence = SeqIO.read(os.path.join(sample_dir, sample_data['Assembly_file']), 'fasta')
-    else:
-        sequence = None
-        seq_file, seq_name = os.path.join(sample_dir, sample_data['Assembly_file']).split('>')
-        sequences = SeqIO.parse(seq_file, 'fasta')
-        for record in sequences:
-            if seq_name in record.description:
-                sequence = record
-                break
-        if sequence is None:
-            results.append('Sequence %s not found in file %s' % (seq_name, seq_file))
-            return '\n'.join(results)
-
-    sp, data_set = save_genomic_dataset_details(sample_data['Locus'], sample_data['Dataset'], sample_data['Species'])
-    ref_seq = save_genomic_ref_seq(sample_data['Locus'], sample_data['Assembly_id'], sp, sequence, sample_data['Assembly_reference'],
-                                   sample_data['Chromosome'], sample_data['Start_CoOrd'], sample_data['End_CoOrd'])
-    db.session.commit()
-    study = save_genomic_study(sample_data['Study'], sample_data['Institute'], sample_data['Researcher'], sample_data['Reference'], sample_data['Contact'], sample_data['Study_description'])
-
-    contig_filter = None
-    annotation_filename = sample_data['Annotation_file']
-
-    if '>' in annotation_filename:
-        annotation_filename, contig_filter = annotation_filename.split('>')
-
-    report_link = '/'.join(['study_data', 'Genomic', sample_data['Species'].replace(' ', '_'), sample_data['Dataset'].replace(' ', '_'), annotation_filename])
-    sample = save_genomic_sample(sample_data['Sample'], sample_data['Type'], sample_data['Date'], study, sp.id, ref_seq.id, data_set.id, report_link,
-                                 sample_data['Sample_description'], sample_data['Annotation_method'], sample_data['Annotation_reference'])
+    ref_seq = save_genomic_ref_seq(session, assembly.identifier, assembly.sequence, assembly.reference, subject.chromosome, subject.start, subject.end)
+    session.commit()
 
     # all records will be of the same sense. We'll use the sense when preparing the assembly file for gff
 
     sense = '+'
 
-    with open(os.path.join(sample_dir, annotation_filename), 'r') as fi:
+    with open(os.path.join(dataset_dir, annotation_file), 'r') as fi:
         reader = csv.DictReader(fi)
         feature_id = 1
         variants = {}
 
         for row in reader:
-            if contig_filter is None or contig_filter in row['contig']:
+            if assembly.identifier in row['contig']:
                 sense = row['sense']
 
                 # swap forward and reverse co-ords as analysis is on anti-sense
@@ -83,27 +39,22 @@ def process_digger_record(sample_data, sample_dir, novels):
                 if len(row['imgt_score']) > 0 and float(row['imgt_score']) >= 99.9:
                     imgt_name = row['imgt_match']
 
-                allele = find_allele_by_seq(row['seq'], sp.id)
+                allele = find_allele_by_seq(session, row['seq'])
 
-                if allele is not None:
-                    name = allele.name
-                elif len(row['cirelli_score']) > 0 and float(row['cirelli_score']) > 99.99:
-                    name = row['cirelli_match']
-                elif len(row['cirelli_match']) > 0:
-                    allele_info = find_novel_allele(novels, sample_data['Species'], sample_data['Dataset'], row['seq'])
+                if allele is None:
+                    if len(row['cirelli_match']) > 0:
+                        functional = 'U'
+                        if row['functional'].lower() == 'functional':
+                            functional = 'F'
+                        elif row['functional'] == 'pseudo':
+                            functional = 'P'
+                        elif row['functional'] == 'ORF':
+                            functional = 'O'
+                        allele = find_or_assign_allele(session, row['seq'], 'V' in row['cirelli_match'], functional)
+                    else:
+                        continue    # poor sequence, probably truncated alignment
 
-                    if allele_info is None:
-                        # we know we have a cirelli name: use it for family and locus
-                        stem = row['cirelli_match'].split('_')[1]
-                        stem = stem.split('.')[0]
-                        family = stem[-1:]
-                        prefix = 'VDJbase_' + stem[:-1]
-                        allele_info = assign_novel_gene(novels, sample_data['Species'], sample_data['Dataset'], row['seq'], prefix, family, 'Digger')
-
-                    name = allele_info['name']
-                else:
-                    continue    # poor sequence, probably truncated alignment
-
+                name = allele.name
                 add_feature_to_ref(name, 'gene', row['start'], row['end'], row['sense'], 'Name=%s;ID=%s' % (name, feature_id), feature_id, ref_seq)
                 parent_id = feature_id
                 feature_id += 1
@@ -142,38 +93,21 @@ def process_digger_record(sample_data, sample_dir, novels):
                         add_feature_to_ref(name, 'CDS', row['5_rss_start'], row['5_rss_end'], row['sense'], 'Name=%s_J-RS;ID=%s' % (name, feature_id), parent_id, ref_seq)
                         allele_type = 'J-REGION'
 
-                if allele is None:
-                    functional = 'U'
-                    if row['functional'].lower() == 'functional':
-                        functional = 'F'
-                    elif row['functional'] == 'pseudo':
-                        functional = 'P'
-                    elif row['functional'] == 'ORF':
-                        functional = 'O'
-                    gs = save_genomic_sequence(name, imgt_name, allele_type, True, False, functional, row['seq'], row['seq_gapped'], sp)
-                    gs.features.append(region_feature)
-                    SampleSequence(sample=sample, sequence=gs, chromosome='h1', chromo_count=1)
-                else:
-                    allele.features.append(region_feature)
-                    SampleSequence(sample=sample, sequence=allele, chromosome='h1', chromo_count=1)
-                    # spruce up the ref if we have some info that can help
-                    if allele.gapped_sequence == '':
-                        allele.gapped_sequence = row['seq_gapped'].lower()
-                    if allele.imgt_name == '' and imgt_name != '':
-                        allele.imgt_name = imgt_name
+                allele.features.append(region_feature)
+                SubjectSequence(subject=subject, sequence=allele, haplotype='h1')
+                # spruce up the ref if we have some info that can help
+                if allele.imgt_name == '' and imgt_name != '':
+                    allele.imgt_name = imgt_name
 
-    db.session.commit()
+    session.commit()
 
     # Create assembly fasta for gff. The sequence name in the file must match the assembly id.
 
-    ref_path = os.path.join(sample_dir, '%s_%s.fasta' % (sample_data['Species'], sample_data['Assembly_id'])).replace(' ', '_')
+    ref_path = os.path.join(dataset_dir, f'{assembly.identifier}.fasta').replace(' ', '_')
 
-    if sense == '-':
-        sequence = sequence.reverse_complement()
+    sequence = assembly.sequence if sense == '+' else simple.reverse_complement(assembly.sequence)
 
     with open(ref_path, 'w') as fo:
-        fo.write('>%s\n' % sample_data['Assembly_id'])
-        fo.write(str(sequence.seq))
+        fo.write(f'>{assembly.identifier}\n{assembly.sequence}\n')
 
-
-    return '\n'.join(results)
+    return

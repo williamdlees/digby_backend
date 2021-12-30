@@ -1,5 +1,5 @@
 from app import db
-from db.feature_db import Species, RefSeq, Feature, Sample, SampleSequence, Sequence, Study
+from db.genomic_db import Species, RefSeq, Feature, Sample, SampleSequence, Sequence, Study
 from Bio import SeqIO
 from Bio.Seq import Seq
 from os import listdir
@@ -7,7 +7,7 @@ from os.path import isfile, join, splitext, isdir
 import csv
 from sqlalchemy import func, and_
 import traceback
-from db.save_genomic import save_genomic_dataset_details, save_genomic_study, find_existing_allele, find_all_alleles, save_genomic_sequence, \
+from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_study, find_existing_allele, find_all_alleles, save_genomic_sequence, \
     update_sample_sequence_link, add_feature_to_ref, find_allele_type
 
 IGENOTYPER_DIR = 'static/study_data/IGenotyper'

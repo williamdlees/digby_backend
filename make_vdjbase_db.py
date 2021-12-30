@@ -1,10 +1,10 @@
-# Standalone script to maake a VDJbase sqlite database from the command line
+# Standalone script to make a VDJbase sqlite database from the command line
 
 import argparse
 from db.vdjbase_maint import create_single_database
 import os
 
-parser = argparse.ArgumentParser(description='Make a VDJbase sqlite database from files n current directory')
+parser = argparse.ArgumentParser(description='Make a VDJbase sqlite database from files in current directory')
 parser.add_argument('species', help='species')
 parser.add_argument('dataset_name', help='data set name')
 args = parser.parse_args()

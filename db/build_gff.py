@@ -1,5 +1,5 @@
 from app import db
-from db.feature_db import RefSeq, Feature, Species, Sequence, SequenceFeature
+from db.genomic_db import RefSeq, Feature, Species, Sequence, SequenceFeature
 from sqlalchemy import or_
 
 

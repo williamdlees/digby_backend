@@ -1,5 +1,5 @@
 from app import db
-from db.feature_db import RefSeq, Species, Sample, Sequence, Feature, SampleSequence, SequenceFeature, Study, DataSet
+from db.genomic_db import RefSeq, Species, Sample, Sequence, Feature, SampleSequence, SequenceFeature, Study, DataSet
 
 
 def delete_dependencies(species):

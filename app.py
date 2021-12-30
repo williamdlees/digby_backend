@@ -78,8 +78,8 @@ from api.vdjbase.vdjbase import ns as vdjbase
 from api.reports.reports import ns as reports
 from api.system.system import ns as system, digby_protected
 
-from db.feature_db import *
-from db.update import update_genomic_db
+from db.genomic_db import *
+from db.genomic_maint import update_genomic_db
 from db.build_gff import build_gffs
 import db.vdjbase_maint
 import db.vdjbase_export

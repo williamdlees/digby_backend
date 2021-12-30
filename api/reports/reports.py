@@ -8,7 +8,7 @@ from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
 import json
 from werkzeug.exceptions import BadRequest
-from db.feature_db import RefSeq, Sample
+from db.genomic_db import RefSeq, Sample
 from db.vdjbase_model import Sample as vdjb_Sample
 from api.genomic.genomic import find_genomic_samples, find_genomic_filter_params
 from api.vdjbase.vdjbase import find_vdjbase_samples, find_rep_filter_params

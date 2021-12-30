@@ -9,7 +9,7 @@ from werkzeug.exceptions import BadRequest
 
 from api.system.system import digby_protected
 from app import sql_db as db
-from db.feature_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence, DataSet
+from db.genomic_db import Species, RefSeq, Feature, Sequence, SequenceFeature, Sample, Study, SampleSequence, DataSet
 import json
 from datetime import datetime
 from sqlalchemy_filters import apply_filters
