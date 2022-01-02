@@ -8,9 +8,9 @@ from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
 import json
 from werkzeug.exceptions import BadRequest
-from db.genomic_db import RefSeq, Sample
+from db.genomic_db import RefSeq, Subject
 from db.vdjbase_model import Sample as vdjb_Sample
-from api.genomic.genomic import find_genomic_samples, find_genomic_filter_params
+from api.genomic.genomic import find_genomic_filter_params, find_genomic_subjects
 from api.vdjbase.vdjbase import find_vdjbase_samples, find_rep_filter_params
 from app import app
 import importlib
@@ -140,7 +140,7 @@ class ReportsRunApi(Resource):
                 genomic_filters = json.loads(args.genomic_filters)
 
                 if genomic_datasets is not None:
-                    genomic_samples = find_genomic_samples([Sample.id, Sample.name, RefSeq.name], args.species, genomic_datasets, genomic_filters)
+                    genomic_samples = find_genomic_subjects([Subject.id, Subject.identity, RefSeq.name], args.species, genomic_datasets, genomic_filters)
                 else:
                     genomic_samples = []
 

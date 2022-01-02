@@ -5,6 +5,8 @@ from receptor_utils import novel_allele_name
 from db.genomic_db import RefSeq, Feature, Subject, SubjectSequence, Sequence, Study, Details, Assembly
 from sqlalchemy import and_
 from db.genomic_ref import find_type
+import datetime
+from hashlib import sha256
 
 feature_type = {
     "5'UTR": 'five_prime_UTR',
@@ -29,7 +31,7 @@ feature_type = {
 def save_genomic_dataset_details(session, species, locus):
     details = session.query(Details).one_or_none()
     if not details:
-        details = Details(species=species, locus=locus)
+        details = Details(species=species, locus=locus, date=datetime.datetime.now())
         session.add(details)
 
 
@@ -39,8 +41,8 @@ def save_genomic_ref_seq(session, name, ref_sequence, reference, chromosome, sta
     return ref_seq
 
 
-def add_feature_to_ref(name, feature, start, end, strand, feature_id, parent_id, ref):
-    gene = Feature(name=name, feature=feature, start=start, end=end, strand=strand, feature_id=feature_id, parent_id=parent_id)
+def add_feature_to_ref(name, feature, start, end, strand, attribute, parent_id, ref):
+    gene = Feature(name=name, feature=feature, start=start, end=end, strand=strand, attribute=attribute, parent_id=parent_id)
     ref.features.append(gene)
     return gene
 
@@ -51,16 +53,15 @@ def save_genomic_sequence(session, name, imgt_name, allele_type, novel, deleted,
     return sequence
 
 
-def save_genomic_subject(identifier, name_in_study, age, sex, annotation_path, annotation_method, annotation_format, annotation_reference,
-                         chromosome, start, end, study):
+def save_genomic_subject(identifier, name_in_study, age, sex, annotation_path, annotation_method, annotation_format, annotation_reference, study):
     subject = Subject(identifier=identifier, name_in_study=name_in_study, age=age, sex=sex, annotation_path=annotation_path, annotation_method=annotation_method,
-                      annotation_format=annotation_format, annotation_reference=annotation_reference, chromosome=chromosome, start=start, end=end)
+                      annotation_format=annotation_format, annotation_reference=annotation_reference)
     study.subjects.append(subject)
     return subject
 
 
-def save_genomic_assembly(identifier, reference, sequence_file, sequence, subject):
-    assembly = Assembly(identifier=identifier, reference=reference, sequence_file=sequence_file, sequence=sequence)
+def save_genomic_assembly(identifier, reference, sequence_file, sequence, chromosome, start, end, subject):
+    assembly = Assembly(identifier=identifier, reference=reference, sequence_file=sequence_file, sequence=sequence, chromosome=chromosome, start=start, end=end)
     subject.assemblies.append(assembly)
     return assembly
 
@@ -93,14 +94,25 @@ def find_allele_by_seq(session, gene_sequence):
 
 
 def find_or_assign_allele(session, gene_sequence, v_gene, functional):
-    gene_sequence = gene_sequence.lower()
     if s := find_allele_by_seq(session, gene_sequence):
         return s
 
     ref_set = get_ref_set(session)
     name, gapped_seq = novel_allele_name.name_novel(gene_sequence, ref_set, v_gene)
-    root = name.split('_')[0]
-    gene = session.query(Sequence.gene).filter(Sequence.name == root).one_or_none()
+    prefix, name = name.split('IG')
+    prefix = prefix + 'IG'
+
+    name_components = name.split('_')
+    root_name = prefix + name_components[0]
+    gene = session.query(Sequence.gene).filter(Sequence.name == root_name).one_or_none()[0]
+
+    # Avoid infeasibly long names
+
+    if len(name_components) > 6:
+        hash = sha256(gene_sequence.encode('utf-8')).hexdigest()[-5:]
+        name = root_name + '_' + hash
+    else:
+        name = prefix + name
 
     s = Sequence(
         name=name,

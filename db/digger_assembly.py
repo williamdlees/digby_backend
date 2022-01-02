@@ -9,7 +9,7 @@ from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_s
 def process_digger_record(session, study, assembly, dataset_dir, subject, annotation_file):
     print(f"Importing assembly {assembly.identifier} for subject {subject.identifier}")
 
-    ref_seq = save_genomic_ref_seq(session, assembly.identifier, assembly.sequence, assembly.reference, subject.chromosome, subject.start, subject.end)
+    ref_seq = save_genomic_ref_seq(session, assembly.identifier, assembly.sequence, assembly.reference, assembly.chromosome, assembly.start, assembly.end)
     session.commit()
 
     # all records will be of the same sense. We'll use the sense when preparing the assembly file for gff

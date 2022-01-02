@@ -37,8 +37,8 @@ class ContentProvider():
         self.db.dispose()
 
 
-def vdjbase_db_init(vdjbase_db_path):
-    vdjbase_dbs = {}
+def study_data_db_init(vdjbase_db_path):
+    sqlite_dbs = {}
 
     for species in listdir(vdjbase_db_path):
         p = join(vdjbase_db_path, species)
@@ -49,20 +49,20 @@ def vdjbase_db_init(vdjbase_db_path):
                     if isfile(join(p, name, 'db_description.txt')):
                         with open(join(p, name, 'db_description.txt'), 'r') as fi:
                             description = ' '.join(fi.readlines())
-                    if species not in vdjbase_dbs:
-                        vdjbase_dbs[species] = {}
-                    vdjbase_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
-                    vdjbase_dbs[species][name + '_description'] = description
+                    if species not in sqlite_dbs:
+                        sqlite_dbs[species] = {}
+                    sqlite_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
+                    sqlite_dbs[species][name + '_description'] = description
 
     # sort datasets of each species
 
-    for species in vdjbase_dbs:
-        vdjbase_dbs[species] = dict(sorted(vdjbase_dbs[species].items(), key=lambda kv: kv[0]))
+    for species in sqlite_dbs:
+        sqlite_dbs[species] = dict(sorted(sqlite_dbs[species].items(), key=lambda kv: kv[0]))
 
     # put Human at the front
-    vdjbase_dbs = dict(sorted(vdjbase_dbs.items(), key=lambda kv: 'aaaaa' if kv[0] == 'Human' else kv[0]))
+    sqlite_dbs = dict(sorted(sqlite_dbs.items(), key=lambda kv: 'aaaaa' if kv[0] == 'Human' else kv[0]))
 
-    return vdjbase_dbs
+    return sqlite_dbs
 
 
 

@@ -6,9 +6,11 @@ from sqlalchemy.pool import NullPool
 
 import os
 import yaml
+
+from db.build_gff import build_gff
 from db.digger_assembly import process_digger_record
 from db.genomic_db import Base
-from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_assembly
+from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_assembly, save_genomic_dataset_details
 #from db.imgt_assembly import process_imgt_assembly
 from db.genomic_ref import update_genomic_ref
 
@@ -45,8 +47,8 @@ def create_dataset(dataset_dir):
     if len(dir_els) < 2:
         print(f'Cannot determine species and dataset from pathname {dataset_dir}')
 
-    species = dir_els[-1]
-    dataset = dir_els[-2]
+    dataset = dir_els[-1]
+    species = dir_els[-2]
 
     db_file = os.path.join(dataset_dir, 'db.sqlite3')
 
@@ -59,6 +61,8 @@ def create_dataset(dataset_dir):
     engine.session = Session(bind=db_connection)
     session = engine.session
 
+    save_genomic_dataset_details(session, species, dataset)
+
     if 'Reference_sets' in study_data:
         for file in study_data['Reference_sets']:
             update_genomic_ref(session, os.path.join(dataset_dir, file))
@@ -68,9 +72,8 @@ def create_dataset(dataset_dir):
         return
 
     needed_study_items = {'Study', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
-    needed_subject_items = {'Name_in_study', 'Age', 'Sex', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference',
-                            'Chromosome', 'Start_CoOrd', 'End_CoOrd'}
-    needed_assembly_items = {'Assembly_id', 'Assembly_reference', 'Assembly_file'}
+    needed_subject_items = {'Name_in_study', 'Age', 'Sex', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference'}
+    needed_assembly_items = {'Assembly_id', 'Assembly_reference', 'Assembly_file', 'Chromosome', 'Start_CoOrd', 'End_CoOrd'}
 
 
     for _, study in study_data['Studies'].items():
@@ -88,8 +91,7 @@ def create_dataset(dataset_dir):
 
             report_link = '/'.join(['study_data', 'Genomic', species.replace(' ', '_'), dataset.replace(' ', '_'), subject['Annotation_file']])
             subject_obj = save_genomic_subject(name, subject['Name_in_study'], subject['Age'], subject['Sex'], report_link,
-                            subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'],
-                            subject['Chromosome'], subject['Start_CoOrd'], subject['End_CoOrd'], study_obj)
+                            subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'], study_obj)
 
             for _, assembly in subject['Assemblies'].items():
                 if needed_assembly_items - set(assembly.keys()):
@@ -109,7 +111,8 @@ def create_dataset(dataset_dir):
                     assembly_seq = simple.read_single_fasta(os.path.join(dataset_dir, assembly['Assembly_file']))
 
                 assembly_obj = save_genomic_assembly(assembly['Assembly_id'], assembly['Assembly_reference'],
-                                                     assembly['Assembly_file'], assembly_seq, subject_obj)
+                                                     assembly['Assembly_file'], assembly_seq, assembly['Chromosome'], assembly['Start_CoOrd'],
+                                                     assembly['End_CoOrd'], subject_obj)
 
                 if subject_obj.annotation_format == 'IMGT':
                     # process_imgt_assembly(assembly_obj)
@@ -119,5 +122,6 @@ def create_dataset(dataset_dir):
                 else:
                     print('%s: Invalid type/format %s' % (dataset_file, assembly['Annotation_format']))
 
+    build_gff(session, dataset_dir)
     return
 

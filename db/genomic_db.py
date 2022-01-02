@@ -12,6 +12,7 @@ class Details(Base):
     id = Column(Integer, primary_key=True)
     species = Column(String(100))
     locus = Column(String(100))
+    date = Column(DateTime())
 
 
 class RefSeq(Base):
@@ -53,7 +54,7 @@ class Feature(Base):
     start = Column(Integer)
     end = Column(Integer)
     strand = Column(String(1))
-    feature_id = Column(Integer)
+    attribute = Column(String(200))
     parent_id = Column(Integer)
     refseq_id = Column(Integer, ForeignKey('ref_seq.id'))
     refseq = relationship('RefSeq', backref='features')
@@ -83,9 +84,6 @@ class Subject(Base):
     name_in_study = Column(String(100))
     age = Column(Integer)
     sex = Column(String(10))
-    chromosome = Column(String(10))
-    start = Column(BigInteger)
-    end = Column(BigInteger)
     annotation_path = Column(String(200))
     annotation_method = Column(String(100))
     annotation_format = Column(String(100))
@@ -103,6 +101,9 @@ class Assembly(Base):
     sequence = Column(Text(10000000))
     subject_id = Column(Integer, ForeignKey('subject.id'))
     subject = relationship("Subject", backref='assemblies')
+    chromosome = Column(String(10))
+    start = Column(BigInteger)
+    end = Column(BigInteger)
 
 
 class Study(Base):

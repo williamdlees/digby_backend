@@ -1,40 +1,34 @@
-from app import db
-from db.genomic_db import RefSeq, Feature, Species, Sequence, SequenceFeature
+from db.genomic_db import RefSeq, Feature, Sequence, SequenceFeature, Details
 from sqlalchemy import or_
+import os
 
 
-def build_gffs():
-
-    species = db.session.query(Species.name.distinct()).join(RefSeq).all()
-    species = [x[0] for x in species]
-
-    for sp in species:
-        build_gff(sp)
-    return('GFFs built! Now run /mnt/d/Research/digby_backend/static/gff/make_bam')
-
-def build_gff(species):
-    ref_seqs = db.session.query(RefSeq).join(Species).filter(Species.name == species).all()
+def build_gff(session, dataset_dir):
+    ref_seqs = session.query(RefSeq).all()
+    details = session.query(Details).one_or_none()
+    species = details.species
 
     for ref_seq in ref_seqs:
+        name_prefix = f"{species.replace(' ', '_')}_{ref_seq.name}"
         # Feature file showing genes only: GFF3
-        with open('static/gff/%s_%s.gff3' % (species.replace(' ', '_'), ref_seq.name), 'w') as fo:
+        with open(os.path.join(dataset_dir, name_prefix + '.gff3'), 'w') as fo:
             fo.write('##gff-version 3\n')
 
 #           ctg123 . gene            1000  9000  .  +  .  ID=gene00001;Name=EDEN
 #           ctg123 . TF_binding_site 1000  1012  .  +  .  ID=tfbs00001;Parent=gene00001
 
-            features = db.session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
+            features = session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
                 if feature.feature == 'CDS':
                     fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
 
         # Alignment file of all alleles and other annotated regions within samples aligned to this reference (SAM, needs external conversion to BAM)
         # FIX - add non coding regions
-        with open('static/gff/%s_%s.sam' % (species.replace(' ', '_'), ref_seq.name), 'w') as fo:
+        with open(os.path.join(dataset_dir, name_prefix + '.sam'), 'w') as fo:
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
             fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
-            features = db.session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
+            features = session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
                 if feature.feature == 'CDS':
                     for sequence in feature.sequences:
@@ -46,11 +40,11 @@ def build_gff(species):
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence))
 
         # Alignment file of all alleles within IMGT, plus novel alleles from samples aligned to this reference (SAM, needs external conversion to BAM)
-        with open('static/gff/%s_%s_imgt.sam' % (species.replace(' ', '_'), ref_seq.name), 'w') as fo:
+        with open(os.path.join(dataset_dir, name_prefix + '_imgt.sam'), 'w') as fo:
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
             fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
-            features = db.session.query(Feature).filter(Feature.refseq == ref_seq).filter(Feature.attribute.like('%REGION%')).order_by(Feature.start).all()
+            features = session.query(Feature).filter(Feature.refseq == ref_seq).filter(Feature.attribute.like('%REGION%')).order_by(Feature.start).all()
 
             order = 1
             for feature in features:
@@ -67,7 +61,11 @@ def build_gff(species):
 
                 # TODO need a better way of identifying alleles here. Can't really rely on syntax. I think we need to store
                 # the root name and allele as separate fields in the sequence object so that we can cope with different syntax
-                imgts = db.session.query(Sequence).join(Species).join(RefSeq).filter(RefSeq.name == ref_seq.name)\
+                imgts = session.query(Sequence)\
+                    .join(SequenceFeature, SequenceFeature.sequence_id == Sequence.id) \
+                    .join(Feature, Feature.id == SequenceFeature.feature_id) \
+                    .join(RefSeq).filter(RefSeq.name == ref_seq.name)\
+                    .filter(Feature.refseq_id == RefSeq.id) \
                     .filter(or_(Sequence.name.like(feature.name.split('_')[0] + '*%'), Sequence.name == feature.name))\
                     .filter(Sequence.novel == False).order_by(Sequence.name.desc()).all()
 
@@ -92,22 +90,25 @@ def build_gff(species):
 
 
 
-def build_fake_human_ref():
-    with open('static/gff/Human_Human_IGH.fasta', 'w') as fo:
-        fo.write('>Human_IGH\n')
-        feats = db.session.query(Feature).join(RefSeq).join(SequenceFeature).join(Sequence).filter(Sequence.type.like('%REGION')).filter(RefSeq.name == 'Human_IGH').order_by(Feature.start).all()
+def build_fake_ref(session, dataset_dir):
+    details = session.query(Details).one_or_none()
+    species = details.species
+
+    with open(os.path.join(dataset_dir, f'fake_{species}.fasta'), 'w') as fo:
+        fo.write(f'>{species}\n')
+        feats = session.query(Feature).join(RefSeq).join(SequenceFeature).join(Sequence).filter(Sequence.type.like('%REGION')).filter(RefSeq.name == 'Human_IGH').order_by(Feature.start).all()
 
         i = 1
         for feat in feats:
             if i <= feat.start and feat.sequences:
-                seq_01 = db.session.query(Sequence).join(Species).filter(Species.name == 'Human').filter(Sequence.name == feat.name.split('_')[0] + '*01').one_or_none()
+                seq_01 = session.query(Sequence).filter(Sequence.name == feat.name.split('_')[0] + '*01').one_or_none()
                 if seq_01:
                     fo.write('n'*(feat.start-i))
                     i += (feat.start-i)
                     fo.write(seq_01.sequence)
                     i += len(seq_01.sequence)
                 else:
-                    seqs = db.session.query(Sequence).filter(Sequence.name.like(feat.name + '*%')).all()
+                    seqs = session.query(Sequence).filter(Sequence.name.like(feat.name + '*%')).all()
                     if seqs:
                         fo.write('n'*(feat.start-i))
                         i += (feat.start-i)

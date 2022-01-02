@@ -15,13 +15,10 @@ import decimal
 import os.path
 from os.path import isfile
 from db.filter_list import apply_filter_to_list
-
 from api.system.system import digby_protected
 
-from app import vdjbase_dbs, app, db
+from app import vdjbase_dbs, app, genomic_dbs
 from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
-
-from db.genomic_db import Species   # don't import any tables that would conflict with vdjbase!
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
@@ -32,18 +29,16 @@ def object_as_dict(obj):
             for c in inspect(obj).mapper.column_attrs}
 
 
-# can't declare in genomic api or we would get circular imports
-def get_genomic_species():
-        sp = db.session.query(Species).all()
-        return [row.name for row in sp] if sp else []
-
-
 ns = api.namespace('repseq', description='Genes and annotations inferred from RepSeq data')
 
 # for use by genomic api
 
 def get_vdjbase_species():
     return list(vdjbase_dbs.keys())
+
+
+def get_genomic_species():
+    return list(genomic_dbs.keys())
 
 
 @ns.route('/species')

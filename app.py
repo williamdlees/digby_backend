@@ -8,7 +8,7 @@ from flask_cors import CORS
 import os
 import custom_logging
 from reverse_proxied import ReverseProxied
-from db.vdjbase_db import vdjbase_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
+from db.vdjbase_db import study_data_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
 
 from flask_security.utils import hash_password
 from flask_sqlalchemy import SQLAlchemy
@@ -62,7 +62,8 @@ else:
 mail = Mail(app)
 custom_logging.init_logging(app, mail)
 
-vdjbase_dbs = vdjbase_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
+vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
+genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/db'))
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 
@@ -79,8 +80,6 @@ from api.reports.reports import ns as reports
 from api.system.system import ns as system, digby_protected
 
 from db.genomic_db import *
-from db.genomic_maint import update_genomic_db
-from db.build_gff import build_gffs
 import db.vdjbase_maint
 import db.vdjbase_export
 from db.vdjbase_igsnper import do_igsnper
@@ -181,12 +180,6 @@ def airrseq_copy_live():
 @app.route('/airrseq_delete/<species>/<dataset>', methods=['GET', 'POST'])
 def airrseq_delete(species, dataset):
     return airrseq_remove(species, dataset, app, vdjbase_dbs)
-
-
-@app.route('/build_gff', methods=['GET', 'POST'])
-@login_required
-def build_gff():
-    return build_gffs()
 
 
 @app.route('/export_vdjbase_metadata', methods=['GET', 'POST'])
