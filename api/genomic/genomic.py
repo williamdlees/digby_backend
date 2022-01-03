@@ -45,7 +45,7 @@ def get_genomic_datasets(species):
     sp = get_genomic_species()
 
     if species in sp:
-        datasets = [d for d in genomic_dbs[species].keys() if 'description' not in d]
+        datasets = [{'dataset': d, 'locus': d} for d in genomic_dbs[species].keys() if 'description' not in d]
         return datasets
     else:
         return []
@@ -418,20 +418,20 @@ class FeaturePosAPI(Resource):
             return []
 
 genomic_subject_filters = {
-    'id': {'model': 'Sample', 'field': Subject.id},
-    'identifier': {'model': 'Sample', 'field': Subject.identifier},
-    'name_in_study': {'model': 'Sample', 'field': Subject.name_in_study},
-    'age': {'model': 'Sample', 'field': Subject.age},
-    'sex': {'sex': 'Sample', 'field': Subject.sex},
-    'annotation_path': {'annotation_path': 'Sample', 'field': Subject.annotation_path},
-    'annotation_method': {'annotation_method': 'Sample', 'field': Subject.annotation_method},
-    'annotation_format': {'annotation_format': 'Sample', 'field': Subject.annotation_format},
-    'annotation_reference': {'annotation_reference': 'Sample', 'field': Subject.annotation_reference},
+    'id': {'model': 'Subject', 'field': Subject.id},
+    'identifier': {'model': 'Subject', 'field': Subject.identifier},
+    'name_in_study': {'model': 'Subject', 'field': Subject.name_in_study},
+    'age': {'model': 'Subject', 'field': Subject.age},
+    'sex': {'sex': 'Subject', 'field': Subject.sex},
+    'annotation_path': {'annotation_path': 'Subject', 'field': Subject.annotation_path},
+    'annotation_method': {'annotation_method': 'Subject', 'field': Subject.annotation_method},
+    'annotation_format': {'annotation_format': 'Subject', 'field': Subject.annotation_format},
+    'annotation_reference': {'annotation_reference': 'Subject', 'field': Subject.annotation_reference},
 
     'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'study_name'},
     'study_date': {'model': 'Study', 'field': Study.date.label('study_date'), 'fieldname': 'study_date'},
-    'institute': {'model': 'Study', 'field': Study.institute},
     'study_description': {'model': 'Study', 'field': Study.description.label('study_description'), 'fieldname': 'study_description'},
+    'institute': {'model': 'Study', 'field': Study.institute},
     'researcher': {'model': 'Study', 'field': Study.researcher},
     'reference': {'model': 'Study', 'field': Study.reference},
     'contact': {'model': 'Study', 'field': Study.contact},
@@ -459,7 +459,7 @@ class SubjectsAPI(Resource):
             required_cols = ['study_name'] + required_cols
         if 'dataset' not in required_cols:
             required_cols.append('dataset')
-        if 'report' in required_cols:
+        if 'annotation_path' in required_cols:
             if 'annotation_method' not in required_cols:
                 required_cols.append('annotation_method')
             if 'annotation_reference' not in required_cols:
@@ -514,17 +514,10 @@ class SubjectsAPI(Resource):
                         el = el.date().isoformat()
                     elif isinstance(el, str) and len(el) == 0:
                         el = '(blank)'
-                    elif f == 'report':
-                        sample_type = getattr(s, 'type')
-                        if sample_type == 'Igenotyper assembly':
-                            if 'http' not in el:
-                                el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
-                        elif sample_type == 'VDJbase_assembly':
-                           el = app.config['STATIC_LINK'] + el.replace('\\', '/').replace(' ', '%20')
                     if el not in uniques[f]:
                         uniques[f].append(el)
             if filter_applied:
-                uniques['names_by_dataset'][s.dataset].append(s.name)
+                uniques['names_by_dataset'][s['dataset']].append(s['identifier'])
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
 
@@ -560,13 +553,15 @@ def find_genomic_subjects(attribute_query, species, genomic_datasets, genomic_fi
             .join(Study, Study.id == Subject.study_id)
 
         allele_filters = None
-        dataset_filters = []
 
         filter_spec = []
         for f in genomic_filters:
             try:
                 if f['field'] == 'allele':
                     allele_filters = f
+                elif f['field'] == 'dataset':
+                    if f['op'] == 'in' and dataset not in f['value']:
+                        continue        # just going to ignore other criteria I'm afraid
                 else:
                     f['model'] = genomic_subject_filters[f['field']]['model']
                     if 'fieldname' in genomic_subject_filters[f['field']]:
@@ -594,9 +589,8 @@ def find_genomic_subjects(attribute_query, species, genomic_datasets, genomic_fi
                 v = r[k]
                 if isinstance(v, datetime):
                     r[k] = v.date().isoformat()
-                elif k == 'report' and 'http' not in v:
-                    r[k] = app.config['STATIC_LINK'] + s[k]
-                    r['hap_report'] = s[k].replace('IGenotyper_report.html', 'genes_assigned_to_alleles.txt')
+                elif k == 'annotation_path' and 'http' not in v:
+                    r[k] = '/'.join([app.config['STATIC_LINK'], 'study_data/Genomic/samples', r[k]])
             r['dataset'] = dataset
             results.append(r)
 
@@ -649,3 +643,23 @@ def find_genomic_filter_params(species, genomic_datasets):
     ])
 
     return params
+
+
+@ns.route('/assemblies/<string:species>/<string:data_sets>')
+class AssemblyAPI(Resource):
+    @digby_protected()
+    def get(self, species, data_sets):
+        """ Returns the list of annotated assemblies for the selected species and datasets """
+        results = []
+        for dataset in data_sets.split(','):
+            db = get_genomic_db(species, dataset)
+
+            if db is None:
+                raise BadRequest('Bad species or dataset name')
+
+            assemblies = db.session.query(distinct(RefSeq.name)).all()
+            results.extend(assemblies)
+
+        return [{'assembly': row[0]} for row in results]
+
+

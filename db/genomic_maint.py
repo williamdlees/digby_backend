@@ -89,7 +89,7 @@ def create_dataset(dataset_dir):
                 print(f'Error - subject attributes missing: {",".join(list(needed_subject_items - set(subject.keys())))}')
                 return
 
-            report_link = '/'.join(['study_data', 'Genomic', species.replace(' ', '_'), dataset.replace(' ', '_'), subject['Annotation_file']])
+            report_link = '/'.join([species.replace(' ', '_'), dataset.replace(' ', '_'), subject['Annotation_file']])
             subject_obj = save_genomic_subject(name, subject['Name_in_study'], subject['Age'], subject['Sex'], report_link,
                             subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'], study_obj)
 
