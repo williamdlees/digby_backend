@@ -435,17 +435,19 @@ class SamplesApi(Resource):
                 uniques['haplotypes'].extend(x)
             uniques['haplotypes'] = list(set(uniques['haplotypes']))
 
-        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
+        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else []
+        if len(sort_specs) == 0:
+            sort_specs = [{'field': 'name', 'order': 'asc'}]
 
-        if len(sort_specs) > 0:
-            for spec in sort_specs:
-                if spec['field'] in valid_filters.keys():
-                    if spec['field'] in ('name', 'patient_name'):
-                        ret = sorted(ret, key=lambda x: name_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
-                    else:
-                        ret = sorted(ret, key=lambda x: ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
-        else:
-            ret = sorted(ret, key=lambda x: name_sort_key(x['name']))
+        for spec in sort_specs:
+            f = spec['field']
+            if f in valid_filters.keys():
+                if 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'underscore':
+                    ret = sorted(ret, key=lambda x: name_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
+                elif 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'numeric':
+                    ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
+                else:
+                    ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''), x[f]), reverse=(spec['order'] == 'desc'))
 
         if args['page_size']:
             first = (args['page_number']) * args['page_size']

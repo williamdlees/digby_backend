@@ -2,45 +2,53 @@ from db.genomic_db import RefSeq, Feature, Sequence, SequenceFeature, Details
 from sqlalchemy import or_
 import os
 
+# Build a GFF file for the reference sequence - contains gene-level coding and non-coding features
+
+def build_ref_seq_gff(session, dataset_dir, ref_seq, name_prefix):
+    # Feature file showing genes only: GFF3
+    with open(os.path.join(dataset_dir, 'samples', name_prefix + '.gff3'), 'w') as fo:
+        fo.write('##gff-version 3\n')
+
+        #           ctg123 . gene            1000  9000  .  +  .  ID=gene00001;Name=EDEN
+        #           ctg123 . TF_binding_site 1000  1012  .  +  .  ID=tfbs00001;Parent=gene00001
+
+        features = session.query(Feature).filter(Feature.refseq == ref_seq)\
+            .filter(Feature.feature_level == 'gene')\
+            .order_by(Feature.start)\
+            .all()
+
+        for feature in features:
+            if feature.feature == 'CDS' or feature.feature == 'gene':
+                fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
+
 
 def build_gff(session, dataset_dir):
-    ref_seqs = session.query(RefSeq).all()
     details = session.query(Details).one_or_none()
     species = details.species
 
+    ref_seqs = session.query(RefSeq).all()
     for ref_seq in ref_seqs:
         name_prefix = f"{species.replace(' ', '_')}_{ref_seq.name}"
-        # Feature file showing genes only: GFF3
-        with open(os.path.join(dataset_dir, name_prefix + '.gff3'), 'w') as fo:
-            fo.write('##gff-version 3\n')
-
-#           ctg123 . gene            1000  9000  .  +  .  ID=gene00001;Name=EDEN
-#           ctg123 . TF_binding_site 1000  1012  .  +  .  ID=tfbs00001;Parent=gene00001
-
-            features = session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
-            for feature in features:
-                if feature.feature == 'CDS':
-                    fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
-
+        build_ref_seq_gff(session, dataset_dir, ref_seq, name_prefix)
         # Alignment file of all alleles and other annotated regions within samples aligned to this reference (SAM, needs external conversion to BAM)
         # FIX - add non coding regions
-        with open(os.path.join(dataset_dir, name_prefix + '.sam'), 'w') as fo:
+        with open(os.path.join(dataset_dir, 'samples', name_prefix + '.sam'), 'w') as fo:
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
             fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
             features = session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start).all()
             for feature in features:
-                if feature.feature == 'CDS':
+                if feature.feature_level == 'allele':
                     for sequence in feature.sequences:
-                        if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION'):  # '_' is a fudge for salmon line-bred, no alleles
-                            legend = 'novel ' if sequence.novel else ''
-                            legend = legend + ('*' + sequence.name.split('*')[1] if '*' in sequence.name else sequence.name)
+                        if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION', 'V-HEPTAMER', 'V-NONAMER'):  # '_' is a fudge for salmon line-bred, no alleles
+                            legend = ('*' + sequence.name.split('*')[1] if '*' in sequence.name else sequence.name)
+                            legend += f" ({sequence.appearances})"
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tNM:Z:%s\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, legend))
                         else:
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence))
 
         # Alignment file of all alleles within IMGT, plus novel alleles from samples aligned to this reference (SAM, needs external conversion to BAM)
-        with open(os.path.join(dataset_dir, name_prefix + '_imgt.sam'), 'w') as fo:
+        with open(os.path.join(dataset_dir, 'samples', name_prefix + '_imgt.sam'), 'w') as fo:
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
             fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 

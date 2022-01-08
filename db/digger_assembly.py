@@ -1,19 +1,21 @@
 from receptor_utils import simple_bio_seq as simple
 import os.path
+import shutil
 import csv
 from db.genomic_db import RefSeq, Feature, Sequence, Subject, SubjectSequence, Study
 from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_study, add_feature_to_ref, \
-    save_genomic_sequence, save_genomic_ref_seq, feature_type, find_allele_by_seq, get_ref_set, find_or_assign_allele
+    save_genomic_sequence, save_genomic_ref_seq, find_allele_by_seq, get_ref_set, find_or_assign_allele
 
 
-def process_digger_record(session, study, assembly, dataset_dir, subject, annotation_file):
+def process_digger_record(session, species, assembly, dataset_dir, subject, annotation_file):
     print(f"Importing assembly {assembly.identifier} for subject {subject.identifier}")
 
     ref_seq = save_genomic_ref_seq(session, assembly.identifier, assembly.sequence, assembly.reference, assembly.chromosome, assembly.start, assembly.end)
     session.commit()
 
-    # all records will be of the same sense. We'll use the sense when preparing the assembly file for gff
+    shutil.copy(annotation_file, os.path.join(dataset_dir, 'samples'))
 
+    # all records will be of the same sense. We'll use the sense when preparing the assembly file for gff
     sense = '+'
 
     with open(os.path.join(dataset_dir, annotation_file), 'r') as fi:
@@ -103,7 +105,7 @@ def process_digger_record(session, study, assembly, dataset_dir, subject, annota
 
     # Create assembly fasta for gff. The sequence name in the file must match the assembly id.
 
-    ref_path = os.path.join(dataset_dir, f'{assembly.identifier}.fasta').replace(' ', '_')
+    ref_path = os.path.join(dataset_dir, 'samples', f"{species.replace(' ', '_')}_{assembly.identifier}.fasta")
 
     sequence = assembly.sequence if sense == '+' else simple.reverse_complement(assembly.sequence)
 

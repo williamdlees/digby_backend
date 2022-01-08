@@ -25,11 +25,14 @@ class RefSeq(Base):
     start = Column(BigInteger)
     end = Column(BigInteger)
     reference = Column(String(500))
+    subjects = relationship("Subject", backref='ref_seq')
 
 
 class SubjectSequence(Base):
     __tablename__ = 'subject_sequence'
     id = Column(Integer, primary_key=True, autoincrement=True)
+    haplotype = Column(Text(20))
+    haplo_count = Column(Integer)
     subject_id = Column(Integer, ForeignKey('subject.id'), nullable=False)
     sequence_id = Column(Integer, ForeignKey('sequence.id'), nullable=False)
     subject = relationship('Subject', backref='sequence_associations', cascade="all")
@@ -50,6 +53,9 @@ class Feature(Base):
     __tablename__ = 'feature'
     id = Column(Integer, primary_key=True)
     name = Column(String(100))
+    feature_level = Column(String(20))
+    feature_type = Column(String(30))
+    feature_seq = Column(String(500))
     feature = Column(String(100))
     start = Column(Integer)
     end = Column(Integer)
@@ -69,11 +75,12 @@ class Sequence(Base):
     imgt_name = Column(String(100))
     type = Column(String(100))
     novel = Column(Boolean)
+    appearances = Column(Integer)
     deleted = Column(Boolean)
     functional = Column(String(1))
-    sequence = Column(Text(10000000))
-    gapped_sequence = Column(Text(10000000))
-    subject = relationship('Subject', secondary='subject_sequence')
+    sequence = Column(Text(1000))
+    gapped_sequence = Column(Text(1000))
+    subjects = relationship('Subject', secondary='subject_sequence', back_populates='sequences')
     features = relationship('Feature', secondary='sequence_feature')
 
 
@@ -88,8 +95,9 @@ class Subject(Base):
     annotation_method = Column(String(100))
     annotation_format = Column(String(100))
     annotation_reference = Column(String(100))
+    ref_seq_id = Column(Integer, ForeignKey('ref_seq.id'))
     study_id = Column(Integer, ForeignKey('study.id'))
-    sequence = relationship('Sequence', secondary='subject_sequence')
+    sequences = relationship('Sequence', secondary='subject_sequence', back_populates='subjects')
 
 
 class Assembly(Base):
@@ -119,6 +127,15 @@ class Study(Base):
     subjects = relationship("Subject", backref='study')
 
 
+class Gene(Base):
+    __tablename__ = 'gene'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(250), nullable=False)
+    type = Column(String(20), nullable=False)
+    family = Column(String(20), nullable=False)
+    locus_order = Column(Integer)
+    alpha_order = Column(Integer)
+    pseudo_gene = Column(Boolean)
 
 
 

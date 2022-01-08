@@ -3,14 +3,16 @@
 #
 
 # Update a non-IMGT reference set for a specific species
-
+import importlib
 
 from receptor_utils import simple_bio_seq as simple
-from db.genomic_db import Sequence
+from db.genomic_db import Sequence, Gene
 import os
 
 
 # Add reference sequences
+
+
 def update_genomic_ref(session, ref_file):
     if not os.path.isfile(ref_file):
         return f'No reference file {ref_file}'
@@ -19,7 +21,7 @@ def update_genomic_ref(session, ref_file):
     for name, seq in refs.items():
         # determine gene/allele
         if '*' in name:
-            gene = name.split['*'][0]
+            gene = name.split('*')[0]
         elif '.' in name and len(name.split('.')) == 3:     # cirelli format
             gene = name.split('.')[0] + '.' + name.split('.')[1]
         else:
@@ -35,6 +37,7 @@ def update_genomic_ref(session, ref_file):
             type=find_type(name),
             sequence=seq.replace('.', ''),
             novel=False,
+            appearances=0,
             deleted=False,
             gapped_sequence=seq,
             functional='F',
@@ -53,3 +56,42 @@ def find_type(name):
             return t
 
     return ''
+
+
+def read_gene_order(session, dataset_dir):
+    if os.path.isfile(os.path.join(dataset_dir, 'gene_order.py')):
+        spec = importlib.util.spec_from_file_location("gene_order", os.path.join(dataset_dir, 'gene_order.py'))
+        gene_order = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gene_order)
+    else:
+        print('gene_order.py not found - skipped')
+        return
+
+    alpha_order = 0
+    for gene in gene_order.ALPHA_ORDER:
+        locus_order = gene_order.LOCUS_ORDER.index(gene) if gene in gene_order.LOCUS_ORDER else 999
+        pseudo = gene in gene_order.PSEUDO_GENES
+
+        family = ''
+        if '-' in gene[4:]:
+            family = gene[4:].split('-')[0]
+
+        type = gene[:4]
+
+        save_gene(session, gene, type, family, locus_order, alpha_order, pseudo)
+        alpha_order += 1
+
+    session.commit()
+
+
+def save_gene(session, name, type, family, locus_order, alpha_order, pseudo_gene):
+    g = Gene(
+        name=name,
+        type=type,
+        family=family,
+        locus_order=locus_order,
+        alpha_order=alpha_order,
+        pseudo_gene=pseudo_gene,
+    )
+    session.add(g)
+    return g

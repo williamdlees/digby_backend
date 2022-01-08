@@ -8,7 +8,7 @@ from math import ceil
 from werkzeug.exceptions import BadRequest
 
 from api.system.system import digby_protected
-from db.genomic_db import RefSeq, Feature, Sequence, Subject, Study, SubjectSequence
+from db.genomic_db import RefSeq, Feature, Sequence, Subject, Study, SubjectSequence, Gene
 import json
 from datetime import datetime
 from sqlalchemy_filters import apply_filters
@@ -131,7 +131,7 @@ def enumerate_feature(f):
 
 
 genomic_sequence_filters = {
-    'name': {'model': 'Sequence', 'field': Sequence.name, 'sort': 'name'},
+    'name': {'model': 'Sequence', 'field': Sequence.name, 'sort': 'gene'},
     'gene': {'model': 'Sequence', 'field': Sequence.gene, 'sort': 'gene'},
     'imgt_name': {'model': 'Sequence', 'field': Sequence.imgt_name},
     'type': {'model': 'Sequence', 'field': Sequence.type},
@@ -140,8 +140,8 @@ genomic_sequence_filters = {
     'functional': {'model': 'Sequence', 'field': Sequence.functional},
     'sequence': {'model': 'Sequence', 'field': Sequence.sequence, 'no_uniques': True},
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
+    'appearances': {'model': 'Sequence', 'field': Sequence.appearances, 'fieldname': 'appearances', 'sort': 'numeric'},
 
-    'appearances': {'model': None, 'field': func.count(Subject.id.distinct()).label('appearances'), 'fieldname': 'appearances', 'sort': 'numeric'},
     'subject_id': {'model': None, 'fieldname': 'subject_id'},
     'dataset': {'model': None, 'fieldname': 'dataset'},
 }
@@ -188,7 +188,16 @@ class SequencesAPI(Resource):
         args = filter_arguments.parse_args(request)
 
         required_cols = json.loads(args['cols'])
-        ret = find_genomic_sequences(required_cols, genomic_datasets.split(','), species, json.loads(args['filter']))
+        genomic_datasets = genomic_datasets.split(',')
+        ret = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']))
+
+        gene_order = {}
+        set_index = 0
+        for ds in genomic_datasets:
+            db = get_genomic_db(species, ds)
+            go = db.session.query(Gene.name, Gene.alpha_order).all()
+            for gene, order in go:
+                gene_order[gene] = int(order) + set_index
 
         uniques = {}
         for f in required_cols:
@@ -210,10 +219,21 @@ class SequencesAPI(Resource):
                     if el not in uniques[f]:
                         uniques[f].append(el)
 
-        # something of a sort order for names
 
-        def allele_sort_key(x):
-            if x is None or x == '' or 'IGH' not in x:
+        def allele_sort_key(name):
+            if gene_order is None or len(gene_order) == 0:
+                return fallback_allele_sort_key(name)
+
+            if '*' in name:
+                gene = name.split('*')
+            else:
+                gene = (name, '')
+
+            return((gene_order[gene[0]] if gene[0] in gene_order else 999, gene[1]))
+
+
+        def fallback_allele_sort_key(x):
+            if x is None or x == '' or 'IG' not in x:
                 return ''
             name = x.split('IGH')[1]
             seg = name[:1]
@@ -251,21 +271,23 @@ class SequencesAPI(Resource):
             try:
                 if 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'numeric':
                     uniques[f].sort(key=num_sort_key)
-                elif 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'name':
+                elif 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'gene':
                     uniques[f].sort(key=allele_sort_key)
                 else:
                     uniques[f].sort(key=lambda x: (x is None or x == '', x))
             except:
                 pass
 
-        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
+        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else []
+        if len(sort_specs) == 0:
+            sort_specs = [{'field': 'name', 'order': 'asc'}]
 
         for spec in sort_specs:
             if spec['field'] in genomic_sequence_filters.keys():
                 f = spec['field']
                 if 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'numeric':
                     ret = sorted(ret, key=lambda x: num_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
-                elif 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'name':
+                elif 'sort' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['sort'] == 'gene':
                     ret = sorted(ret, key=lambda x: allele_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
                 else:
                     ret = sorted(ret, key=lambda x : (x[spec['field']] is None,  x[spec['field']]), reverse=(spec['order'] == 'desc'))
@@ -293,13 +315,6 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
         if db is None:
             raise BadRequest('Bad species or dataset name')
 
-        sequence_id_query = db.session.query(Sequence.id.distinct()) \
-            .join(SubjectSequence, Sequence.id == SubjectSequence.sequence_id) \
-            .join(Subject, Subject.id == SubjectSequence.subject_id)
-
-        sequence_ids = sequence_id_query.all()
-        sequence_ids = [s[0] for s in sequence_ids]
-
         for col in required_cols:
             if col not in genomic_sequence_filters.keys():
                 raise BadRequest('Bad column string %s' % col)
@@ -314,16 +329,11 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             if col != 'name' and genomic_sequence_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sequence_filters[col]['field'])
 
-        seq_query = db.session.query(*attribute_query) \
-            .filter(Sequence.id.in_(sequence_ids)) \
-            .join(SubjectSequence, Sequence.id == SubjectSequence.sequence_id) \
-            .join(Subject, Subject.id == SubjectSequence.subject_id) \
-            .group_by(Sequence.id)
+        seq_query = db.session.query(*attribute_query)
 
         filter_spec = []
         sample_count_filters = []
         subject_id_filter = None
-        appearances_filters = []
 
         if len(genomic_filters) > 0:
             for f in genomic_filters:
@@ -332,8 +342,6 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
                         sample_count_filters.append(f)
                     elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'subject_id':
                         subject_id_filter = f
-                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'appearances':
-                        appearances_filters.append(f)
                     else:
                         f['model'] = genomic_sequence_filters[f['field']]['model']
                         if 'fieldname' in genomic_sequence_filters[f['field']]:
@@ -355,19 +363,25 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             if f['op'] in OPERATORS:
                 seq_query = seq_query.having(OPERATORS[f['op']](func.count(Subject.name), f['value']))
 
-        for f in appearances_filters:
-            if f['op'] in OPERATORS:
-                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Subject.id.distinct()), f['value']))
-
         if subject_id_filter is not None:
             filtered_subject_ids = []
 
             for names in subject_id_filter['value'].items():
-                subject_ids = db.session.query(Subject.id.distinct()) \
-                    .filter(Subject.identifier.in_(names)).all()
-                filtered_subject_ids.extend(subject_ids)
+                if names[0] == dataset:
+                    subject_ids = db.session.query(Subject.id.distinct()) \
+                        .filter(Subject.identifier.in_(names[1])).all()
+                    subject_ids = [x[0] for x in subject_ids]
+                    filtered_subject_ids.extend(subject_ids)
+
+            if not filtered_subject_ids:
+                continue
+
+            sequence_id_query = db.session.query(Sequence.id.distinct()) \
+                .join(SubjectSequence, Sequence.id == SubjectSequence.sequence_id) \
+                .join(Subject, Subject.id == SubjectSequence.sample_id)
 
             filtered_sequence_ids = sequence_id_query.filter(Subject.id.in_(filtered_subject_ids)).all()
+            filtered_sequence_ids = [x[0] for x in filtered_sequence_ids]
             seq_query = seq_query.filter(Sequence.id.in_(filtered_sequence_ids))
 
         seqs = seq_query.all()
@@ -419,7 +433,7 @@ class FeaturePosAPI(Resource):
 
 genomic_subject_filters = {
     'id': {'model': 'Subject', 'field': Subject.id},
-    'identifier': {'model': 'Subject', 'field': Subject.identifier},
+    'identifier': {'model': 'Subject', 'field': Subject.identifier, 'sort': 'underscore'},
     'name_in_study': {'model': 'Subject', 'field': Subject.name_in_study},
     'age': {'model': 'Subject', 'field': Subject.age},
     'sex': {'sex': 'Subject', 'field': Subject.sex},
@@ -497,14 +511,11 @@ class SubjectsAPI(Resource):
                 except:
                     return 0
 
-        for f in required_cols:
-            try:
-                if 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'numeric':
-                    uniques[f].sort(key=num_sort_key)
-                else:
-                    uniques[f].sort(key=lambda x: (x is None or x == '', x))
-            except:
-                pass
+        def name_sort_key(name):
+            name = name.split('_')
+            for i in range(len(name)):
+                name[i] = name[i][1:].zfill(4)
+            return name
 
         for s in ret:
             for f in required_cols:
@@ -519,11 +530,30 @@ class SubjectsAPI(Resource):
             if filter_applied:
                 uniques['names_by_dataset'][s['dataset']].append(s['identifier'])
 
-        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
+        for f in required_cols:
+            try:
+                if 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'numeric':
+                    uniques[f].sort(key=num_sort_key)
+                elif 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'underscore':
+                    uniques[f].sort(key=name_sort_key)
+                else:
+                    uniques[f].sort(key=lambda x: (x is None or x == '', x))
+            except:
+                pass
+
+        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else []
+        if len(sort_specs) == 0:
+            sort_specs = [{'field': 'identifier', 'order': 'asc'}]
 
         for spec in sort_specs:
-            if spec['field'] in genomic_subject_filters.keys():
-                ret = sorted(ret, key=lambda x : (x[spec['field']] is None,  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+            f = spec['field']
+            if f in genomic_subject_filters.keys():
+                if 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'underscore':
+                    ret = sorted(ret, key=lambda x: name_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
+                elif 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'numeric':
+                    ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
+                else:
+                    ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''),  x[f]), reverse=(spec['order'] == 'desc'))
 
         total_size = len(ret)
 
@@ -579,6 +609,7 @@ def find_genomic_subjects(attribute_query, species, genomic_datasets, genomic_fi
             subjects_with_alleles = db.session.query(Subject.identifier)\
                 .join(SubjectSequence)\
                 .join(Sequence).filter(Sequence.name.in_(allele_filters['value'])).all()
+            subjects_with_alleles = [x[0] for x in subjects_with_alleles]
             subject_query = subject_query.filter(Subject.identifier.in_(subjects_with_alleles))
 
         subjects = subject_query.all()
