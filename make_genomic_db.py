@@ -16,8 +16,8 @@ parser.add_argument('species', help='species')
 parser.add_argument('dataset_name', help='data set name')
 args = parser.parse_args()
 
-#create_dataset(args.species, args.dataset_name)
-#quit()
+create_dataset(args.species, args.dataset_name)
+quit()
 
 # or comment out the above lines to build the gffs without rebuilding the database
 

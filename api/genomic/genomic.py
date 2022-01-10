@@ -202,10 +202,11 @@ class SequencesAPI(Resource):
         uniques = {}
         for f in required_cols:
             uniques[f] = []
+        uniques['dataset'] = genomic_datasets
 
         for s in ret:
             for f in required_cols:
-                if genomic_sequence_filters[f]['field'] is not None and 'no_uniques' not in genomic_sequence_filters[f]:
+                if 'field' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['field'] is not None and 'no_uniques' not in genomic_sequence_filters[f]:
                     el = s[f]
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
@@ -326,7 +327,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             genomic_sequence_filters['name']['field']]  # the query requires the first field to be from Sequence
 
         for col in required_cols:
-            if col != 'name' and genomic_sequence_filters[col]['field'] is not None:
+            if col != 'name' and 'field' in genomic_sequence_filters[col] and genomic_sequence_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sequence_filters[col]['field'])
 
         seq_query = db.session.query(*attribute_query)
@@ -342,6 +343,9 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
                         sample_count_filters.append(f)
                     elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'subject_id':
                         subject_id_filter = f
+                    elif f['field'] == 'dataset':
+                        if f['op'] == 'in' and dataset not in f['value']:
+                            continue  # just going to ignore other criteria I'm afraid
                     else:
                         f['model'] = genomic_sequence_filters[f['field']]['model']
                         if 'fieldname' in genomic_sequence_filters[f['field']]:

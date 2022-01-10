@@ -19,7 +19,7 @@ from db.genomic_db import Base, RefSeq
 from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_assembly, save_genomic_dataset_details, save_genomic_ref_seq, \
     add_feature_to_ref
 #from db.imgt_assembly import process_imgt_assembly
-from db.igenotyper import process_igenotyper_record
+from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
 
 Session = sessionmaker()
@@ -130,30 +130,12 @@ lookup_feature_type = {
     'spacer': 'V-RSS-SPACER',
 }
 
-def add_gene_level_features(session, ref, reference_features):
-    feature_id = 1
-    for gene, features in reference_features[ref.name].items():
-        parent_id = feature_id
-        for feature_type, feature in features.items():
-            if feature_type == 'gene':
-                add_feature_to_ref(feature['gene'], 'gene', 'V-GENE', feature['ref_seq'], 'gene', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", feature_id, ref)
-                feature_id += 1
-                add_feature_to_ref(feature['gene'], 'gene', 'V-GENE', feature['ref_seq'], 'mRNA', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", parent_id, ref)
-            elif feature_type == 'nonamer':
-                name = f"IGHVNona{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-                add_feature_to_ref(name, 'gene', 'V-NONAMER', feature['ref_seq'], 'CDS', feature['start'], feature['end'], '+',
-                                   f"Name={feature['gene']}_{feature_type};ID={feature_id}", parent_id, ref)
-            elif feature_type == 'heptamer':
-                name = f"IGHVNona{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-                add_feature_to_ref(name, 'gene', 'V-HEPTAMER', feature['ref_seq'], 'CDS', feature['start'], feature['end'], '+', f"Name={feature['gene']}_{feature_type};ID={feature_id}", parent_id, ref)
-            feature_id += 1
-
 
 def process_study(dataset, dataset_dir, reference_features, session, species, study):
     needed_study_items = {'Study', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
     if needed_study_items - set(list(study.keys())):
         raise ImportException(f'Error - study attributes missing: {",".join(list(needed_study_items - set(study.keys())))}')
-    study_obj = save_genomic_study(session, study['Study'], date.fromisoformat(study['Date']), study['Institute'], study['Study_description'],
+    study_obj = save_genomic_study(session, study['Study'], study['Date'], study['Institute'], study['Study_description'],
                                    study['Researcher'],
                                    study['Reference'], study['Contact'])
     session.commit()
@@ -196,7 +178,7 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
             pass
         elif subject_obj.annotation_format == 'VDJbase':
             for assembly_obj in assembly_objs:
-                process_digger_record(session, species, assembly_obj, dataset_dir, subject_obj, subject['Annotation_file'])
+                process_digger_record(session, species, assembly_obj, dataset_dir, subject_obj, subject['Annotation_file'], reference_features)
         elif subject_obj.annotation_format == 'IGenotyper':
             if not reference_features:
                 raise ImportException('Error: Igenotyper records require a reference assembly and one or more bed files')

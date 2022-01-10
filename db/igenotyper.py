@@ -69,7 +69,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 hept_seq = find_sequence_by_sequence(session, 'V-HEPTAMER', seq.gene, row['heptamer'])
 
                 if not hept_seq:
-                    hept_name = f"IGHVHept{seq.gene.replace('IGHV', '')}*{sha256(row['heptamer'].encode('utf-8')).hexdigest()[-4:]}"
+                    hept_name = f"{seq.gene}*{sha256(row['heptamer'].encode('utf-8')).hexdigest()[-4:]}"
                     hept_seq = save_genomic_sequence(session, hept_name, seq.gene, 'V-HEPTAMER', True, False, 'F', row['heptamer'], row['heptamer'])
 
                 update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, hept_seq)
@@ -89,7 +89,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 nona_seq = find_sequence_by_sequence(session, 'V-NONAMER', seq.gene, row['nonamer'])
 
                 if not nona_seq:
-                    nona_name = f"IGHVNona{seq.gene.replace('IGHV', '')}*{sha256(row['nonamer'].encode('utf-8')).hexdigest()[-4:]}"
+                    nona_name = f"{seq.gene}*{sha256(row['nonamer'].encode('utf-8')).hexdigest()[-4:]}"
                     nona_seq = save_genomic_sequence(session, nona_name, seq.gene, 'V-NONAMER', True, False, 'F', row['nonamer'], row['nonamer'])
 
                 update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, nona_seq)
@@ -235,4 +235,24 @@ def read_eval_genes(infile):
         for row in reader:
             recs.append(row)
         return recs
+
+def add_gene_level_features(session, ref, reference_features):
+    feature_id = 1
+    for gene, features in reference_features[ref.name].items():
+        parent_id = feature_id
+        for feature_type, feature in features.items():
+            if feature_type == 'gene':
+                add_feature_to_ref(feature['gene'], 'gene', 'V-GENE', feature['ref_seq'], 'gene', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", feature_id, ref)
+                feature_id += 1
+                add_feature_to_ref(feature['gene'], 'gene', 'V-GENE', feature['ref_seq'], 'mRNA', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", parent_id, ref)
+            elif feature_type == 'nonamer':
+                name = f"IGHVNona{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
+                add_feature_to_ref(name, 'gene', 'V-NONAMER', feature['ref_seq'], 'CDS', feature['start'], feature['end'], '+',
+                                   f"Name={feature['gene']}_{feature_type};ID={feature_id}", parent_id, ref)
+            elif feature_type == 'heptamer':
+                name = f"IGHVNona{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
+                add_feature_to_ref(name, 'gene', 'V-HEPTAMER', feature['ref_seq'], 'CDS', feature['start'], feature['end'], '+', f"Name={feature['gene']}_{feature_type};ID={feature_id}", parent_id, ref)
+            feature_id += 1
+
+
 
