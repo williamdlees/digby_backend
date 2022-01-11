@@ -44,7 +44,10 @@ def build_gff(session, dataset_dir):
                 if feature.feature_level == 'allele':
                     for sequence in feature.sequences:
                         legend = ('*' + sequence.name.split('*')[1] if '*' in sequence.name else sequence.name)
-                        legend += f" ({sequence.appearances})"
+                        if sequence.functional == 'Functional' or not sequence.functional:
+                            legend += f" ({sequence.appearances})"
+                        else:
+                            legend += f" ({sequence.appearances}, {sequence.functional[0]})"
                         fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tNM:Z:%s\n' %(sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, legend))
 
         # Alignment file of all alleles within IMGT, plus novel alleles from samples aligned to this reference (SAM, needs external conversion to BAM)

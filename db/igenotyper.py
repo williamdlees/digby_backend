@@ -70,7 +70,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
                 if not hept_seq:
                     hept_name = f"{seq.gene}*{sha256(row['heptamer'].encode('utf-8')).hexdigest()[-4:]}"
-                    hept_seq = save_genomic_sequence(session, hept_name, seq.gene, 'V-HEPTAMER', True, False, 'F', row['heptamer'], row['heptamer'])
+                    hept_seq = save_genomic_sequence(session, hept_name, seq.gene, 'V-HEPTAMER', True, False, '', row['heptamer'], row['heptamer'])
 
                 update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, hept_seq)
                 feature = find_feature_by_name(session, 'V-HEPTAMER', hept_seq.name, subject.ref_seq)
@@ -90,7 +90,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
                 if not nona_seq:
                     nona_name = f"{seq.gene}*{sha256(row['nonamer'].encode('utf-8')).hexdigest()[-4:]}"
-                    nona_seq = save_genomic_sequence(session, nona_name, seq.gene, 'V-NONAMER', True, False, 'F', row['nonamer'], row['nonamer'])
+                    nona_seq = save_genomic_sequence(session, nona_name, seq.gene, 'V-NONAMER', True, False, '', row['nonamer'], row['nonamer'])
 
                 update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, nona_seq)
                 feature = find_feature_by_name(session, 'V-NONAMER', nona_seq.name, subject.ref_seq)
@@ -195,11 +195,11 @@ def find_name_or_novel(session, row):
                 seq_choices = session.query(Sequence).filter(and_(Sequence.gene == row['gene'], Sequence.novel == False)).all()
                 gene_refs = {seq.name: seq.gapped_sequence for seq in seq_choices}
 
-            name, gapped_sequence = name_novel(row['coding_sequence'], gene_refs, True)
+            name, gapped_sequence, notes = name_novel(row['coding_sequence'], gene_refs, True)
             name, _ = rationalise_name(row['coding_sequence'], name)
 
             if not exact_match or len(row['coding_sequence']) > len(allele_seq):
-                save_novel_allele(session, row['gene'], name, 'F', row['coding_sequence'], gapped_sequence)
+                save_novel_allele(session, row['gene'], name, notes, row['coding_sequence'], gapped_sequence)
         else:
             name = s.name
 

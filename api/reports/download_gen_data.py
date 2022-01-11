@@ -2,12 +2,12 @@
 from Bio import SeqIO
 from werkzeug.exceptions import BadRequest
 
-from api.genomic.genomic import genomic_sequence_filters, find_genomic_samples, genomic_sample_filters, \
+from api.genomic.genomic import genomic_sequence_filters, find_genomic_subjects, genomic_subject_filters, \
     find_genomic_sequences
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
-from db.genomic_db import Sample
+from db.genomic_db import Subject
 import csv
 import zipfile
 import os
@@ -28,25 +28,24 @@ def zipdir(path, ziph, arc_root):
             ziph.write(path, arcname=path.replace(arc_root, ''))
 
 
-def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
-    if len(genomic_samples) == 0:
+def run(format, species, genomic_datasets, genomic_subjects, rep_datasets, rep_samples, params):
+    if len(genomic_subjects) == 0:
         raise BadRequest('No repertoire-derived genotypes were selected.')
 
     if 'Sample info' in params['type']:
-        attribute_query = []
-        headers = []
+        headers = genomic_subject_filters.keys()
 
-        for name, filter in genomic_sample_filters.items():
+        attribute_query = []
+        for name, filter in genomic_subject_filters.items():
             if filter['model'] is not None:
                 attribute_query.append(filter['field'])
-                headers.append(name)
 
-        rows = find_genomic_samples(attribute_query, species, genomic_datasets, params['filters'])
+        rows = find_genomic_subjects(attribute_query, species, genomic_datasets, params['filters'])
 
         outfile = make_output_file('csv')
         with open(outfile, 'w', newline='') as fo:
-            writer = csv.writer(fo, dialect='excel')
-            writer.writerow(headers)
+            writer = csv.DictWriter(fo, dialect='excel', fieldnames=headers)
+            writer.writeheader()
             for row in rows:
                 writer.writerow(row)
 
@@ -56,12 +55,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         outfile = make_output_file('zip')
         with zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED) as fo:
             added_dirs = []
-            sample_paths = find_genomic_samples([Sample.report_link], species, genomic_datasets, params['filters'])
-            sample_paths = [os.path.join(app.config['STATIC_PATH'], s[0]) for s in sample_paths]
+            sample_paths = find_genomic_subjects([Subject.annotation_path], species, genomic_datasets, params['filters'])
+            sample_paths = ['/'.join(['study_data/Genomic', s['annotation_path'].split('Genomic')[1]]) for s in sample_paths]
+            sample_paths = [os.path.join(app.config['STATIC_PATH'], s) for s in sample_paths]
             for sample_path in sample_paths:
                 sample_dir = os.path.dirname(sample_path)
                 if sample_dir not in added_dirs:
-                    zipdir(sample_dir, fo, os.path.join(app.config['STATIC_PATH'], GENOMIC_SAMPLE_PATH))        # sample files
+                    zipdir(sample_dir, fo, app.config['STATIC_PATH'])        # sample files
                     added_dirs.append(sample_dir)
 
         return send_report(outfile, 'zip', attachment_filename='sample_data.zip')
@@ -82,11 +82,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         return send_report(outfile, 'fasta', attachment_filename='%s_sequences.fasta' % species)
 
     elif 'Gene info' in params['type']:
-        headers = []
-        for name, att_filter in genomic_sequence_filters.items():
-            if att_filter['model'] is not None:
-                headers.append(name)
-
+        headers = genomic_sequence_filters.keys()
         rows = find_genomic_sequences(headers, genomic_datasets, species, params['filters'])
 
         outfile = make_output_file('csv')

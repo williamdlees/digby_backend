@@ -40,7 +40,8 @@ def update_genomic_ref(session, ref_file):
             appearances=0,
             deleted=False,
             gapped_sequence=seq,
-            functional='F',
+            functional='Functional',
+            notes='',
         )
         session.add(s)
 

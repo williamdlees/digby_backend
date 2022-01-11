@@ -117,11 +117,11 @@ def find_or_assign_allele(session, gene_sequence, v_gene, functional):
         return s
 
     ref_set = get_ref_set(session)
-    name, gapped_seq = novel_allele_name.name_novel(gene_sequence, ref_set, v_gene)
+    name, gapped_seq, notes = novel_allele_name.name_novel(gene_sequence, ref_set, v_gene)
     name, root_name = rationalise_name(gene_sequence, name)
     gene = session.query(Sequence.gene).filter(Sequence.name == root_name).one_or_none()[0]
 
-    s = save_novel_allele(session, gene, name, functional, gene_sequence, gapped_seq)
+    s = save_novel_allele(session, gene, name, notes, gene_sequence, gapped_seq)
 
     return s
 
@@ -132,7 +132,14 @@ def link_sequence_to_feature(sequence, feature):
     sf.feature = feature
 
 
-def save_novel_allele(session, gene, name, functional, sequence, gapped_sequence):
+def save_novel_allele(session, gene, name, notes, sequence, gapped_sequence):
+    if not notes:
+        functionality = 'Functional'
+    elif 'Stop' in notes:
+        functionality = 'Pseudogene'
+    else:
+        functionality = 'ORF'
+
     s = Sequence(
         name=name,
         gene=gene,
@@ -143,7 +150,8 @@ def save_novel_allele(session, gene, name, functional, sequence, gapped_sequence
         appearances=0,
         deleted=False,
         gapped_sequence=gapped_sequence,
-        functional=functional,
+        functional=functionality,
+        notes=notes,
     )
     session.add(s)
     return s
