@@ -383,7 +383,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
 
             sequence_id_query = db.session.query(Sequence.id.distinct()) \
                 .join(SubjectSequence, Sequence.id == SubjectSequence.sequence_id) \
-                .join(Subject, Subject.id == SubjectSequence.sample_id)
+                .join(Subject, Subject.id == SubjectSequence.subject_id)
 
             filtered_sequence_ids = sequence_id_query.filter(Subject.id.in_(filtered_subject_ids)).all()
             filtered_sequence_ids = [x[0] for x in filtered_sequence_ids]

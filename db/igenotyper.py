@@ -70,7 +70,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
                 if not hept_seq:
                     hept_name = f"{seq.gene}*{sha256(row['heptamer'].encode('utf-8')).hexdigest()[-4:]}"
-                    hept_seq = save_genomic_sequence(session, hept_name, seq.gene, 'V-HEPTAMER', True, False, '', row['heptamer'], row['heptamer'])
+                    hept_seq = save_genomic_sequence(session, hept_name, seq.gene, 'V-HEPTAMER', True, False, '', row['heptamer'], '')
 
                 update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, hept_seq)
                 feature = find_feature_by_name(session, 'V-HEPTAMER', hept_seq.name, subject.ref_seq)
@@ -90,7 +90,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
                 if not nona_seq:
                     nona_name = f"{seq.gene}*{sha256(row['nonamer'].encode('utf-8')).hexdigest()[-4:]}"
-                    nona_seq = save_genomic_sequence(session, nona_name, seq.gene, 'V-NONAMER', True, False, '', row['nonamer'], row['nonamer'])
+                    nona_seq = save_genomic_sequence(session, nona_name, seq.gene, 'V-NONAMER', True, False, '', row['nonamer'], '')
 
                 update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, nona_seq)
                 feature = find_feature_by_name(session, 'V-NONAMER', nona_seq.name, subject.ref_seq)
@@ -141,9 +141,6 @@ def find_name_or_novel(session, row):
 
         # find the best alignment to the reference allele sequence - either an exact match or the closest match
         # within a window close to the end of the gene sequence
-
-        #if row['gene'] == 'IGHV3-30-3':
-        #    breakpoint()
 
         if allele_seq in seq:
             seq_pos = list(re.finditer(allele_seq, seq))[-1]
