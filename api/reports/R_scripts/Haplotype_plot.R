@@ -53,11 +53,10 @@ sample_name <- opt$sample_name
 html_output <- opt$is_html  # for pdf set "F"
 html_output <- ifelse(html_output == "T", TRUE, FALSE)
 
-haplo_db_J6 <- read.delim(haplotype_path, header=TRUE, sep="\t",stringsAsFactors = F, colClasses = "character")
+haplo_db_J6 <- readHaplotypeDb(file=haplotypes_path)
 if (!is.null(opt$samp)) {
   haplo_db_J6$subject <- opt$samp
 }
-names(haplo_db_J6)[c(1,2,5:ncol(haplo_db_J6))] <- tolower(names(haplo_db_J6)[c(1,2,5:ncol(haplo_db_J6))])
 
 if (!is.null(opt$gene_order_file)){
     gene_order = read.delim(file=opt$gene_order_file, header=FALSE, sep="\t", stringsAsFactors = F)

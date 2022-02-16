@@ -39,8 +39,7 @@ if (is.null(opt$Kdiff)){
 # read genotype table
 haplotypes_path <- opt$input_file
 output_file <- opt$output_file
-haplotypes <- read.delim(file=haplotypes_path ,header=TRUE,sep="\t",stringsAsFactors = F)
-names(haplotypes)[c(1,2,5:ncol(haplotypes))] <- tolower(names(haplotypes)[c(1,2,5:ncol(haplotypes))])
+haplotypes <- readHaplotypeDb(file=haplotypes_path)
 kdiff <- opt$Kdiff
 
 if (!is.null(opt$gene_order_file)){
