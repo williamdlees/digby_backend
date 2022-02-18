@@ -17,7 +17,9 @@ def read_bed_file(infile):
         recs = {}
         for row in reader:
             if row['feature'] is None and row['ref_seq'] is None:
-                row['feature'] = 'gene'
+                row['feature'] = infile.split('.')[0]
+                if row['feature'] == 'genes':
+                    row['feature'] = 'gene'
                 row['ref_seq'] = ''
             if row['ref_name'] not in recs:
                 recs[row['ref_name']] = []
@@ -39,16 +41,17 @@ def read_bed_files(bed_files, sense, ref_seq_len):
             if ref_file not in features:
                 features[ref_file] = {}
             for rec in recs:
-                rec['start'] = int(rec['start'])
-                rec['end'] = int(rec['end'])
+                if rec['start'] and rec['end']:
+                    rec['start'] = int(rec['start'])
+                    rec['end'] = int(rec['end'])
 
-                if sense == '-':
-                    rec['start'], rec['end'] = ref_seq_len - rec['end'] + 1, ref_seq_len - rec['start']
+                    if sense == '-':
+                        rec['start'], rec['end'] = ref_seq_len - rec['end'] + 1, ref_seq_len - rec['start']
 
-                if rec['gene'] not in features[ref_file]:
-                    features[ref_file][rec['gene']] = {}
-                if rec['feature'] not in features[ref_file][rec['gene']]:
-                    features[ref_file][rec['gene']][rec['feature']] = {}
-                features[ref_file][rec['gene']][rec['feature']] = rec
+                    if rec['gene'] not in features[ref_file]:
+                        features[ref_file][rec['gene']] = {}
+                    if rec['feature'] not in features[ref_file][rec['gene']]:
+                        features[ref_file][rec['gene']][rec['feature']] = {}
+                    features[ref_file][rec['gene']][rec['feature']] = rec
 
     return features

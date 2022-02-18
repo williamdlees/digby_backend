@@ -102,6 +102,14 @@ def find_allele_by_seq(session, gene_sequence):
     return seq[0] if len(seq) > 0 else None
 
 
+def find_allele_by_name(session, allele_name):
+    seq = session.query(Sequence)\
+        .filter(Sequence.name == allele_name)\
+        .one_or_none()
+
+    return seq
+
+
 def find_gene_allele_by_seq(session, gene, gene_sequence):
     gene_sequence = gene_sequence.upper()
     seq = session.query(Sequence)\

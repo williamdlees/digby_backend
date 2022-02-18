@@ -25,7 +25,7 @@ from db.vdjbase_projects import find_allele_or_similar
 
 def check_novel_confidence(ds_dir, session):
     result = ['Running confidence checks']
-    novels = gather_novel_data(session)
+    novels = session.query(Allele).filter(Allele.novel == True).all()
 
     gather_haplo_data(novels, ds_dir, session)
 
@@ -67,38 +67,6 @@ def check_novel_confidence(ds_dir, session):
 
     return result
 
-
-# Collect info on novel inferences, store in Alleles table
-def gather_novel_data(session):
-    novels = session.query(Allele).filter(Allele.novel == True).all()
-    for novel in novels:
-        closest_ref = session.query(Allele).filter(Allele.name == novel.name.split('_')[0]).one_or_none()
-
-        if not closest_ref:
-            closest_ref = session.query(Allele).filter(Allele.similar.like('%|' + novel.name.split('_')[0] + '|%')).one_or_none()
-
-        if not closest_ref:
-            report_issue(novel, 'No Closest Ref',
-                         'The closest reference allele, %s, is not in the database' % (novel.name.split('_')[0]), session)
-        elif not closest_ref.seq:
-            report_issue(novel, 'No Ref Sequence',
-                         'The closest reference allele, %s, has no defined sequence' % (novel.name.split('_')[0]), session)
-        else:
-            novel.closest_ref = closest_ref
-            session.flush()
-
-        snps = novel.name.split('_')
-
-        for snp in snps:
-            if snp[0].isalpha() and snp[-1].isalpha():
-                s = SNP(
-                    from_base=snp[0],
-                    pos=int(snp[1:-1]),
-                    to_base=snp[-1],
-                    allele=novel
-                )
-                session.add(s)
-    return novels
 
 """
 # One-off function, used for a single study, to assess gene duplication. Not used at the moment.
@@ -554,6 +522,8 @@ def check_novels_in_ogrdbstats(filename, expected):
         names = [xp.name.upper()]
         if len(xp.similar) > 0:
             names.extend([alias.upper() for alias in xp.similar.split('|') if len(alias) > 0])
+        if xp.pipeline_name:
+            names.extend(xp.pipeline_name.upper().split(', '))
         names = set(names)
 
         if len(names & novels_in_file) == 0:

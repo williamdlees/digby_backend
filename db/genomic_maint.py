@@ -123,19 +123,15 @@ def process_reference_assembly(session, ref, species):
     return reference_features
 
 
-lookup_feature_type = {
-    'gene': 'V-GENE',
-    'nonamer': 'V-NONAMER',
-    'heptamer': 'V-HEPTAMER',
-    'spacer': 'V-RSS-SPACER',
-}
-
-
 def process_study(dataset, dataset_dir, reference_features, session, species, study):
     needed_study_items = {'Study', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
     if needed_study_items - set(list(study.keys())):
         raise ImportException(f'Error - study attributes missing: {",".join(list(needed_study_items - set(study.keys())))}')
-    study_obj = save_genomic_study(session, study['Study'], study['Date'], study['Institute'], study['Study_description'],
+    study_obj = save_genomic_study(session,
+                                   study['Study'],
+                                   date.fromisoformat(study['Date']),
+                                   study['Institute'],
+                                   study['Study_description'],
                                    study['Researcher'],
                                    study['Reference'], study['Contact'])
     session.commit()
