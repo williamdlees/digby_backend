@@ -125,7 +125,7 @@ def enumerate_feature(f):
         ret['uniqueID'] = str(f.feature_id)
 
     if f.feature == 'gene':
-        ret['name'] = f.name
+        ret['name'] = f.study_title
 
     return ret
 

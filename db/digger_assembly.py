@@ -11,7 +11,7 @@ from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_s
 def process_digger_record(session, species, assembly, dataset_dir, subject, annotation_file, reference_features):
     print(f"Importing assembly {assembly.identifier} for subject {subject.identifier}")
 
-    ref_seq = save_genomic_ref_seq(session, assembly.identifier, assembly.sequence, assembly.reference, assembly.chromosome, assembly.start, assembly.end)
+    ref_seq = save_genomic_ref_seq(session, assembly.identifier, assembly.sequence, assembly.pub_ids, assembly.chromosome, assembly.start, assembly.end)
 
     shutil.copy(annotation_file, os.path.join(dataset_dir, 'samples'))
 
@@ -56,7 +56,7 @@ def process_digger_record(session, species, assembly, dataset_dir, subject, anno
                     else:
                         continue    # poor sequence, probably truncated alignment
 
-                name = allele.name
+                name = allele.study_title
 
                 def add_feature(name, feature_type, feature_seq, feature, start, end, strand, attribute, parent_id, ref):
                     start = int(start)

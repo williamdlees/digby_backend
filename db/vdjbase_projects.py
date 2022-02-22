@@ -50,7 +50,7 @@ def import_studies(ds_dir, species, dataset, session):
                 accession_reference=sd['Accession reference'],
             )
             session.add(s)
-            study_rec = session.query(Study).filter(Study.name == sd['Project']).one_or_none()
+            study_rec = session.query(Study).filter(Study.study_title == sd['Project']).one_or_none()
         except Exception as e:
             print('Exception processing study record %s' % json.dumps(sd, default=str))
             traceback.print_exc(limit=2, file=sys.stdout)
@@ -104,7 +104,7 @@ def import_studies(ds_dir, species, dataset, session):
 
         for tp in sd['Tissue Processing'].values():
             try:
-                t = session.query(TissuePro).filter(TissuePro.name == tp['Name']).one_or_none()
+                t = session.query(TissuePro).filter(TissuePro.tissue_processing == tp['Name']).one_or_none()
 
                 if t is None:
                     t = TissuePro(
@@ -156,7 +156,7 @@ def import_studies(ds_dir, species, dataset, session):
                     result.append(['sample %s: Sequence Protocol record not found' % sa['Name']])
                     print('sample %s: Sequence Protocol record not found' % sa['Name'])
                     dependencies_ok = False
-                tp_id = session.query(TissuePro.id).filter(TissuePro.name == sa['Tissue Processing Name']).one_or_none()
+                tp_id = session.query(TissuePro.id).filter(TissuePro.tissue_processing == sa['Tissue Processing Name']).one_or_none()
                 if tp_id is None:
                     result.append(['sample %s: Tissue Processing record not found' % sa['Name']])
                     print('sample %s: Tissue Processing record not found' % sa['Name'])
@@ -367,20 +367,20 @@ def process_genotypes(ds_dir, species, dataset, session):
                     add_compound_gene(session, allele_name, pipeline_gene_name)
 
     for sample in samples:
-        genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
+        genotype_file = os.path.join('samples', sample.study.study_title, sample.patient.study_title, sample.study_title + '_geno_H_binom.tab').replace('\\', '/')
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
+            genotype_file = os.path.join('samples', sample.study.study_title, sample.study_title, sample.study_title + '_genotype.tsv').replace('\\', '/')  # new directory layout
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '.tsv').replace('\\', '/')  # another new directory layout
+            genotype_file = os.path.join('samples', sample.study.study_title, sample.study_title, sample.study_title + '.tsv').replace('\\', '/')  # another new directory layout
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
-            result.append('Error: no genotype file for sample %s' % sample.name)
+            result.append('Error: no genotype file for sample %s' % sample.study_title)
 
     return result
 
@@ -665,7 +665,7 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
 
     if same_seq_allele is not None:
         allele = None
-        temp = same_seq_allele.name
+        temp = same_seq_allele.study_title
         sim = same_seq_allele.similar
         if (temp == final_allele_name):
             allele = same_seq_allele
@@ -775,7 +775,7 @@ def add_deleted_alleles(session):
 
     for gene in genes:
         a = Allele(
-            name=gene.name + '*Del',
+            name=gene.study_title + '*Del',
             seq='',
             seq_len='0',
             gene_id=gene.id,
@@ -797,14 +797,14 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
     samples = session.query(Sample).all()
 
     for sample in samples:
-        sample_dir = os.path.join('samples', sample.study.name, sample.patient.name) #old format
+        sample_dir = os.path.join('samples', sample.study.study_title, sample.patient.study_title) #old format
 
         if not os.path.isdir(os.path.join(ds_dir, sample_dir)):
-            sample_dir = os.path.join('samples', sample.study.name, sample.name) #new format
+            sample_dir = os.path.join('samples', sample.study.study_title, sample.study_title) #new format
 
         if os.path.isdir(os.path.join(ds_dir, sample_dir)):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):
-                if sample.name in filename:
+                if sample.study_title in filename:
                     if 'haplotype.' in filename:
                         haplo_gene = filename.replace('_haplotype.tab', '')
                         haplo_gene = haplo_gene.replace('_haplotype.tsv', '')
@@ -816,11 +816,11 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
                         sample.genotype_stats = os.path.join(sample_dir, filename).replace('\\', '/')
 
             if sample.genotype_report is None:
-                print("No genotype report for sample %s" % sample.name)
+                print("No genotype report for sample %s" % sample.study_title)
             if sample.genotype_stats is None:
-                print("No genotype stats for sample %s" % sample.name)
+                print("No genotype stats for sample %s" % sample.study_title)
         else:
-            print("No sample directory for sample %s" % sample.name)
+            print("No sample directory for sample %s" % sample.study_title)
 
     session.flush()
     return result

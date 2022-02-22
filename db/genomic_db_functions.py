@@ -216,7 +216,7 @@ def get_ref_set(session):
     refs = session.query(Sequence).filter(Sequence.novel == False).all()
 
     if refs is not None:
-        ref_set = {ref.name: ref.sequence for ref in refs}
+        ref_set = {ref.study_title: ref.sequence for ref in refs}
 
     return ref_set
 

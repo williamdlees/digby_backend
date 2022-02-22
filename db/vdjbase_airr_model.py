@@ -11,9 +11,9 @@ class SeqProtocol(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
     umi = Column(Boolean, nullable=False)
-    sequencing_length = Column(String(20))
-    primers_3_location = Column(String(50))
-    primers_5_location = Column(String(50))
+    read_length = Column(String(20))
+    forward_pcr_primer_target_location = Column(String(50))
+    reverse_pcr_primer_target_location = Column(String(50))
     sequencing_platform = Column(String(40))
     helix = Column(String(8), nullable=False)
 
@@ -22,14 +22,14 @@ class Study(Base):
     __tablename__ = 'database_studies'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(50), nullable=False)
-    institute = Column(String(50), nullable=False)
-    researcher = Column(String(50), nullable=False)
+    study_title = Column(String(50), nullable=False)
+    lab_address = Column(String(50), nullable=False)
+    submitted_by = Column(String(50), nullable=False)
     num_subjects = Column(Integer, nullable=False)
     num_samples = Column(Integer, nullable=False)
-    reference = Column(String(200))
-    contact = Column(String(200))
-    accession_id = Column(String(50))
+    pub_ids = Column(String(200))
+    study_contact = Column(String(200))
+    study_id = Column(String(50))
     accession_reference = Column(String(200))
 
 
@@ -37,16 +37,16 @@ class TissuePro(Base):
     __tablename__ = 'database_tissue_pro'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
-    species = Column(String(20), nullable=False)
-    tissue = Column(String(100), nullable=False)
-    cell_type = Column(String(30), nullable=False)
+    tissue_processing = Column(String(250), nullable=False)
+    cell_species_label = Column(String(20), nullable=False)
+    tissue_label = Column(String(100), nullable=False)
+    cell_subset_label = Column(String(30), nullable=False)
     sub_cell_type = Column(String(30), nullable=False)
-    isotype = Column(String(30), nullable=False)
+    cell_phenotype = Column(String(30), nullable=False)
 
     @hybrid_property
     def combined_cell_type(self):
-        return self.cell_type + '/' + self.sub_cell_type
+        return self.cell_subset_label + '/' + self.sub_cell_type
 
 
 class Patient(Base):
@@ -55,13 +55,13 @@ class Patient(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
     sex = Column(String(20), nullable=False)
-    ethnic = Column(String(50), nullable=False)
-    status = Column(String(100), nullable=False)
-    cohort = Column(String(50))
+    ethnicity = Column(String(50), nullable=False)
+    disease_diagnosis_label = Column(String(100), nullable=False)
+    study_group_description = Column(String(50))
     age = Column(Integer)
     study_id = Column(ForeignKey('database_studies.id'), nullable=False, index=True)
     name_in_paper = Column(String(30))
-    country = Column(String(50))
+    ancestry_population = Column(String(50))
     study = relationship('Study')
     igsnper_sample_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
     samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")

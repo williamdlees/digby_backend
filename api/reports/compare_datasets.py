@@ -35,16 +35,16 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         for i in (0, 1):
             session.append(vdjbase_dbs[species][datasets[i]].session)
             alleles.append(session[i].query(Allele).all())
-            allele_names.append(set([allele.name for allele in alleles[i]]))
+            allele_names.append(set([allele.study_title for allele in alleles[i]]))
 
             allele_similars.append({})
             for allele in alleles[i]:
                 if allele.similar is not None:
                     sims = [x.replace('|', '') for x in allele.similar.split(', ')]
                     for sim in sims:
-                        allele_similars[i][sim] = allele.name
+                        allele_similars[i][sim] = allele.study_title
 
-                allele_lookups[i][allele.name] = allele
+                allele_lookups[i][allele.study_title] = allele
 
         common_allele_names = list(allele_names[0] & allele_names[1])
 

@@ -205,7 +205,7 @@ class ReportsStatus(Resource):
     @digby_protected()
     def get(self, job_id):
         res = celery.AsyncResult(job_id)
-        status = res.status
+        status = res.disease_diagnosis_label
 
         print('Get report status called for %s: returning %s, %s' % (job_id, status, res.info))
 

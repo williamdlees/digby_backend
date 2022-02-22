@@ -46,13 +46,13 @@ def calculate_gene_frequencies(ds_dir, session):
 
     result = ['Updating overall gene frequencies']
     genes = session.query(Gene)
-    gene_ids_by_name = dict(zip([gene.name for gene in genes], [gene.id for gene in genes]))
+    gene_ids_by_name = dict(zip([gene.study_title for gene in genes], [gene.id for gene in genes]))
 
     samples = session.query(Sample)
 
     for sample in samples:
         if sample.genotype is None or not os.path.isfile(os.path.join(ds_dir, sample.genotype)):
-            print('skipping genotype processing for sample %s - no file' % sample.name)
+            print('skipping genotype processing for sample %s - no file' % sample.study_title)
             continue
 
         genotype = pd.read_csv(os.path.join(ds_dir, sample.genotype), sep='\t')
@@ -94,12 +94,12 @@ def calculate_gene_frequencies(ds_dir, session):
             family = gene[:4]
 
             if family_total_seq[family] == 0:
-                print('family_total_seq is zero for sample %s' % sample.name)
+                print('family_total_seq is zero for sample %s' % sample.study_title)
             else:
                 frequencies_by_seq[gene] /= float(family_total_seq[family])
 
             if family_total_clone[family] == 0:
-                print('family_total_clone is zero for sample %s' % sample.name)
+                print('family_total_clone is zero for sample %s' % sample.study_title)
             else:
                 frequencies_by_clone[gene] /= float(family_total_clone[family])
 

@@ -78,7 +78,7 @@ class NovelsApi(Resource):
                             if ds_name not in ret[sp]:
                                 ret[sp][ds_name] = {}
                             for novel in novels:
-                                ret[sp][ds_name][novel.name] = (novel.seq.replace('.', ''), novel.appears)
+                                ret[sp][ds_name][novel.study_title] = (novel.seq.replace('.', ''), novel.appears)
 
         return ret
 
@@ -98,13 +98,13 @@ class NovelsSpApi(Resource):
             .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
             .filter(Allele.novel == True)\
             .filter(Allele.is_single_allele == True)\
-            .filter(SeqProtocol.sequencing_length == 'Full')\
+            .filter(SeqProtocol.read_length == 'Full')\
             .all()
 
         results = {}
         for novel in novels:
             result = {
-                'name': novel.name,
+                'name': novel.study_title,
                 'subject_count': len(set([sample.patient_id for sample in novel.samples])),
                 'j_haplotypes': 0,
                 'd_haplotypes': 0,
@@ -121,7 +121,7 @@ class NovelsSpApi(Resource):
             d_haps = 0
             j_haps = 0
             hetero_haps = 0
-            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.name}
+            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.study_title}
 
             for haplo in haplos:
                 gene_type = 'D' if 'D' in haplo.hap_gene else 'J'
@@ -136,7 +136,7 @@ class NovelsSpApi(Resource):
                 if hetero and gene_type == 'J':
                     hetero_haps += 1
 
-                novel_allele = novel.name.split('*')[1].upper()
+                novel_allele = novel.study_title.split('*')[1].upper()
                 novel_count = 0
 
                 try:
@@ -153,7 +153,7 @@ class NovelsSpApi(Resource):
                     or (best_hap['gene_type'] == 'D' and gene_type == 'J') \
                     or (best_hap['hetero'] and not hetero) \
                     or best_hap['count'] < novel_count:
-                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.name}
+                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.study_title}
 
             result['j_haplotypes'] = j_haps
             result['d_haplotypes'] = d_haps
@@ -192,25 +192,25 @@ class DataSetInfoAPI(Resource):
         stats['total_subjects'] = session.query(Patient.id).count()
         stats['total_samples'] = session.query(Sample.id).count()
         stats['sex_count'] = session.query(Patient.sex, func.count(Patient.sex)).group_by(Patient.sex).order_by(func.count(Patient.sex).desc()).all()
-        stats['study_count'] = session.query(Study.name, func.count(Sample.name)).join(Sample, Sample.study_id == Study.id).group_by(Study.name).order_by(func.count(Sample.name).desc()).all()
-        stats['condition_count'] = session.query(Patient.status, func.count(Patient.status)).group_by(Patient.status).order_by(func.count(Patient.status).desc()).all()
+        stats['study_count'] = session.query(Study.study_title, func.count(Sample.name)).join(Sample, Sample.study_id == Study.id).group_by(Study.study_title).order_by(func.count(Sample.name).desc()).all()
+        stats['condition_count'] = session.query(Patient.disease_diagnosis_label, func.count(Patient.disease_diagnosis_label)).group_by(Patient.disease_diagnosis_label).order_by(func.count(Patient.disease_diagnosis_label).desc()).all()
         stats['celltype_count'] = session.query(TissuePro.sub_cell_type, func.count(TissuePro.sub_cell_type)).group_by(TissuePro.sub_cell_type).order_by(func.count(TissuePro.sub_cell_type).desc()).all()
-        stats['tissue_count'] = session.query(TissuePro.tissue, func.count(TissuePro.tissue)).group_by(TissuePro.tissue).order_by(func.count(TissuePro.tissue).desc()).all()
+        stats['tissue_count'] = session.query(TissuePro.tissue_label, func.count(TissuePro.tissue_label)).group_by(TissuePro.tissue_label).order_by(func.count(TissuePro.tissue_label).desc()).all()
         studies = session.query(
-            Study.name,
-            Study.accession_id,
-            Study.institute,
+            Study.study_title,
+            Study.study_id,
+            Study.lab_address,
             Study.num_subjects,
             Study.num_samples,
-            Study.reference,
+            Study.pub_ids,
             Study.accession_reference
         ).all()
         stats['studies'] = []
 
         for row in studies:
             row = row._asdict()
-            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.name == row['name']).count()
-            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.name == row['name']).count()
+            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_title == row['name']).count()
+            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_title == row['name']).count()
             stats['studies'].append(row)
 
         return stats
@@ -229,36 +229,36 @@ valid_filters = {
 
     'patient_name': {'model': 'Patient', 'field': Patient.name.label('patient_name'), 'fieldname': 'name', 'sort': 'underscore'},
     'sex': {'model': 'Patient', 'field': Patient.sex},
-    'ethnic': {'model': 'Patient', 'field': Patient.ethnic},
-    'status': {'model': 'Patient', 'field': Patient.status},
-    'cohort': {'model': 'Patient', 'field': Patient.cohort},
+    'ethnic': {'model': 'Patient', 'field': Patient.ethnicity},
+    'status': {'model': 'Patient', 'field': Patient.disease_diagnosis_label},
+    'cohort': {'model': 'Patient', 'field': Patient.study_group_description},
     'age': {'model': 'Patient', 'field': Patient.age, 'sort': 'numeric'},
     'name_in_paper': {'model': 'Patient', 'field': Patient.name_in_paper},
-    'country': {'model': 'Patient', 'field': Patient.country},
+    'country': {'model': 'Patient', 'field': Patient.ancestry_population},
 
-    'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'name'},
-    'institute': {'model': 'Study', 'field': Study.institute},
-    'researcher': {'model': 'Study', 'field': Study.researcher},
+    'study_name': {'model': 'Study', 'field': Study.study_title.label('study_name'), 'fieldname': 'study_title'},
+    'institute': {'model': 'Study', 'field': Study.lab_address},
+    'researcher': {'model': 'Study', 'field': Study.submitted_by},
     'num_subjects': {'model': 'Study', 'field': Study.num_subjects, 'sort': 'numeric'},
     'num_samples': {'model': 'Study', 'field': Study.num_samples, 'sort': 'numeric'},
-    'study_reference': {'model': 'Study', 'field': Study.reference.label('study_reference'), 'fieldname': 'reference'},
-    'study_contact': {'model': 'Study', 'field': Study.contact.label('study_contact'), 'fieldname': 'contact'},
-    'study_acc_id': {'model': 'Study', 'field': Study.accession_id.label('study_acc_id'), 'fieldname': 'accession_id'},
+    'study_reference': {'model': 'Study', 'field': Study.pub_ids.label('study_reference'), 'fieldname': 'reference'},
+    'study_contact': {'model': 'Study', 'field': Study.study_contact.label('study_contact'), 'fieldname': 'study_contact'},
+    'study_acc_id': {'model': 'Study', 'field': Study.study_id.label('study_acc_id'), 'fieldname': 'study_id'},
     'study_acc_ref': {'model': 'Study', 'field': Study.accession_reference.label('study_acc_ref'), 'fieldname': 'accession_reference'},
 
-    'tissue_name': {'model': 'TissuePro', 'field': TissuePro.name.label('tissue_name'), 'fieldname': 'name'},
-    'species': {'model': 'TissuePro', 'field': TissuePro.species},
-    'tissue': {'model': 'TissuePro', 'field': TissuePro.tissue},
+    'tissue_name': {'model': 'TissuePro', 'field': TissuePro.tissue_processing.label('tissue_name'), 'fieldname': 'name'},
+    'species': {'model': 'TissuePro', 'field': TissuePro.cell_species_label},
+    'tissue': {'model': 'TissuePro', 'field': TissuePro.tissue_label},
     'combined_cell_type': {'model': 'TissuePro', 'field': TissuePro.combined_cell_type},
-    'cell_type': {'model': 'TissuePro', 'field': TissuePro.cell_type},
+    'cell_type': {'model': 'TissuePro', 'field': TissuePro.cell_subset_label},
     'sub_cell_type': {'model': 'TissuePro', 'field': TissuePro.sub_cell_type},
-    'isotype': {'model': 'TissuePro', 'field': TissuePro.isotype},
+    'isotype': {'model': 'TissuePro', 'field': TissuePro.cell_phenotype},
 
     'sequencing_protocol': {'model': 'SeqProtocol', 'field': SeqProtocol.name.label('sequencing_protocol'), 'fieldname': 'name'},
     'umi': {'model': 'SeqProtocol', 'field': SeqProtocol.umi},
-    'sequencing_length': {'model': 'SeqProtocol', 'field': SeqProtocol.sequencing_length, 'sort': 'numeric'},
-    'primer_3_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.primers_3_location.label('primer_3_loc'), 'fieldname': 'primers_3_location'},
-    'primer_5_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.primers_5_location.label('primer_5_loc'), 'fieldname': 'primers_5_location'},
+    'sequencing_length': {'model': 'SeqProtocol', 'field': SeqProtocol.read_length, 'sort': 'numeric'},
+    'primer_3_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.forward_pcr_primer_target_location.label('primer_3_loc'), 'fieldname': 'primers_3_location'},
+    'primer_5_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.reverse_pcr_primer_target_location.label('primer_5_loc'), 'fieldname': 'primers_5_location'},
     'seq_platform': {'model': 'SeqProtocol', 'field': SeqProtocol.sequencing_platform.label('seq_platform'), 'fieldname': 'sequencing_platform'},
     'helix': {'model': 'SeqProtocol', 'field': SeqProtocol.helix},
 
@@ -804,7 +804,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
             # query = query.filter(Allele.name.in_(required_names))
 
         for r in res:
-            if len(required_names) == 0 or r.name in required_names:
+            if len(required_names) == 0 or r.study_title in required_names:
                 s = r._asdict()
                 for k, v in s.items():
                     if k == 'similar' and v is not None:
@@ -891,7 +891,7 @@ def apply_rep_filter_params(params, sample_list, session):
     if not params['f_pseudo_genes']:
         gq = gq.filter(Gene.pseudo_gene == 0)
     wanted_genes = gq.all()
-    wanted_genes = [gene.name for gene in wanted_genes]
+    wanted_genes = [gene.study_title for gene in wanted_genes]
     return sample_list, wanted_genes
 
 
