@@ -3,7 +3,8 @@ import subprocess
 
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH
 from app import vdjbase_dbs, app
-from db.vdjbase_model import Sample, Patient, Study, Gene
+from db.vdjbase_model import Gene
+from db.vdjbase_airr_model import Study, Patient, Sample
 from api.reports.report_utils import make_output_file
 import os.path
 import shutil

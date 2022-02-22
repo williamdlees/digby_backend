@@ -3,6 +3,8 @@ import os.path
 import os
 
 import yaml
+
+from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample
 from db.vdjbase_model import *
 
 

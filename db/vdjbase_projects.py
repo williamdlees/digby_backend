@@ -7,7 +7,8 @@ from glob import glob
 import re
 from db.vdjbase_exceptions import *
 import yaml
-from db.vdjbase_model import Study, GenoDetection, SeqProtocol, TissuePro, Patient, Sample, Allele, AllelesSample, Gene, HaplotypesFile, SamplesHaplotype, SNP
+from db.vdjbase_model import GenoDetection, Allele, AllelesSample, Gene, HaplotypesFile, SamplesHaplotype, SNP
+from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample
 import pandas as pd
 import math
 from db.vdjbase_formats import *

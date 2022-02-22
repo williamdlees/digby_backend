@@ -6,7 +6,8 @@ from api.reports.report_utils import trans_df, collate_samples, chunk_list
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
 from app import app, vdjbase_dbs
-from db.vdjbase_model import Sample, Gene
+from db.vdjbase_model import Gene
+from db.vdjbase_airr_model import Sample
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, get_multiple_order_file
 import pandas as pd

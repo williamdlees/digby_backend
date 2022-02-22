@@ -9,7 +9,7 @@ from api.restx import api
 import json
 from werkzeug.exceptions import BadRequest
 from db.genomic_db import RefSeq, Subject
-from db.vdjbase_model import Sample as vdjb_Sample
+from db.vdjbase_airr_model import Sample as vdjb_Sample
 from api.genomic.genomic import find_genomic_filter_params, find_genomic_subjects
 from api.vdjbase.vdjbase import find_vdjbase_samples, find_rep_filter_params
 from app import app

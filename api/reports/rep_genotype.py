@@ -6,7 +6,8 @@ from api.reports.report_utils import make_output_file, collate_samples, find_pri
 
 from api.reports.report_utils import trans_df
 from app import app, vdjbase_dbs
-from db.vdjbase_model import Sample, Gene
+from db.vdjbase_model import Gene
+from db.vdjbase_airr_model import Sample
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, get_multiple_order_file
 import pandas as pd

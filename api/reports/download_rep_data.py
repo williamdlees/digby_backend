@@ -4,7 +4,8 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file, chunk_list
 from app import app, vdjbase_dbs
-from db.vdjbase_model import Sample, GenoDetection, Patient, SeqProtocol, Study, TissuePro, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
+from db.vdjbase_model import GenoDetection, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
+from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample
 import csv
 import zipfile
 import os

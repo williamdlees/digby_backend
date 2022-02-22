@@ -5,7 +5,8 @@ from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list
 
 from app import app, vdjbase_dbs
-from db.vdjbase_model import Sample, HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, Patient, AllelesPattern
+from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, AllelesPattern
+from db.vdjbase_airr_model import Patient, Sample
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
 from sqlalchemy import func

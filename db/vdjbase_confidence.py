@@ -15,7 +15,8 @@ from Bio.Seq import Seq
 from Bio.Data.CodonTable import TranslationError
 from sqlalchemy import not_, distinct, or_
 
-from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern, AlleleConfidenceReport, SNP, HaplotypeEvidence, SamplesHaplotype, SeqProtocol
+from db.vdjbase_model import Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern, AlleleConfidenceReport, SNP, HaplotypeEvidence, SamplesHaplotype
+from db.vdjbase_airr_model import SeqProtocol, Sample
 
 import re
 import csv

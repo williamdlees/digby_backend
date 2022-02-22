@@ -4,7 +4,7 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
 from app import app, vdjbase_dbs
-from db.vdjbase_model import Sample
+from db.vdjbase_airr_model import Sample
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, get_multiple_order_file, get_order_file
 from api.reports.report_utils import check_tab_file

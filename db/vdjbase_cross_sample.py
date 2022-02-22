@@ -7,7 +7,8 @@ import pandas as pd
 import os, math
 
 from sqlalchemy import func
-from db.vdjbase_model import Sample, Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern
+from db.vdjbase_model import Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern
+from db.vdjbase_airr_model import Sample
 import re
 from db.vdjbase_formats import *
 from sqlalchemy.sql import func
