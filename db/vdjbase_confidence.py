@@ -140,8 +140,8 @@ def gather_haplo_data(novels, ds_dir, session):
                 vdjbase_allele[pa] = allele.study_title
 
     for sample_haplotype in sample_haplotypes:
-        print(sample_haplotype.haplotypes_files.file)
-        with open(os.path.join(ds_dir, sample_haplotype.haplotypes_files.file), 'r', newline='') as fi:
+        print(sample_haplotype.haplotypes_file.file)
+        with open(os.path.join(ds_dir, sample_haplotype.haplotypes_file.file), 'r', newline='') as fi:
             reader = csv.reader(fi, dialect='excel-tab')
             header = True
             row_index = True
@@ -178,7 +178,7 @@ def gather_haplo_data(novels, ds_dir, session):
                                 counts.append('%s (%s)' % (allele_names[i], allele_counts[i]))
 
                             he = HaplotypeEvidence(
-                                hap_gene=sample_haplotype.haplotypes_files.by_gene,
+                                hap_gene=sample_haplotype.haplotypes_file.by_gene,
                                 sample_id=sample_haplotype.samples_id,
                                 allele=n,
                                 counts=', '.join(counts)
@@ -203,7 +203,7 @@ def gather_haplo_data(novels, ds_dir, session):
                                     print('either/or format in %s ignored' % name)
                                     continue
 
-                            print('Allele %s is present in haplotype file %s but is not in the Alleles table' % (name, sample_haplotype.haplotypes_files.file))
+                            print('Allele %s is present in haplotype file %s but is not in the Alleles table' % (name, sample_haplotype.haplotypes_file.file))
 
     for novel in novels:
         if session.query(HaplotypeEvidence).filter(HaplotypeEvidence.allele_id == novel.id).count():
@@ -346,7 +346,7 @@ def check_for_singleton_infs(novels, ds_dir, session):
     reported_deletions = {}
 
     for sample_haplotype in sample_haplotypes:
-        with open(os.path.join(ds_dir, sample_haplotype.haplotypes_files.file), 'r', newline='') as fi:
+        with open(os.path.join(ds_dir, sample_haplotype.haplotypes_file.file), 'r', newline='') as fi:
             reader = csv.reader(fi, dialect='excel-tab')
             header = True
             row_index = True
@@ -390,7 +390,7 @@ def check_for_singleton_infs(novels, ds_dir, session):
                                     reported_deletions[novel.study_title] = []
                                 if sample_haplotype.samples.study_title not in reported_deletions[novel.study_title]:
                                     report_issue(novel, 'Deletion on other chromosome', 'In sample %s, allele(s) %s present on one chromosome, deletion on other (%s)'
-                                                 % (sample_haplotype.samples.study_title, ', '.join(novel_nondels), sample_haplotype.haplotypes_files.by_gene), session, low_confidence=False)
+                                                 % (sample_haplotype.samples.study_title, ', '.join(novel_nondels), sample_haplotype.haplotypes_file.by_gene), session, low_confidence=False)
                                     reported_deletions[novel.study_title].append(sample_haplotype.samples.study_title)
 
                     else:
@@ -402,7 +402,7 @@ def check_for_singleton_infs(novels, ds_dir, session):
                                         reported_duplicates[novel.study_title] = []
                                     if sample_haplotype.samples.study_title not in reported_duplicates[novel.study_title]:
                                         report_issue(novel, 'Inferred allele on both chromosomes', 'In sample %s, allele %s is present on both chromosomes (%s).'
-                                                     % (sample_haplotype.samples.study_title, n, sample_haplotype.haplotypes_files.by_gene), session, low_confidence=True)
+                                                     % (sample_haplotype.samples.study_title, n, sample_haplotype.haplotypes_file.by_gene), session, low_confidence=True)
                                         reported_duplicates[novel.study_title].append(sample_haplotype.samples.study_title)
 
 # An allele should be low_confidence if it is exclusively found on both chromosomes

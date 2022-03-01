@@ -843,7 +843,7 @@ def process_haplotype(filename, sample, haplo_gene, session):
 
     sh = SamplesHaplotype(
         samples_id=sample.id,
-        haplotypes_files_id=hf.id,
+        haplotypes_file_id=hf.id,
     )
     session.add(sh)
 

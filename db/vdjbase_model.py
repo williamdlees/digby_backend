@@ -9,7 +9,7 @@ metadata = Base.metadata
 
 
 class Gene(Base):
-    __tablename__ = 'database_gene'
+    __tablename__ = 'gene'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
@@ -24,7 +24,7 @@ class Gene(Base):
 
 
 class GenoDetection(Base):
-    __tablename__ = 'database_geno_detection'
+    __tablename__ = 'geno_detection'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
@@ -41,7 +41,7 @@ class GenoDetection(Base):
 
 
 class HaplotypesFile(Base):
-    __tablename__ = 'database_haplotypes_files'
+    __tablename__ = 'haplotypes_file'
 
     id = Column(Integer, primary_key=True)
     by_gene = Column(String(50), nullable=False)
@@ -59,7 +59,7 @@ class HaplotypesFile(Base):
 
 
 class Allele(Base):
-    __tablename__ = 'database_alleles'
+    __tablename__ = 'allele'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(30), nullable=False)
@@ -68,12 +68,12 @@ class Allele(Base):
     seq_len = Column(String(50), nullable=False)
     similar = Column(String(250), nullable=False)       # list of other names which have the same sequence as this one
     appears = Column(Integer, nullable=False)
-    gene_id = Column(ForeignKey('database_gene.id'), nullable=False, index=True)
+    gene_id = Column(ForeignKey('gene.id'), nullable=False, index=True)
     is_single_allele = Column(Boolean, nullable=False)      # False if a short sequence is ambiguous, ie could match more than one reference allele
     low_confidence = Column(Boolean, nullable=False)
     novel = Column(Boolean, nullable=False)
     max_kdiff = Column(DECIMAL, nullable=False)
-    closest_ref_id = Column(ForeignKey('database_alleles.id'), index=True)
+    closest_ref_id = Column(ForeignKey('allele.id'), index=True)
 
     closest_ref = relationship('Allele', remote_side=[id])
     gene = relationship('Gene', back_populates="alleles")
@@ -81,48 +81,48 @@ class Allele(Base):
 
 
 class AlleleConfidenceReport(Base):
-    __tablename__ = 'database_alleleconfidencereport'
+    __tablename__ = 'allele_confidence_report'
 
     id = Column(Integer, primary_key=True)
     category = Column(String(50), nullable=False)
     notes = Column(String(400), nullable=False)
-    allele_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
+    allele_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
 
     allele = relationship('Allele', backref="confidence")
 
 
 class AllelesPattern(Base):
-    __tablename__ = 'database_alleles_patterns'
+    __tablename__ = 'allele_patterns'
 
     id = Column(Integer, primary_key=True)
-    allele_in_p_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
-    pattern_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
+    allele_in_p_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
+    pattern_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
 
     allele_in_p = relationship('Allele', primaryjoin='AllelesPattern.allele_in_p_id == Allele.id')
     pattern = relationship('Allele', primaryjoin='AllelesPattern.pattern_id == Allele.id')
 
 
 class SNP(Base):
-    __tablename__ = 'database_snps'
+    __tablename__ = 'snps'
 
     id = Column(Integer, primary_key=True)
     pos = Column(Integer, nullable=False)
     from_base = Column(String(1), nullable=False)
     to_base = Column(String(1), nullable=False)
-    allele_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
+    allele_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
 
     allele = relationship('Allele')
 
 
 class AllelesSample(Base):
-    __tablename__ = 'database_alleles_samples'
+    __tablename__ = 'alleles_sample'
 
     id = Column(Integer, primary_key=True)
     hap = Column(String(20), nullable=False)
     kdiff = Column(DECIMAL, nullable=False)
-    allele_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
-    patient_id = Column(ForeignKey('database_patients.id'), nullable=False, index=True)
-    sample_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
+    allele_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
+    patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
+    sample_id = Column(ForeignKey('sample.id'), nullable=False, index=True)
 
     allele = relationship('Allele', back_populates="samples")
     patient = relationship('Patient')
@@ -130,13 +130,13 @@ class AllelesSample(Base):
 
 
 class GenesDistribution(Base):
-    __tablename__ = 'database_genes_distribution'
+    __tablename__ = 'genes_distribution'
 
     id = Column(Integer, primary_key=True)
     frequency = Column(DECIMAL, nullable=False)
-    gene_id = Column(ForeignKey('database_gene.id'), nullable=False, index=True)
-    patient_id = Column(ForeignKey('database_patients.id'), nullable=False, index=True)
-    sample_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
+    gene_id = Column(ForeignKey('gene.id'), nullable=False, index=True)
+    patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
+    sample_id = Column(ForeignKey('sample.id'), nullable=False, index=True)
     count_by_clones = Column(Boolean, nullable=False)
 
     gene = relationship('Gene')
@@ -145,11 +145,11 @@ class GenesDistribution(Base):
 
 
 class HaplotypeEvidence(Base):
-    __tablename__ = 'database_haplotypeevidence'
+    __tablename__ = 'haplotype_evidence'
 
     id = Column(Integer, primary_key=True)
-    allele_id = Column(ForeignKey('database_alleles.id'), nullable=False, index=True)
-    sample_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
+    allele_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
+    sample_id = Column(ForeignKey('sample.id'), nullable=False, index=True)
     hap_gene = Column(String(50), nullable=False)
     counts = Column(String(200), nullable=False)
 
@@ -158,15 +158,15 @@ class HaplotypeEvidence(Base):
 
 
 class SamplesHaplotype(Base):
-    __tablename__ = 'database_samples_haplotype'
+    __tablename__ = 'samples_haplotype'
     __table_args__ = (
-        Index('database_samples_haplotype_samples_id_haplotypes_files_id_50b31fc1_uniq', 'samples_id', 'haplotypes_files_id', unique=True),
+        Index('samples_haplotype_samples_id_haplotypes_file_id_50b31fc1_uniq', 'samples_id', 'haplotypes_file_id', unique=True),
     )
 
     id = Column(Integer, primary_key=True)
-    samples_id = Column(ForeignKey('database_samples.id'), nullable=False, index=True)
-    haplotypes_files_id = Column(ForeignKey('database_haplotypes_files.id'), nullable=False, index=True)
+    samples_id = Column(ForeignKey('sample.id'), nullable=False, index=True)
+    haplotypes_file_id = Column(ForeignKey('haplotypes_file.id'), nullable=False, index=True)
 
-    haplotypes_files = relationship('HaplotypesFile')
+    haplotypes_file = relationship('HaplotypesFile')
     samples = relationship('Sample')
 

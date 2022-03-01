@@ -71,3 +71,4 @@ matplotlib
 seaborn
 pika
 mysqlclient
+stringcase

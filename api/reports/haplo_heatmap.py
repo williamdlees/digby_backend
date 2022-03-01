@@ -39,7 +39,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             haplo_query = session.query(Sample.name, HaplotypesFile.file)\
                 .filter(Sample.name.in_(sample_list))\
                 .join(SamplesHaplotype, Sample.id == SamplesHaplotype.samples_id)\
-                .filter(SamplesHaplotype.haplotypes_files_id == HaplotypesFile.id)\
+                .filter(SamplesHaplotype.haplotypes_file_id == HaplotypesFile.id)\
                 .filter(HaplotypesFile.by_gene == params['haplo_gene'])
             haplos.extend(haplo_query.all())
 

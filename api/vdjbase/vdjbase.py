@@ -490,7 +490,7 @@ class SamplesApi(Resource):
                 haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s), func.group_concat(HaplotypesFile.file))
                 h = haplotypes.filter(Sample.name == r['name'])\
                     .join(SamplesHaplotype, SamplesHaplotype.samples_id == Sample.id)\
-                    .join(HaplotypesFile, HaplotypesFile.id == SamplesHaplotype.haplotypes_files_id)\
+                    .join(HaplotypesFile, HaplotypesFile.id == SamplesHaplotype.haplotypes_file_id)\
                     .one_or_none()
                 if h is not None and h[1] is not None:
                     r['haplotypes'] = {}
