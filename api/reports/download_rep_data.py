@@ -10,10 +10,10 @@ import csv
 import zipfile
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, find_vdjbase_sequences, \
-    valid_sequence_cols, find_vdjbase_samples
+    sequence_filters, find_vdjbase_samples
 from sqlalchemy import func
 import pandas as pd
-from api.vdjbase.vdjbase import valid_filters
+from api.vdjbase.vdjbase import sample_info_filters
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -41,7 +41,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         attribute_query = []
         headers = []
 
-        for name, filter in valid_filters.items():
+        for name, filter in sample_info_filters.items():
 
             if filter['model'] is not None:
                 attribute_query.append(filter['field'])
@@ -119,7 +119,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     elif 'Gene info' in params['type']:
         headers = []
-        for name, att_filter in valid_sequence_cols.items():
+        for name, att_filter in sequence_filters.items():
             if att_filter['model'] is not None:
                 headers.append(name)
 

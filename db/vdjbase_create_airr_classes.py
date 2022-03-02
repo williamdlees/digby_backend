@@ -3,7 +3,8 @@
 import csv
 import stringcase
 
-definition_file = 'vdjbase_airr_schema_defs.csv'
+from db.vdjbase_airr_common import read_definition_data
+
 classes_file = 'vdjbase_airr_model.py'
 
 prelude = '''
@@ -48,19 +49,6 @@ key_texts = {
 
 }
 
-def read_definition_data():
-    defs = {}
-    with open(definition_file, 'r') as fi:
-        reader = csv.DictReader(fi)
-        for row in reader:
-            if 'VDJbase table' in row and row['VDJbase table']:
-                if row['VDJbase table'] not in defs:
-                    defs[row['VDJbase table']] = []
-                defs[row['VDJbase table']].append(row)
-
-    return defs
-
-
 def write_prelude(fo):
     fo.write(prelude)
 
@@ -91,8 +79,6 @@ class {table_name}(Base):
             print(f'Unrecognised type in {item} - skipped')
             continue
 
-        simple_name = item['simple_name'].replace('.', '_')
-
         if simple_name in specials:
             decl = specials[simple_name]
 
@@ -112,7 +98,7 @@ def main():
     with open(classes_file, 'w', newline='') as fo:
         write_prelude(fo)
         for table, items in defs.items():
-            write_table(fo, table, items)
+            write_table(fo, table, items.values())
 
 
 if __name__ == "__main__":

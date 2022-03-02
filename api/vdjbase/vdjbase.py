@@ -1,5 +1,5 @@
 # Services related to vdjbase repseq-based data sets
-import requests
+
 from flask import request
 from flask_restx import Resource, reqparse, fields, marshal, inputs
 
@@ -18,6 +18,7 @@ from db.filter_list import apply_filter_to_list
 from api.system.system import digby_protected
 
 from app import vdjbase_dbs, app, genomic_dbs
+from db.vdjbase_api_query_filters import sample_info_filters
 from db.vdjbase_model import GenoDetection, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
 from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample
 
@@ -216,71 +217,6 @@ class DataSetInfoAPI(Resource):
         return stats
 
 
-valid_filters = {
-    'name': {'model': 'Sample', 'field': Sample.name, 'sort': 'underscore'},
-    'id': {'model': 'Sample', 'field': Sample.id},
-    'chain': {'model': 'Sample', 'field': Sample.chain},
-    'row_reads': {'model': 'Sample', 'field': Sample.row_reads, 'sort': 'numeric'},
-    'date': {'model': 'Sample', 'field': Sample.date},
-    'samples_group': {'model': 'Sample', 'field': Sample.samples_group},
-    'genotype': {'model': Sample, 'field': Sample.genotype},
-    'genotype_stats': {'model': None, 'field': Sample.genotype_stats},
-    'genotype_report': {'model': None, 'field': Sample.genotype_report},
-
-    'patient_name': {'model': 'Patient', 'field': Patient.name.label('patient_name'), 'fieldname': 'name', 'sort': 'underscore'},
-    'sex': {'model': 'Patient', 'field': Patient.sex},
-    'ethnic': {'model': 'Patient', 'field': Patient.ethnicity},
-    'status': {'model': 'Patient', 'field': Patient.disease_diagnosis_label},
-    'cohort': {'model': 'Patient', 'field': Patient.study_group_description},
-    'age': {'model': 'Patient', 'field': Patient.age, 'sort': 'numeric'},
-    'name_in_paper': {'model': 'Patient', 'field': Patient.name_in_paper},
-    'country': {'model': 'Patient', 'field': Patient.ancestry_population},
-
-    'study_name': {'model': 'Study', 'field': Study.study_title.label('study_name'), 'fieldname': 'study_title'},
-    'institute': {'model': 'Study', 'field': Study.lab_address},
-    'researcher': {'model': 'Study', 'field': Study.submitted_by},
-    'num_subjects': {'model': 'Study', 'field': Study.num_subjects, 'sort': 'numeric'},
-    'num_samples': {'model': 'Study', 'field': Study.num_samples, 'sort': 'numeric'},
-    'study_reference': {'model': 'Study', 'field': Study.pub_ids.label('study_reference'), 'fieldname': 'reference'},
-    'study_contact': {'model': 'Study', 'field': Study.study_contact.label('study_contact'), 'fieldname': 'study_contact'},
-    'study_acc_id': {'model': 'Study', 'field': Study.study_id.label('study_acc_id'), 'fieldname': 'study_id'},
-    'study_acc_ref': {'model': 'Study', 'field': Study.accession_reference.label('study_acc_ref'), 'fieldname': 'accession_reference'},
-
-    'tissue_name': {'model': 'TissuePro', 'field': TissuePro.tissue_processing.label('tissue_name'), 'fieldname': 'name'},
-    'species': {'model': 'TissuePro', 'field': TissuePro.cell_species_label},
-    'tissue': {'model': 'TissuePro', 'field': TissuePro.tissue_label},
-    'combined_cell_type': {'model': 'TissuePro', 'field': TissuePro.combined_cell_type},
-    'cell_type': {'model': 'TissuePro', 'field': TissuePro.cell_subset_label},
-    'sub_cell_type': {'model': 'TissuePro', 'field': TissuePro.sub_cell_type},
-    'isotype': {'model': 'TissuePro', 'field': TissuePro.cell_phenotype},
-
-    'sequencing_protocol': {'model': 'SeqProtocol', 'field': SeqProtocol.name.label('sequencing_protocol'), 'fieldname': 'name'},
-    'umi': {'model': 'SeqProtocol', 'field': SeqProtocol.umi},
-    'sequencing_length': {'model': 'SeqProtocol', 'field': SeqProtocol.read_length, 'sort': 'numeric'},
-    'primer_3_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.forward_pcr_primer_target_location.label('primer_3_loc'), 'fieldname': 'primers_3_location'},
-    'primer_5_loc': {'model': 'SeqProtocol', 'field': SeqProtocol.reverse_pcr_primer_target_location.label('primer_5_loc'), 'fieldname': 'primers_5_location'},
-    'seq_platform': {'model': 'SeqProtocol', 'field': SeqProtocol.sequencing_platform.label('seq_platform'), 'fieldname': 'sequencing_platform'},
-    'helix': {'model': 'SeqProtocol', 'field': SeqProtocol.helix},
-
-    'pipeline_name': {'model': 'GenoDetection', 'field': GenoDetection.name.label('pipeline_name'), 'fieldname': 'name'},
-    'prepro_tool': {'model': 'GenoDetection', 'field': GenoDetection.prepro_tool},
-    'aligner_tool': {'model': 'GenoDetection', 'field': GenoDetection.aligner_tool},
-    'aligner_ver': {'model': 'GenoDetection', 'field': GenoDetection.aligner_ver},
-    'aligner_reference': {'model': 'GenoDetection', 'field': GenoDetection.aligner_reference},
-    'geno_tool': {'model': 'GenoDetection', 'field': GenoDetection.geno_tool},
-    'geno_ver': {'model': 'GenoDetection', 'field': GenoDetection.geno_ver},
-    'haplotype_tool': {'model': 'GenoDetection', 'field': GenoDetection.haplotype_tool},
-    'haplotype_ver': {'model': 'GenoDetection', 'field': GenoDetection.haplotype_ver},
-    'single_assignment': {'model': 'GenoDetection', 'field': GenoDetection.single_assignment},
-    'detection': {'model': 'GenoDetection', 'field': GenoDetection.detection},
-
-    'allele': {'model': None, 'field': None},
-
-    'haplotypes': {'model': None, 'field': None},
-    'genotypes': {'model': None, 'field': None},
-
-    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
-}
 
 rep_sample_bool_values = {
     'umi': ('UMI', '(blank)')
@@ -298,9 +234,9 @@ class SampleInfoApi(Resource):
         session = vdjbase_dbs[species][dataset].session
         attribute_query = []
 
-        for col in valid_filters.keys():
-            if valid_filters[col]['field'] is not None:
-                attribute_query.append(valid_filters[col]['field'])
+        for col in sample_info_filters.keys():
+            if sample_info_filters[col]['field'] is not None:
+                attribute_query.append(sample_info_filters[col]['field'])
 
         info = session.query(*attribute_query)\
             .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
@@ -347,7 +283,7 @@ class SamplesApi(Resource):
             required_cols.append('dataset')
 
         for col in required_cols:
-            if col not in valid_filters.keys():
+            if col not in sample_info_filters.keys():
                 raise BadRequest('Bad filter string %s' % args['filter'])
 
         if 'genotypes' in required_cols:                # needed to compose paths to files
@@ -358,11 +294,11 @@ class SamplesApi(Resource):
             required_cols.append('genotype_stats')
             required_cols.append('genotype_report')
 
-        attribute_query = [valid_filters['id']['field']]        # the query requires the first field to be from Sample
+        attribute_query = [sample_info_filters['id']['field']]        # the query requires the first field to be from Sample
 
         for col in required_cols:
-            if col != 'id' and valid_filters[col]['field'] is not None:
-                attribute_query.append(valid_filters[col]['field'])
+            if col != 'id' and sample_info_filters[col]['field'] is not None:
+                attribute_query.append(sample_info_filters[col]['field'])
 
         filter = json.loads(args['filter'])
         ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), filter)
@@ -386,7 +322,7 @@ class SamplesApi(Resource):
 
         for s in ret:
             for f in required_cols:
-                if valid_filters[f]['field'] is not None and 'no_uniques' not in valid_filters[f]:
+                if sample_info_filters[f]['field'] is not None and 'no_uniques' not in sample_info_filters[f]:
                     el = s[f]
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
@@ -418,9 +354,9 @@ class SamplesApi(Resource):
 
         for f in required_cols:
             try:
-                if 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'underscore':
+                if 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'underscore':
                     uniques[f].sort(key=name_sort_key)
-                elif 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'numeric':
+                elif 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'numeric':
                     uniques[f].sort(key=num_sort_key)
                 elif f != 'names_by_dataset':
                     uniques[f].sort(key=lambda x: (x is None or x == '', x))
@@ -442,10 +378,10 @@ class SamplesApi(Resource):
 
         for spec in sort_specs:
             f = spec['field']
-            if f in valid_filters.keys():
-                if 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'underscore':
+            if f in sample_info_filters.keys():
+                if 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'underscore':
                     ret = sorted(ret, key=lambda x: name_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
-                elif 'sort' in valid_filters[f] and valid_filters[f]['sort'] == 'numeric':
+                elif 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'numeric':
                     ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
                 else:
                     ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''), x[f]), reverse=(spec['order'] == 'desc'))
@@ -529,9 +465,9 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
             elif f['field'] == 'dataset':
                 dataset_filters.append(f)
             else:
-                f['model'] = valid_filters[f['field']]['model']
-                if 'fieldname' in valid_filters[f['field']]:
-                    f['field'] = valid_filters[f['field']]['fieldname']
+                f['model'] = sample_info_filters[f['field']]['model']
+                if 'fieldname' in sample_info_filters[f['field']]:
+                    f['field'] = sample_info_filters[f['field']]['fieldname']
                 if f['field'] in rep_sample_bool_values:
                     value = []
                     for v in f['value']:
@@ -584,7 +520,7 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
     return ret
 
 
-valid_sequence_cols = {
+sequence_filters = {
     'name': {'model': 'Allele', 'field': Allele.name, 'sort': 'allele'},
     'gene_name': {'model': 'Gene', 'field': Gene.name.label('gene_name'), 'fieldname': 'name'},
     'igsnper_plot_path': {'model': 'Gene', 'field': Gene.igsnper_plot_path},
@@ -630,7 +566,7 @@ class SequencesApi(Resource):
         required_cols = json.loads(args['cols'])
 
         for col in required_cols:
-            if col not in valid_sequence_cols.keys():
+            if col not in sequence_filters.keys():
                 print('bad column in request: %s' % col)
                 return list(), 404
 
@@ -647,7 +583,7 @@ class SequencesApi(Resource):
 
         for s in ret:
             for f in required_cols:
-                if valid_sequence_cols[f]['field'] is not None and 'no_uniques' not in valid_sequence_cols[f]:
+                if sequence_filters[f]['field'] is not None and 'no_uniques' not in sequence_filters[f]:
                     el = s[f]
                     if isinstance(el, datetime):        # convert and add to uniques. Can't convert the returned records until we sort
                         el = el.date().isoformat()
@@ -689,9 +625,9 @@ class SequencesApi(Resource):
 
         for f in required_cols:
             try:
-                if 'sort' in valid_sequence_cols[f] and valid_sequence_cols[f]['sort'] == 'allele':
+                if 'sort' in sequence_filters[f] and sequence_filters[f]['sort'] == 'allele':
                     uniques[f].sort(key=allele_sort_key)
-                elif 'sort' in valid_sequence_cols[f] and valid_sequence_cols[f]['sort'] == 'numeric':
+                elif 'sort' in sequence_filters[f] and sequence_filters[f]['sort'] == 'numeric':
                     uniques[f].sort(key=num_sort_key)
                 else:
                     uniques[f] = [x[1] for x in uniques[f].sorted(key=lambda x: (x is None or x == '', x))]
@@ -702,7 +638,7 @@ class SequencesApi(Resource):
 
         if len(sort_specs) > 0:
             for spec in sort_specs:
-                if spec['field'] in valid_sequence_cols.keys():
+                if spec['field'] in sequence_filters.keys():
                     if spec['field'] in ('name'):
                         ret = sorted(ret, key=lambda x : allele_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
                     else:
@@ -750,9 +686,9 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                         for v in f['value']:
                             value.append('|' + v.replace(',', '|') + '|')
                         f['value'] = value
-                    f['model'] = valid_sequence_cols[f['field']]['model']
-                    if 'fieldname' in valid_sequence_cols[f['field']]:
-                        f['field'] = valid_sequence_cols[f['field']]['fieldname']
+                    f['model'] = sequence_filters[f['field']]['model']
+                    if 'fieldname' in sequence_filters[f['field']]:
+                        f['field'] = sequence_filters[f['field']]['fieldname']
                     if f['field'] in rep_sequence_bool_values:
                         value = []
                         for v in f['value']:
@@ -775,8 +711,8 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
         attribute_query = []
 
         for col in required_cols:
-            if valid_sequence_cols[col]['field'] is not None:
-                attribute_query.append(valid_sequence_cols[col]['field'])
+            if sequence_filters[col]['field'] is not None:
+                attribute_query.append(sequence_filters[col]['field'])
 
         query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
         query = apply_filters(query, filter_spec)

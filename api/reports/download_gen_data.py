@@ -12,7 +12,7 @@ import csv
 import zipfile
 import os
 from api.vdjbase.vdjbase import apply_rep_filter_params, find_vdjbase_sequences, \
-    valid_sequence_cols, find_vdjbase_samples
+    sequence_filters, find_vdjbase_samples
 from sqlalchemy import func
 import pandas as pd
 from Bio.Seq import Seq
