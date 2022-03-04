@@ -15,13 +15,14 @@ from Bio.Seq import Seq
 from Bio.Data.CodonTable import TranslationError
 from sqlalchemy import not_, distinct, or_
 
+from db.vdjbase_genotypes import find_allele_or_similar
 from db.vdjbase_model import Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern, AlleleConfidenceReport, SNP, HaplotypeEvidence, SamplesHaplotype
 from db.vdjbase_airr_model import SeqProtocol, Sample
 
 import re
 import csv
 
-from db.vdjbase_projects import find_allele_or_similar
+
 
 
 def check_novel_confidence(ds_dir, session):

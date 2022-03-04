@@ -19,8 +19,8 @@ from api.system.system import digby_protected
 
 from app import vdjbase_dbs, app, genomic_dbs
 from db.vdjbase_api_query_filters import sample_info_filters
-from db.vdjbase_model import GenoDetection, HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
-from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample
+from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
+from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 

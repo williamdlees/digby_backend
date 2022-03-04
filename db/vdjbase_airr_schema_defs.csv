@@ -1,146 +1,159 @@
-structured_name,simple_name,airr_object,VDJbase table,existing VDJbase attribute,type,list,title,description,example,notes
-Repertoire.repertoire_id,repertoire_id,Repertoire,Study,,string,FALSE,Repertoire ID,"Identifier for the repertoire object. This identifier should be globally unique so that repertoires from multiple studies can be combined together without conflict. The repertoire_id is used to link other AIRR data to a Repertoire. Specifically, the Rearrangements Schema includes repertoire_id for referencing the specific Repertoire for that Rearrangement.
+structured_name,simple_name,airr_object,VDJbase table,existing VDJbase attribute,YML attribute,type,list,title,description,example,notes
+Repertoire.repertoire_id,repertoire_id,Repertoire,Sample,,,string,FALSE,Repertoire ID,"Identifier for the repertoire object. This identifier should be globally unique so that repertoires from multiple studies can be combined together without conflict. The repertoire_id is used to link other AIRR data to a Repertoire. Specifically, the Rearrangements Schema includes repertoire_id for referencing the specific Repertoire for that Rearrangement.
 ",,
-Repertoire.repertoire_name,repertoire_name,Repertoire,Study,,string,FALSE,Repertoire name,Short generic display name for the repertoire,,
-Repertoire.repertoire_description,repertoire_description,Repertoire,Study,,string,FALSE,Repertoire description,Generic repertoire description,,
-Repertoire.study.study_id,study_id,study,Study,Study.accession_id,string,FALSE,Study ID,Unique ID assigned by study registry,PRJNA001,
-Repertoire.study.study_title,study_title,study,Study,Study.name,string,FALSE,Study title,Descriptive study title,Effects of sun light exposure of the Treg repertoire,
-Repertoire.study.study_type.id,study_type.id,study,Study,,string,FALSE,Study type,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.study.study_type.label,study_type.label,study,Study,,string,FALSE,Study type,Label of the concept in the respective ontology,,
-Repertoire.study.study_description,study_description,study,Study,,string,FALSE,Study description,Generic study description,Longer description,
-Repertoire.study.inclusion_exclusion_criteria,inclusion_exclusion_criteria,study,Study,,string,FALSE,Study inclusion/exclusion criteria,List of criteria for inclusion/exclusion for the study,Include: Clinical P. falciparum infection; Exclude: Seropositive for HIV,
-Repertoire.study.grants,grants,study,Study,,string,FALSE,Grant funding agency,Funding agencies and grant numbers,"NIH, award number R01GM987654",
-Repertoire.study.study_contact,study_contact,study,Study,Study.contact,string,FALSE,Contact information (study),"Full contact information of the contact persons for this study This should include an e-mail address and a persistent identifier such as an ORCID ID.
+Repertoire.repertoire_name,repertoire_name,Repertoire,Sample,,,string,FALSE,Repertoire name,Short generic display name for the repertoire,,
+Repertoire.repertoire_description,repertoire_description,Repertoire,Sample,,,string,FALSE,Repertoire description,Generic repertoire description,,
+Repertoire.study.study_id,study_id,study,Study,Study.accession_id,Accession id,string,FALSE,Study ID,Unique ID assigned by study registry,PRJNA001,
+Repertoire.study.study_title,study_title,study,Study,,,string,FALSE,Study title,Descriptive study title,Effects of sun light exposure of the Treg repertoire,
+Repertoire.study.study_type.id,study_type.id,study,Study,,,string,FALSE,Study type,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.study.study_type.label,study_type.label,study,Study,,,string,FALSE,Study type,Label of the concept in the respective ontology,,
+Repertoire.study.study_description,study_description,study,Study,,,string,FALSE,Study description,Generic study description,Longer description,
+Repertoire.study.inclusion_exclusion_criteria,inclusion_exclusion_criteria,study,Study,,,string,FALSE,Study inclusion/exclusion criteria,List of criteria for inclusion/exclusion for the study,Include: Clinical P. falciparum infection; Exclude: Seropositive for HIV,
+Repertoire.study.grants,grants,study,Study,,,string,FALSE,Grant funding agency,Funding agencies and grant numbers,"NIH, award number R01GM987654",
+Repertoire.study.study_contact,study_contact,study,Study,Study.contact,Contact,string,FALSE,Contact information (study),"Full contact information of the contact persons for this study This should include an e-mail address and a persistent identifier such as an ORCID ID.
 ","Dr. P. Stibbons, p.stibbons@unseenu.edu, https://orcid.org/0000-0002-1825-0097",
-Repertoire.study.collected_by,collected_by,study,Study,,string,FALSE,Contact information (data collection),"Full contact information of the data collector, i.e. the person who is legally responsible for data collection and release. This should include an e-mail address.
+Repertoire.study.collected_by,collected_by,study,Study,,,string,FALSE,Contact information (data collection),"Full contact information of the data collector, i.e. the person who is legally responsible for data collection and release. This should include an e-mail address.
 ","Dr. P. Stibbons, p.stibbons@unseenu.edu",
-Repertoire.study.lab_name,lab_name,study,Study,,string,FALSE,Lab name,Department of data collector,Department for Planar Immunology,
-Repertoire.study.lab_address,lab_address,study,Study,Study.institute,string,FALSE,Lab address,Institution and institutional address of data collector,"School of Medicine, Unseen University, Ankh-Morpork, Disk World",
-Repertoire.study.submitted_by,submitted_by,study,Study,Study.researcher,string,FALSE,Contact information (data deposition),"Full contact information of the data depositor, i.e. the person submitting the data to a repository. This is supposed to be a short-lived and technical role until the submission is relased.
+Repertoire.study.lab_name,lab_name,study,Study,,,string,FALSE,Lab name,Department of data collector,Department for Planar Immunology,
+Repertoire.study.lab_address,lab_address,study,Study,Study.institute,Institute,string,FALSE,Lab address,Institution and institutional address of data collector,"School of Medicine, Unseen University, Ankh-Morpork, Disk World",
+Repertoire.study.submitted_by,submitted_by,study,Study,Study.researcher,Researcher,string,FALSE,Contact information (data deposition),"Full contact information of the data depositor, i.e. the person submitting the data to a repository. This is supposed to be a short-lived and technical role until the submission is relased.
 ","Adrian Turnipseed, a.turnipseed@unseenu.edu",
-Repertoire.study.pub_ids,pub_ids,study,Study,Study.reference,string,FALSE,Relevant publications,Publications describing the rationale and/or outcome of the study,PMID:85642,
-Repertoire.study.keywords_study,keywords_study,study,Study,,string,TRUE,Keywords for study,,,
-Repertoire.study.adc_publish_date,adc_publish_date,study,Study,,string,FALSE,ADC Publish Date,"Date the study was first published in the AIRR Data Commons.
+Repertoire.study.pub_ids,pub_ids,study,Study,Study.reference,Reference,string,FALSE,Relevant publications,Publications describing the rationale and/or outcome of the study,PMID:85642,
+Repertoire.study.keywords_study,keywords_study,study,Study,,,string,TRUE,Keywords for study,,,
+Repertoire.study.adc_publish_date,adc_publish_date,study,Study,,,string,FALSE,ADC Publish Date,"Date the study was first published in the AIRR Data Commons.
 ",02/02/2021,
-Repertoire.study.adc_update_date,adc_update_date,study,Study,,string,FALSE,ADC Update Date,"Date the study data was updated in the AIRR Data Commons.
+Repertoire.study.adc_update_date,adc_update_date,study,Study,,,string,FALSE,ADC Update Date,"Date the study data was updated in the AIRR Data Commons.
 ",02/02/2021,
-Repertoire.subject.subject_id,subject_id,subject,Patient,Patient.name_in_paper,string,FALSE,Subject ID,"Subject ID assigned by submitter, unique within study",SUB856413,
-Repertoire.subject.synthetic,synthetic,subject,Patient,,boolean,FALSE,Synthetic library,TRUE for libraries in which the diversity has been synthetically generated (e.g. phage display),,
-Repertoire.subject.species.id,species.id,subject,Patient,,string,FALSE,Organism,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.subject.species.label,species.label,subject,Patient,,string,FALSE,Organism,Label of the concept in the respective ontology,,
-Repertoire.subject.organism.id,organism.id,subject,Patient,,string,FALSE,,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.subject.organism.label,organism.label,subject,Patient,,string,FALSE,,Label of the concept in the respective ontology,,
-Repertoire.subject.sex,sex,subject,Patient,Patient.sex,string,FALSE,Sex,Biological sex of subject,female,
-Repertoire.subject.age_min,age_min,subject,Patient,,number,FALSE,Age minimum,Specific age or lower boundary of age range.,60,
-Repertoire.subject.age_max,age_max,subject,Patient,,number,FALSE,Age maximum,"Upper boundary of age range or equal to age_min for specific age. This field should only be null if age_min is null.
+Repertoire.subject.subject_id,subject_id,subject,Patient,Patient.name_in_paper,Subjects.Original name,string,FALSE,Subject ID,"Subject ID assigned by submitter, unique within study",SUB856413,
+Repertoire.subject.synthetic,synthetic,subject,Patient,,,boolean,FALSE,Synthetic library,TRUE for libraries in which the diversity has been synthetically generated (e.g. phage display),,
+Repertoire.subject.species.id,species.id,subject,Patient,,,string,FALSE,Organism,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.subject.species.label,species.label,subject,Patient,,,string,FALSE,Organism,Label of the concept in the respective ontology,,
+Repertoire.subject.organism.id,organism.id,subject,Patient,,,string,FALSE,,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.subject.organism.label,organism.label,subject,Patient,,,string,FALSE,,Label of the concept in the respective ontology,,
+Repertoire.subject.sex,sex,subject,Patient,Patient.sex,Subjects.Sec,string,FALSE,Sex,Biological sex of subject,female,
+Repertoire.subject.age_min,age_min,subject,Patient,,,number,FALSE,Age minimum,Specific age or lower boundary of age range.,60,
+Repertoire.subject.age_max,age_max,subject,Patient,,,number,FALSE,Age maximum,"Upper boundary of age range or equal to age_min for specific age. This field should only be null if age_min is null.
 ",80,
-Repertoire.subject.age_unit.id,age_unit.id,subject,Patient,,string,FALSE,Age unit,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.subject.age_unit.label,age_unit.label,subject,Patient,,string,FALSE,Age unit,Label of the concept in the respective ontology,,
-Repertoire.subject.age_event,age_event,subject,Patient,,string,FALSE,Age event,"Event in the study schedule to which `Age` refers. For NCBI BioSample this MUST be `sampling`. For other implementations submitters need to be aware that there is currently no mechanism to encode to potential delta between `Age event` and `Sample collection time`, hence the chosen events should be in temporal proximity.
+Repertoire.subject.age_unit.id,age_unit.id,subject,Patient,,,string,FALSE,Age unit,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.subject.age_unit.label,age_unit.label,subject,Patient,,,string,FALSE,Age unit,Label of the concept in the respective ontology,,
+Repertoire.subject.age_event,age_event,subject,Patient,,,string,FALSE,Age event,"Event in the study schedule to which `Age` refers. For NCBI BioSample this MUST be `sampling`. For other implementations submitters need to be aware that there is currently no mechanism to encode to potential delta between `Age event` and `Sample collection time`, hence the chosen events should be in temporal proximity.
 ",enrollment,
-Repertoire.subject.age,age,subject,Patient,Patient.age,string,FALSE,,,,
-Repertoire.subject.ancestry_population,ancestry_population,subject,Patient,Patient.country,string,FALSE,Ancestry population,Broad geographic origin of ancestry (continent),"list of continents, mixed or unknown",
-Repertoire.subject.ethnicity,ethnicity,subject,Patient,Patient.ethnic,string,FALSE,Ethnicity,Ethnic group of subject (defined as cultural/language-based membership),"English, Kurds, Manchu, Yakuts (and other fields from Wikipedia)",
-Repertoire.subject.race,race,subject,Patient,,string,FALSE,Race,Racial group of subject (as defined by NIH),"White, American Indian or Alaska Native, Black, Asian, Native Hawaiian or Other Pacific Islander, Other",
-Repertoire.subject.strain_name,strain_name,subject,Patient,,string,FALSE,Strain name,Non-human designation of the strain or breed of animal used,C57BL/6J,
-Repertoire.subject.linked_subjects,linked_subjects,subject,Patient,,string,FALSE,Relation to other subjects,Subject ID to which `Relation type` refers,SUB1355648,
-Repertoire.subject.link_type,link_type,subject,Patient,,string,FALSE,Relation type,"Relation between subject and `linked_subjects`, can be genetic or environmental (e.g.exposure)","father, daughter, household",
-Repertoire.subject.diagnosis.Diagnosis.study_group_description,study_group_description,subject,Patient,Patient.cohort,string,TRUE,Study group description,Designation of study arm to which the subject is assigned to,control,
-Repertoire.subject.diagnosis.Diagnosis.disease_diagnosis.id,disease_diagnosis.id,subject,Patient,,string,TRUE,Diagnosis,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.subject.diagnosis.Diagnosis.disease_diagnosis.label,disease_diagnosis.label,subject,Patient,Patient.status,string,TRUE,Diagnosis,Label of the concept in the respective ontology,,
-Repertoire.subject.diagnosis.Diagnosis.disease_length,disease_length,subject,Patient,,string,TRUE,Length of disease,Time duration between initial diagnosis and current intervention,23 months,
-Repertoire.subject.diagnosis.Diagnosis.disease_stage,disease_stage,subject,Patient,,string,TRUE,Disease stage,Stage of disease at current intervention,Stage II,
-Repertoire.subject.diagnosis.Diagnosis.prior_therapies,prior_therapies,subject,Patient,,string,TRUE,Prior therapies for primary disease under study,List of all relevant previous therapies applied to subject for treatment of `Diagnosis`,melphalan/prednisone,
-Repertoire.subject.diagnosis.Diagnosis.immunogen,immunogen,subject,Patient,,string,TRUE,Immunogen/agent,"Antigen, vaccine or drug applied to subject at this intervention",bortezomib,
-Repertoire.subject.diagnosis.Diagnosis.intervention,intervention,subject,Patient,,string,TRUE,Intervention definition,Description of intervention,"systemic chemotherapy, 6 cycles, 1.25 mg/m2",
-Repertoire.subject.diagnosis.Diagnosis.medical_history,medical_history,subject,Patient,,string,TRUE,Other relevant medical history,Medical history of subject that is relevant to assess the course of disease and/or treatment,"MGUS, first diagnosed 5 years prior",
-Repertoire.subject.genotype.receptor_genotype_set.receptor_genotype_set_id,receptor_genotype_set_id,subject,Patient,,string,FALSE,,A unique identifier for this Receptor Genotype Set.,,
-Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_set_id,mhc_genotype_set_id,subject,Patient,,string,FALSE,,A unique identifier for this MHC Genotype Set.,,
-Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.mhc_genotype_id,mhc_genotype_id,subject,Patient,,string,TRUE,,"A unique identifier for this MHC Genotype, assumed to be unique in the context of the study.",,
-Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.genotype_class,genotype_class,subject,Patient,,string,TRUE,,,MHC,
-Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.germline_alleles.gene_symbol,gene_symbol,subject,Patient,,string,TRUE,,The accepted name for this gene,,
-Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.germline_alleles.germline_set_ref,germline_set_ref,subject,Patient,,string,TRUE,,Repository and list from which it was taken (issuer/name/version),,
-Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.genotype_process,genotype_process,subject,Patient,,string,TRUE,Genotype acquisition process,Information on how the genotype was acquired. Controlled vocabulary.,repertoire_sequencing,
-Repertoire.sample.SampleProcessing.sample_processing_id,sample_processing_id,SampleProcessing,Sample,,string,TRUE,Sample processing ID,"Identifier for the sample processing object. This field should be unique within the repertoire. This field can be used to uniquely identify the combination of sample, cell processing, nucleic acid processing and sequencing run information for the repertoire.
+Repertoire.subject.age,age,subject,Patient,Patient.age,Subjects.Age,string,FALSE,,,,
+Repertoire.subject.ancestry_population,ancestry_population,subject,Patient,Patient.country,Subjects.Country,string,FALSE,Ancestry population,Broad geographic origin of ancestry (continent),"list of continents, mixed or unknown",
+Repertoire.subject.ethnicity,ethnicity,subject,Patient,Patient.ethnic,Subjects.Ethnic,string,FALSE,Ethnicity,Ethnic group of subject (defined as cultural/language-based membership),"English, Kurds, Manchu, Yakuts (and other fields from Wikipedia)",
+Repertoire.subject.race,race,subject,Patient,,,string,FALSE,Race,Racial group of subject (as defined by NIH),"White, American Indian or Alaska Native, Black, Asian, Native Hawaiian or Other Pacific Islander, Other",
+Repertoire.subject.strain_name,strain_name,subject,Patient,,,string,FALSE,Strain name,Non-human designation of the strain or breed of animal used,C57BL/6J,
+Repertoire.subject.linked_subjects,linked_subjects,subject,Patient,,,string,FALSE,Relation to other subjects,Subject ID to which `Relation type` refers,SUB1355648,
+Repertoire.subject.link_type,link_type,subject,Patient,,,string,FALSE,Relation type,"Relation between subject and `linked_subjects`, can be genetic or environmental (e.g.exposure)","father, daughter, household",
+Repertoire.subject.diagnosis.Diagnosis.study_group_description,study_group_description,subject,Patient,Patient.cohort,Subjects.Cohort,string,TRUE,Study group description,Designation of study arm to which the subject is assigned to,control,
+Repertoire.subject.diagnosis.Diagnosis.disease_diagnosis.id,disease_diagnosis.id,subject,Patient,,,string,TRUE,Diagnosis,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.subject.diagnosis.Diagnosis.disease_diagnosis.label,disease_diagnosis.label,subject,Patient,Patient.status,Subjects.Health Status,string,TRUE,Diagnosis,Label of the concept in the respective ontology,,
+Repertoire.subject.diagnosis.Diagnosis.disease_length,disease_length,subject,Patient,,,string,TRUE,Length of disease,Time duration between initial diagnosis and current intervention,23 months,
+Repertoire.subject.diagnosis.Diagnosis.disease_stage,disease_stage,subject,Patient,,,string,TRUE,Disease stage,Stage of disease at current intervention,Stage II,
+Repertoire.subject.diagnosis.Diagnosis.prior_therapies,prior_therapies,subject,Patient,,,string,TRUE,Prior therapies for primary disease under study,List of all relevant previous therapies applied to subject for treatment of `Diagnosis`,melphalan/prednisone,
+Repertoire.subject.diagnosis.Diagnosis.immunogen,immunogen,subject,Patient,,,string,TRUE,Immunogen/agent,"Antigen, vaccine or drug applied to subject at this intervention",bortezomib,
+Repertoire.subject.diagnosis.Diagnosis.intervention,intervention,subject,Patient,,,string,TRUE,Intervention definition,Description of intervention,"systemic chemotherapy, 6 cycles, 1.25 mg/m2",
+Repertoire.subject.diagnosis.Diagnosis.medical_history,medical_history,subject,Patient,,,string,TRUE,Other relevant medical history,Medical history of subject that is relevant to assess the course of disease and/or treatment,"MGUS, first diagnosed 5 years prior",
+Repertoire.subject.genotype.receptor_genotype_set.receptor_genotype_set_id,receptor_genotype_set_id,subject,Patient,,,string,FALSE,,A unique identifier for this Receptor Genotype Set.,,
+Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_set_id,mhc_genotype_set_id,subject,Patient,,,string,FALSE,,A unique identifier for this MHC Genotype Set.,,
+Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.mhc_genotype_id,mhc_genotype_id,subject,Patient,,,string,TRUE,,"A unique identifier for this MHC Genotype, assumed to be unique in the context of the study.",,
+Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.genotype_class,genotype_class,subject,Patient,,,string,TRUE,,,MHC,
+Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.germline_alleles.gene_symbol,gene_symbol,subject,Patient,,,string,TRUE,,The accepted name for this gene,,
+Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.germline_alleles.germline_set_ref,germline_set_ref,subject,Patient,,,string,TRUE,,Repository and list from which it was taken (issuer/name/version),,
+Repertoire.subject.genotype.mhc_genotype_set.mhc_genotype_class_list.MHCGenotype.genotype_process,genotype_process,subject,Patient,,,string,TRUE,Genotype acquisition process,Information on how the genotype was acquired. Controlled vocabulary.,repertoire_sequencing,
+Repertoire.sample.SampleProcessing.sample_processing_id,sample_processing_id,SampleProcessing,Sample,,,string,TRUE,Sample processing ID,"Identifier for the sample processing object. This field should be unique within the repertoire. This field can be used to uniquely identify the combination of sample, cell processing, nucleic acid processing and sequencing run information for the repertoire.
 ",,
-Repertoire.sample.Sample.sample_id,sample_id,Sample,Sample,,string,TRUE,Biological sample ID,"Sample ID assigned by submitter, unique within study",SUP52415,
-Repertoire.sample.Sample.sample_type,sample_type,Sample,Sample,,string,TRUE,Sample type,"The way the sample was obtained, e.g. fine-needle aspirate, organ harvest, peripheral venous puncture",Biopsy,
-Repertoire.sample.Sample.tissue.id,tissue.id,Sample,Sample,,string,TRUE,Tissue,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.Sample.tissue.label,tissue.label,Sample,Sample,TissuePro.tissue,string,TRUE,Tissue,Label of the concept in the respective ontology,,
-Repertoire.sample.Sample.anatomic_site,anatomic_site,Sample,Sample,,string,TRUE,Anatomic site,"The anatomic location of the tissue, e.g. Inguinal, femur",Iliac crest,
-Repertoire.sample.Sample.disease_state_sample,disease_state_sample,Sample,Sample,,string,TRUE,Disease state of sample,Histopathologic evaluation of the sample,Tumor infiltration,
-Repertoire.sample.Sample.collection_time_point_relative,collection_time_point_relative,Sample,Sample,(Sample.date),number,TRUE,Sample collection time,"Time point at which sample was taken, relative to `Collection time event`",14,
-Repertoire.sample.Sample.collection_time_point_relative_unit.id,collection_time_point_relative_unit.id,Sample,Sample,,string,TRUE,Sample collection time unit,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.Sample.collection_time_point_relative_unit.label,collection_time_point_relative_unit.label,Sample,Sample,,string,TRUE,Sample collection time unit,Label of the concept in the respective ontology,,
-Repertoire.sample.Sample.collection_time_point_reference,collection_time_point_reference,Sample,Sample,,string,TRUE,Collection time event,Event in the study schedule to which `Sample collection time` relates to,Primary vaccination,
-Repertoire.sample.Sample.biomaterial_provider,biomaterial_provider,Sample,Sample,,string,TRUE,Biomaterial provider,Name and address of the entity providing the sample,"Tissues-R-Us, Tampa, FL, USA",
-Repertoire.sample.CellProcessing.tissue_processing,tissue_processing,CellProcessing,TissuePro,TissuePro.name,string,TRUE,Tissue processing,Enzymatic digestion and/or physical methods used to isolate cells from sample,"Collagenase A/Dnase I digested, followed by Percoll gradient",
-Repertoire.sample.CellProcessing.cell_subset.id,cell_subset.id,CellProcessing,TissuePro,,string,TRUE,Cell subset,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.CellProcessing.cell_subset.label,cell_subset.label,CellProcessing,TissuePro,TissuePro.cell_type,string,TRUE,Cell subset,Label of the concept in the respective ontology,,
-Repertoire.sample.CellProcessing.cell_phenotype,cell_phenotype,CellProcessing,TissuePro,TissuePro.isotype,string,TRUE,Cell subset phenotype,List of cellular markers and their expression levels used to isolate the cell population,CD19+ CD38+ CD27+ IgM- IgD-,
-Repertoire.sample.CellProcessing.cell_species.id,cell_species.id,CellProcessing,TissuePro,,string,TRUE,Cell species,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.CellProcessing.cell_species.label,cell_species.label,CellProcessing,TissuePro,TissuePro.species,string,TRUE,Cell species,Label of the concept in the respective ontology,,
-Repertoire.sample.CellProcessing.single_cell,single_cell,CellProcessing,TissuePro,,boolean,TRUE,Single-cell sort,TRUE if single cells were isolated into separate compartments,,
-Repertoire.sample.CellProcessing.cell_number,cell_number,CellProcessing,TissuePro,,integer,TRUE,Number of cells in experiment,Total number of cells that went into the experiment,1000000,
-Repertoire.sample.CellProcessing.cells_per_reaction,cells_per_reaction,CellProcessing,TissuePro,,integer,TRUE,Number of cells per sequencing reaction,Number of cells for each biological replicate,50000,
-Repertoire.sample.CellProcessing.cell_storage,cell_storage,CellProcessing,TissuePro,,boolean,TRUE,Cell storage,TRUE if cells were cryo-preserved between isolation and further processing,TRUE,
-Repertoire.sample.CellProcessing.cell_quality,cell_quality,CellProcessing,TissuePro,,string,TRUE,Cell quality,Relative amount of viable cells after preparation and (if applicable) thawing,90% viability as determined by 7-AAD,
-Repertoire.sample.CellProcessing.cell_isolation,cell_isolation,CellProcessing,TissuePro,,string,TRUE,Cell isolation / enrichment procedure,Description of the procedure used for marker-based isolation or enrich cells,"Cells were stained with fluorochrome labeled antibodies and then sorted on a FlowMerlin (CE) cytometer.
+Repertoire.sample.Sample.sample_id,sample_id,Sample,Sample,,,string,TRUE,Biological sample ID,"Sample ID assigned by submitter, unique within study",SUP52415,
+Repertoire.sample.Sample.sample_type,sample_type,Sample,Sample,,,string,TRUE,Sample type,"The way the sample was obtained, e.g. fine-needle aspirate, organ harvest, peripheral venous puncture",Biopsy,
+Repertoire.sample.Sample.tissue.id,tissue.id,Sample,Sample,,,string,TRUE,Tissue,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.sample.Sample.tissue.label,tissue.label,Sample,Sample,TissuePro.tissue,Tissue Processing.Tissue,string,TRUE,Tissue,Label of the concept in the respective ontology,,
+Repertoire.sample.Sample.anatomic_site,anatomic_site,Sample,Sample,,,string,TRUE,Anatomic site,"The anatomic location of the tissue, e.g. Inguinal, femur",Iliac crest,
+Repertoire.sample.Sample.disease_state_sample,disease_state_sample,Sample,Sample,,,string,TRUE,Disease state of sample,Histopathologic evaluation of the sample,Tumor infiltration,
+Repertoire.sample.Sample.collection_time_point_relative,collection_time_point_relative,Sample,Sample,(Sample.date),,number,TRUE,Sample collection time,"Time point at which sample was taken, relative to `Collection time event`",14,
+Repertoire.sample.Sample.collection_time_point_relative_unit.id,collection_time_point_relative_unit.id,Sample,Sample,,,string,TRUE,Sample collection time unit,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.sample.Sample.collection_time_point_relative_unit.label,collection_time_point_relative_unit.label,Sample,Sample,,,string,TRUE,Sample collection time unit,Label of the concept in the respective ontology,,
+Repertoire.sample.Sample.collection_time_point_reference,collection_time_point_reference,Sample,Sample,,,string,TRUE,Collection time event,Event in the study schedule to which `Sample collection time` relates to,Primary vaccination,
+Repertoire.sample.Sample.biomaterial_provider,biomaterial_provider,Sample,Sample,,,string,TRUE,Biomaterial provider,Name and address of the entity providing the sample,"Tissues-R-Us, Tampa, FL, USA",
+Repertoire.sample.CellProcessing.tissue_processing,tissue_processing,CellProcessing,TissuePro,TissuePro.name,,string,TRUE,Tissue processing,Enzymatic digestion and/or physical methods used to isolate cells from sample,"Collagenase A/Dnase I digested, followed by Percoll gradient",
+Repertoire.sample.CellProcessing.cell_subset.id,cell_subset.id,CellProcessing,TissuePro,,,string,TRUE,Cell subset,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.sample.CellProcessing.cell_subset.label,cell_subset.label,CellProcessing,TissuePro,TissuePro.cell_type,Tissue Processing.Cell Type,string,TRUE,Cell subset,Label of the concept in the respective ontology,,
+Repertoire.sample.CellProcessing.cell_phenotype,cell_phenotype,CellProcessing,TissuePro,TissuePro.isotype,Tissue Processing.Isotype,string,TRUE,Cell subset phenotype,List of cellular markers and their expression levels used to isolate the cell population,CD19+ CD38+ CD27+ IgM- IgD-,
+Repertoire.sample.CellProcessing.cell_species.id,cell_species.id,CellProcessing,TissuePro,,,string,TRUE,Cell species,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.sample.CellProcessing.cell_species.label,cell_species.label,CellProcessing,TissuePro,TissuePro.species,Tissue Processing.Species,string,TRUE,Cell species,Label of the concept in the respective ontology,,
+Repertoire.sample.CellProcessing.single_cell,single_cell,CellProcessing,TissuePro,,,boolean,TRUE,Single-cell sort,TRUE if single cells were isolated into separate compartments,,
+Repertoire.sample.CellProcessing.cell_number,cell_number,CellProcessing,TissuePro,,,integer,TRUE,Number of cells in experiment,Total number of cells that went into the experiment,1000000,
+Repertoire.sample.CellProcessing.cells_per_reaction,cells_per_reaction,CellProcessing,TissuePro,,,integer,TRUE,Number of cells per sequencing reaction,Number of cells for each biological replicate,50000,
+Repertoire.sample.CellProcessing.cell_storage,cell_storage,CellProcessing,TissuePro,,,boolean,TRUE,Cell storage,TRUE if cells were cryo-preserved between isolation and further processing,TRUE,
+Repertoire.sample.CellProcessing.cell_quality,cell_quality,CellProcessing,TissuePro,,,string,TRUE,Cell quality,Relative amount of viable cells after preparation and (if applicable) thawing,90% viability as determined by 7-AAD,
+Repertoire.sample.CellProcessing.cell_isolation,cell_isolation,CellProcessing,TissuePro,,,string,TRUE,Cell isolation / enrichment procedure,Description of the procedure used for marker-based isolation or enrich cells,"Cells were stained with fluorochrome labeled antibodies and then sorted on a FlowMerlin (CE) cytometer.
 ",
-Repertoire.sample.CellProcessing.cell_processing_protocol,cell_processing_protocol,CellProcessing,TissuePro,,string,TRUE,Processing protocol,"Description of the methods applied to the sample including cell preparation/ isolation/enrichment and nucleic acid extraction. This should closely mirror the Materials and methods section in the manuscript.
+Repertoire.sample.CellProcessing.cell_processing_protocol,cell_processing_protocol,CellProcessing,TissuePro,,,string,TRUE,Processing protocol,"Description of the methods applied to the sample including cell preparation/ isolation/enrichment and nucleic acid extraction. This should closely mirror the Materials and methods section in the manuscript.
 ",Stimulated wih anti-CD3/anti-CD28,
-Repertoire.sample.NucleicAcidProcessing.template_class,template_class,NucleicAcidProcessing,SeqProtocol,SeqProtocol.template_class,string,TRUE,Target substrate,"The class of nucleic acid that was used as primary starting material for the following procedures
+Repertoire.sample.NucleicAcidProcessing.template_class,template_class,NucleicAcidProcessing,SeqProtocol,SeqProtocol.template_class,Sequence Protocol.Helix,string,TRUE,Target substrate,"The class of nucleic acid that was used as primary starting material for the following procedures
 ",RNA,
-Repertoire.sample.NucleicAcidProcessing.template_quality,template_quality,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Target substrate quality,Description and results of the quality control performed on the template material,RIN 9.2,
-Repertoire.sample.NucleicAcidProcessing.template_amount,template_amount,NucleicAcidProcessing,SeqProtocol,,number,TRUE,Template amount,Amount of template that went into the process,1000,
-Repertoire.sample.NucleicAcidProcessing.template_amount_unit.id,template_amount_unit.id,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Template amount time unit,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.NucleicAcidProcessing.template_amount_unit.label,template_amount_unit.label,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Template amount time unit,Label of the concept in the respective ontology,,
-Repertoire.sample.NucleicAcidProcessing.library_generation_method,library_generation_method,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Library generation method,Generic type of library generation,RT(oligo-dT)+TS(UMI)+PCR,
-Repertoire.sample.NucleicAcidProcessing.library_generation_protocol,library_generation_protocol,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Library generation protocol,Description of processes applied to substrate to obtain a library that is ready for sequencing,cDNA was generated using,
-Repertoire.sample.NucleicAcidProcessing.library_generation_kit_version,library_generation_kit_version,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Protocol IDs,"When using a library generation protocol from a commercial provider, provide the protocol version number",v2.1 (2016-09-15),
-Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.pcr_target_locus,pcr_target_locus,NucleicAcidProcessing,SeqProtocol,Sample.chain,string,TRUE,Target locus for PCR,"Designation of the target locus. Note that this field uses a controlled vocubulary that is meant to provide a generic classification of the locus, not necessarily the correct designation according to a specific nomenclature.
+Repertoire.sample.NucleicAcidProcessing.template_quality,template_quality,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Target substrate quality,Description and results of the quality control performed on the template material,RIN 9.2,
+Repertoire.sample.NucleicAcidProcessing.template_amount,template_amount,NucleicAcidProcessing,SeqProtocol,,,number,TRUE,Template amount,Amount of template that went into the process,1000,
+Repertoire.sample.NucleicAcidProcessing.template_amount_unit.id,template_amount_unit.id,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Template amount time unit,"CURIE of the concept, encoding the ontology and the local ID",,
+Repertoire.sample.NucleicAcidProcessing.template_amount_unit.label,template_amount_unit.label,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Template amount time unit,Label of the concept in the respective ontology,,
+Repertoire.sample.NucleicAcidProcessing.library_generation_method,library_generation_method,NucleicAcidProcessing,SeqProtocol,SeqProtocol.UMI,Sequence Protocol.UMI,string,TRUE,Library generation method,Generic type of library generation,RT(oligo-dT)+TS(UMI)+PCR,
+Repertoire.sample.NucleicAcidProcessing.library_generation_protocol,library_generation_protocol,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Library generation protocol,Description of processes applied to substrate to obtain a library that is ready for sequencing,cDNA was generated using,
+Repertoire.sample.NucleicAcidProcessing.library_generation_kit_version,library_generation_kit_version,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Protocol IDs,"When using a library generation protocol from a commercial provider, provide the protocol version number",v2.1 (2016-09-15),
+Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.pcr_target_locus,pcr_target_locus,NucleicAcidProcessing,SeqProtocol,Sample.chain,Samples.Chain,string,TRUE,Target locus for PCR,"Designation of the target locus. Note that this field uses a controlled vocubulary that is meant to provide a generic classification of the locus, not necessarily the correct designation according to a specific nomenclature.
 ",IGK,
-Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.forward_pcr_primer_target_location,forward_pcr_primer_target_location,NucleicAcidProcessing,SeqProtocol,SeqProtocol.primers_3_location,string,TRUE,Forward PCR primer target location,Position of the most distal nucleotide templated by the forward primer or primer mix,"IGHV, +23",
-Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.reverse_pcr_primer_target_location,reverse_pcr_primer_target_location,NucleicAcidProcessing,SeqProtocol,SeqProtocol.primers_5_location,string,TRUE,Reverse PCR primer target location,Position of the most proximal nucleotide templated by the reverse primer or primer mix,"IGHG, +57",
-Repertoire.sample.NucleicAcidProcessing.complete_sequences,complete_sequences,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Complete sequences,"To be considered `complete`, the procedure used for library construction MUST generate sequences that 1) include the first V gene codon that encodes the mature polypeptide chain (i.e. after the leader sequence) and 2) include the last complete codon of the J gene (i.e. 1 bp 5' of the J->C splice site) and 3) provide sequence information for all positions between 1) and 2). To be considered `complete & untemplated`, the sections of the sequences defined in points 1) to 3) of the previous sentence MUST be untemplated, i.e. MUST NOT overlap with the primers used in library preparation. `mixed` should only be used if the procedure used for library construction will likely produce multiple categories of sequences in the given experiment. It SHOULD NOT be used as a replacement of a NULL value.
+Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.forward_pcr_primer_target_location,forward_pcr_primer_target_location,NucleicAcidProcessing,SeqProtocol,SeqProtocol.primers_3_location,Sequence Protocol.Primer 3 location,string,TRUE,Forward PCR primer target location,Position of the most distal nucleotide templated by the forward primer or primer mix,"IGHV, +23",
+Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.reverse_pcr_primer_target_location,reverse_pcr_primer_target_location,NucleicAcidProcessing,SeqProtocol,SeqProtocol.primers_5_location,Sequence Protocol.Primer 5 location,string,TRUE,Reverse PCR primer target location,Position of the most proximal nucleotide templated by the reverse primer or primer mix,"IGHG, +57",
+Repertoire.sample.NucleicAcidProcessing.complete_sequences,complete_sequences,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Complete sequences,"To be considered `complete`, the procedure used for library construction MUST generate sequences that 1) include the first V gene codon that encodes the mature polypeptide chain (i.e. after the leader sequence) and 2) include the last complete codon of the J gene (i.e. 1 bp 5' of the J->C splice site) and 3) provide sequence information for all positions between 1) and 2). To be considered `complete & untemplated`, the sections of the sequences defined in points 1) to 3) of the previous sentence MUST be untemplated, i.e. MUST NOT overlap with the primers used in library preparation. `mixed` should only be used if the procedure used for library construction will likely produce multiple categories of sequences in the given experiment. It SHOULD NOT be used as a replacement of a NULL value.
 ",partial,
-Repertoire.sample.NucleicAcidProcessing.physical_linkage,physical_linkage,NucleicAcidProcessing,SeqProtocol,,string,TRUE,Physical linkage of different rearrangements,"In case an experimental setup is used that physically links nucleic acids derived from distinct `Rearrangements` before library preparation, this field describes the mode of that linkage. All `hetero_*` terms indicate that in case of paired-read sequencing, the two reads should be expected to map to distinct IG/TR loci. `*_head-head` refers to techniques that link the 5' ends of transcripts in a single-cell context. `*_tail-head` refers to techniques that link the 3' end of one transcript to the 5' end of another one in a single-cell context. This term does not provide any information whether a continuous reading-frame between the two is generated. `*_prelinked` refers to constructs in which the linkage was already present on the DNA level (e.g. scFv).
+Repertoire.sample.NucleicAcidProcessing.physical_linkage,physical_linkage,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Physical linkage of different rearrangements,"In case an experimental setup is used that physically links nucleic acids derived from distinct `Rearrangements` before library preparation, this field describes the mode of that linkage. All `hetero_*` terms indicate that in case of paired-read sequencing, the two reads should be expected to map to distinct IG/TR loci. `*_head-head` refers to techniques that link the 5' ends of transcripts in a single-cell context. `*_tail-head` refers to techniques that link the 3' end of one transcript to the 5' end of another one in a single-cell context. This term does not provide any information whether a continuous reading-frame between the two is generated. `*_prelinked` refers to constructs in which the linkage was already present on the DNA level (e.g. scFv).
 ",hetero_head-head,
-Repertoire.sample.SequencingRun.sequencing_run_id,sequencing_run_id,SequencingRun,SeqProtocol,,string,TRUE,Batch number,ID of sequencing run assigned by the sequencing facility,160101_M01234,
-Repertoire.sample.SequencingRun.total_reads_passing_qc_filter,total_reads_passing_qc_filter,SequencingRun,SeqProtocol,,integer,TRUE,Total reads passing QC filter,Number of usable reads for analysis,10365118,
-Repertoire.sample.SequencingRun.sequencing_platform,sequencing_platform,SequencingRun,SeqProtocol,SeqProtocol.sequencing_platform,string,TRUE,Sequencing platform,Designation of sequencing instrument used,Alumina LoSeq 1000,
-Repertoire.sample.SequencingRun.sequencing_facility,sequencing_facility,SequencingRun,SeqProtocol,,string,TRUE,Sequencing facility,Name and address of sequencing facility,"Seqs-R-Us, Vancouver, BC, Canada",
-Repertoire.sample.SequencingRun.sequencing_run_date,sequencing_run_date,SequencingRun,SeqProtocol,,string,TRUE,Date of sequencing run,Date of sequencing run,16/12/2016,
-Repertoire.sample.SequencingRun.sequencing_kit,sequencing_kit,SequencingRun,SeqProtocol,,string,TRUE,Sequencing kit,"Name, manufacturer, order and lot numbers of sequencing kit","FullSeq 600, Alumina, #M123456C0, 789G1HK",
-Repertoire.sample.SequencingRun.sequencing_files.file_type,file_type,SequencingRun,SeqProtocol,,string,TRUE,Raw sequencing data file type,File format for the raw reads or sequences,,
-Repertoire.sample.SequencingRun.sequencing_files.filename,filename,SequencingRun,SeqProtocol,,string,TRUE,Raw sequencing data file name,File name for the raw reads or sequences. The first file in paired-read sequencing.,MS10R-NMonson-C7JR9_S1_R1_001.fastq,
-Repertoire.sample.SequencingRun.sequencing_files.read_direction,read_direction,SequencingRun,SeqProtocol,,string,TRUE,Read direction,Read direction for the raw reads or sequences. The first file in paired-read sequencing.,forward,
-Repertoire.sample.SequencingRun.sequencing_files.read_length,read_length,SequencingRun,SeqProtocol,SeqProtocol.sequencing_length,integer,TRUE,Forward read length,Read length in bases for the first file in paired-read sequencing,300,
-Repertoire.sample.SequencingRun.sequencing_files.paired_filename,paired_filename,SequencingRun,SeqProtocol,,string,TRUE,Paired raw sequencing data file name,File name for the second file in paired-read sequencing,MS10R-NMonson-C7JR9_S1_R2_001.fastq,
-Repertoire.sample.SequencingRun.sequencing_files.paired_read_direction,paired_read_direction,SequencingRun,SeqProtocol,,string,TRUE,Paired read direction,Read direction for the second file in paired-read sequencing,reverse,
-Repertoire.sample.SequencingRun.sequencing_files.paired_read_length,paired_read_length,SequencingRun,SeqProtocol,,integer,TRUE,Paired read length,Read length in bases for the second file in paired-read sequencing,300,
-Repertoire.data_processing.DataProcessing.data_processing_id,data_processing_id,data_processing,DataPro,,string,TRUE,Data processing ID,Identifier for the data processing object.,,
-Repertoire.data_processing.DataProcessing.primary_annotation,primary_annotation,data_processing,DataPro,,boolean,TRUE,Primary annotation,"If true, indicates this is the primary or default data processing for the repertoire and its rearrangements. If false, indicates this is a secondary or additional data processing.
+Repertoire.sample.SequencingRun.sequencing_run_id,sequencing_run_id,SequencingRun,SeqProtocol,,,string,TRUE,Batch number,ID of sequencing run assigned by the sequencing facility,160101_M01234,
+Repertoire.sample.SequencingRun.total_reads_passing_qc_filter,total_reads_passing_qc_filter,SequencingRun,SeqProtocol,,,integer,TRUE,Total reads passing QC filter,Number of usable reads for analysis,10365118,
+Repertoire.sample.SequencingRun.sequencing_platform,sequencing_platform,SequencingRun,SeqProtocol,SeqProtocol.sequencing_platform,Sequence Protocol.Sequencing_platform,string,TRUE,Sequencing platform,Designation of sequencing instrument used,Alumina LoSeq 1000,
+Repertoire.sample.SequencingRun.sequencing_facility,sequencing_facility,SequencingRun,SeqProtocol,,,string,TRUE,Sequencing facility,Name and address of sequencing facility,"Seqs-R-Us, Vancouver, BC, Canada",
+Repertoire.sample.SequencingRun.sequencing_run_date,sequencing_run_date,SequencingRun,SeqProtocol,,,string,TRUE,Date of sequencing run,Date of sequencing run,16/12/2016,
+Repertoire.sample.SequencingRun.sequencing_kit,sequencing_kit,SequencingRun,SeqProtocol,,,string,TRUE,Sequencing kit,"Name, manufacturer, order and lot numbers of sequencing kit","FullSeq 600, Alumina, #M123456C0, 789G1HK",
+Repertoire.sample.SequencingRun.sequencing_files.file_type,file_type,SequencingRun,SeqProtocol,,,string,TRUE,Raw sequencing data file type,File format for the raw reads or sequences,,
+Repertoire.sample.SequencingRun.sequencing_files.filename,filename,SequencingRun,SeqProtocol,,,string,TRUE,Raw sequencing data file name,File name for the raw reads or sequences. The first file in paired-read sequencing.,MS10R-NMonson-C7JR9_S1_R1_001.fastq,
+Repertoire.sample.SequencingRun.sequencing_files.read_direction,read_direction,SequencingRun,SeqProtocol,,,string,TRUE,Read direction,Read direction for the raw reads or sequences. The first file in paired-read sequencing.,forward,
+Repertoire.sample.SequencingRun.sequencing_files.read_length,read_length,SequencingRun,SeqProtocol,SeqProtocol.sequencing_length,Sequence Protocol.Sequencing_length,integer,TRUE,Forward read length,Read length in bases for the first file in paired-read sequencing,300,
+Repertoire.sample.SequencingRun.sequencing_files.paired_filename,paired_filename,SequencingRun,SeqProtocol,,,string,TRUE,Paired raw sequencing data file name,File name for the second file in paired-read sequencing,MS10R-NMonson-C7JR9_S1_R2_001.fastq,
+Repertoire.sample.SequencingRun.sequencing_files.paired_read_direction,paired_read_direction,SequencingRun,SeqProtocol,,,string,TRUE,Paired read direction,Read direction for the second file in paired-read sequencing,reverse,
+Repertoire.sample.SequencingRun.sequencing_files.paired_read_length,paired_read_length,SequencingRun,SeqProtocol,,,integer,TRUE,Paired read length,Read length in bases for the second file in paired-read sequencing,300,
+Repertoire.data_processing.DataProcessing.data_processing_id,data_processing_id,data_processing,DataPro,,,string,TRUE,Data processing ID,Identifier for the data processing object.,,
+Repertoire.data_processing.DataProcessing.primary_annotation,primary_annotation,data_processing,DataPro,,,boolean,TRUE,Primary annotation,"If true, indicates this is the primary or default data processing for the repertoire and its rearrangements. If false, indicates this is a secondary or additional data processing.
 ",,
-Repertoire.data_processing.DataProcessing.software_versions,software_versions,data_processing,DataPro,,string,TRUE,Software tools and version numbers,"Version number and / or date, include company pipelines",IgBLAST 1.6,
-Repertoire.data_processing.DataProcessing.paired_reads_assembly,paired_reads_assembly,data_processing,DataPro,,string,TRUE,Paired read assembly,How paired end reads were assembled into a single receptor sequence,"PandaSeq (minimal overlap 50, threshold 0.8)",
-Repertoire.data_processing.DataProcessing.quality_thresholds,quality_thresholds,data_processing,DataPro,,string,TRUE,Quality thresholds,How sequences were removed from (4) based on base quality scores,Average Phred score >=20,
-Repertoire.data_processing.DataProcessing.primer_match_cutoffs,primer_match_cutoffs,data_processing,DataPro,,string,TRUE,Primer match cutoffs,"How primers were identified in the sequences, were they removed/masked/etc?",Hamming distance <= 2,
-Repertoire.data_processing.DataProcessing.collapsing_method,collapsing_method,data_processing,DataPro,,string,TRUE,Collapsing method,The method used for combining multiple sequences from (4) into a single sequence in (5),MUSCLE 3.8.31,
-Repertoire.data_processing.DataProcessing.data_processing_protocols,data_processing_protocols,data_processing,DataPro,,string,TRUE,Data processing protocols,General description of how QC is performed,Data was processed using [...],
-Repertoire.data_processing.DataProcessing.data_processing_files,data_processing_files,data_processing,DataPro,,string,TRUE,Processed data file names,,,
-Repertoire.data_processing.DataProcessing.germline_database,germline_database,data_processing,DataPro,,string,TRUE,V(D)J germline reference database,Source of germline V(D)J genes with version number or date accessed.,"ENSEMBL, Homo sapiens build 90, 2017-10-01",
-Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_provenance_id,data_processing,DataPro,,string,TRUE,Analysis provenance ID,Identifier for machine-readable PROV model of analysis provenance,,
-Unmapped,num_subjects,,Study,num_subjects,integer,FALSE,Subjects,Number of subjects in the study,,Derived at take-on
-,num_samples,,Study,num_samples,integer,FALSE,Samples,Number of samples in the study,,Derived at take-on
-,accession_reference,,Study,accession_reference,string,FALSE,Study Ref,"URL of the study in the registry
+Repertoire.data_processing.DataProcessing.software_versions,software_versions,data_processing,DataPro,,,string,TRUE,Software tools and version numbers,"Version number and / or date, include company pipelines",IgBLAST 1.6,
+Repertoire.data_processing.DataProcessing.paired_reads_assembly,paired_reads_assembly,data_processing,DataPro,,,string,TRUE,Paired read assembly,How paired end reads were assembled into a single receptor sequence,"PandaSeq (minimal overlap 50, threshold 0.8)",
+Repertoire.data_processing.DataProcessing.quality_thresholds,quality_thresholds,data_processing,DataPro,,,string,TRUE,Quality thresholds,How sequences were removed from (4) based on base quality scores,Average Phred score >=20,
+Repertoire.data_processing.DataProcessing.primer_match_cutoffs,primer_match_cutoffs,data_processing,DataPro,,,string,TRUE,Primer match cutoffs,"How primers were identified in the sequences, were they removed/masked/etc?",Hamming distance <= 2,
+Repertoire.data_processing.DataProcessing.collapsing_method,collapsing_method,data_processing,DataPro,,,string,TRUE,Collapsing method,The method used for combining multiple sequences from (4) into a single sequence in (5),MUSCLE 3.8.31,
+Repertoire.data_processing.DataProcessing.data_processing_protocols,data_processing_protocols,data_processing,DataPro,,,string,TRUE,Data processing protocols,General description of how QC is performed,Data was processed using [...],
+Repertoire.data_processing.DataProcessing.data_processing_files,data_processing_files,data_processing,DataPro,,,string,TRUE,Processed data file names,,,
+Repertoire.data_processing.DataProcessing.germline_database,germline_database,data_processing,DataPro,,,string,TRUE,V(D)J germline reference database,Source of germline V(D)J genes with version number or date accessed.,"ENSEMBL, Homo sapiens build 90, 2017-10-01",
+Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_provenance_id,data_processing,DataPro,,,string,TRUE,Analysis provenance ID,Identifier for machine-readable PROV model of analysis provenance,,
+,num_subjects,,Study,num_subjects,Number of Subjects,integer,FALSE,Subjects,Number of subjects in the study,,Derived at take-on
+,num_samples,,Study,num_samples,Number of Samples,integer,FALSE,Samples,Number of samples in the study,,Derived at take-on
+,accession_reference,,Study,accession_reference,,string,FALSE,Study Ref,"URL of the study in the registry
 ",,Derived from study.study_id
-,sub_cell_type,,TissuePro,sub_cell_type,string,FALSE,Sub Cell Type,Sub cell type,,?
-,UMI,,SeqProtocol,UMI,boolean,FALSE,UMI,Checked if unique mlecular identifiers are included in the reads,,Subset of NucleicAcidProcessing.library_generation_method
-,name,,Patient,name,string,FALSE,Subject name,Subject name as allocated by VDJbase,,Determined by pipeline
-,igsnper_sample_id,,Patient,igsnper_sample_id,integer,FALSE,Igsnper Sample ID,Sample ID as allocated by IgSNPer,,Detemined at take-on
-,name,,Sample,name,string,FALSE,Sample anme,Sample name as allocated by VDJbase,,Determined by pipeline
-,reads,,Sample,reads,integer,FALSE,Reads,Number of reads,,Determined by pipeline
-,genotype,,Sample,genotype,string,FALSE,Genotype report,Link to genotype report,,Derived at take-on
-,genotype_graph,,Sample,genotype_graph,string,FALSE,Genotype plots,Link to genotype plots,,Derived at take-on
-,samples_group,,Sample,samples_group,string,FALSE,Sample group,Sample group,,? Possibly sample_processing_id
+,sub_cell_type,,TissuePro,sub_cell_type,Tissue Processing.Sub Cell Type,string,FALSE,Sub Cell Type,Sub cell type,,?
+,name,,Patient,name,,string,FALSE,Subject name,Subject name as allocated by VDJbase,,Determined by pipeline
+,igsnper_sample_id,,Patient,igsnper_sample_id,,integer,FALSE,Igsnper Sample ID,Sample ID as allocated by IgSNPer,,Detemined at take-on
+,name,,Sample,name,,string,FALSE,Sample name,Sample name as allocated by VDJbase,,Determined by pipeline
+,reads,,Sample,reads,Samples.Reads,integer,FALSE,Reads,Number of reads,,Determined by pipeline
+,genotype,,Sample,genotype,,string,FALSE,Genotype report,Link to genotype report,,Derived at take-on
+,genotype_graph,,Sample,genotype_graph,,string,FALSE,Genotype plots,Link to genotype plots,,Derived at take-on
+,sample_group,,Sample,sample_group,Samples.Sample Group,string,FALSE,Sample group,Sample group,,? Possibly sample_processing_id
+,name,,Study,name,,string,FALSE,Study name,Study name,,
+,name,,GenoDetection,name,Genotype Detections.name,string,FALSE,Geno pipeline name,Pipeline v. a034f5,,
+,prepro_tool,,GenoDetection,prepro_tool,Genotype Detections.Pre-processing,string,FALSE,Preprocessing tool,PRESTO,,
+,aligner_tool,,GenoDetection,aligner_tool,Genotype Detections.Alignment Tool,string,FALSE,Aligner tool,IgBLAST,,
+,aligner_ver,,GenoDetection,aligner_ver,Genotype Detections.Aligner Version,string,FALSE,Aligner version,1.18,,
+,aligner_reference_v,,GenoDetection,aligner_reference_v,Genotype Detections.Alignment reference v,string,FALSE,Aligner ref V,IMGT full - version 2021-06-06,,
+,aligner_reference_d,,GenoDetection,aligner_reference_d,Genotype Detections.Alignment reference d,string,FALSE,Aligner ref D,IMGT full - version 2021-06-06,,
+,aligner_reference_j,,GenoDetection,aligner_reference_j,Genotype Detections.Alignment reference j,string,FALSE,Aligner ref J,IMGT full - version 2021-06-06,,
+,geno_tool,,GenoDetection,geno_tool,Genotype Detections.Genotyper Tool,string,FALSE,Genotyping tool,TIgGER,,
+,geno_ver,,GenoDetection,geno_ver,Genotype Detections.Genotyper Version,string,FALSE,Genotyping tool version,1.2,,
+,haplotype_tool,,GenoDetection,haplotype_tool,Genotype Detections.Haplotyper Tool,string,FALSE,Haplotyping tool,RabHIT,,
+,haplotype_ver,,GenoDetection,haplotype_ver,Genotype Detections.Haplotyper Version,string,FALSE,Haplotyping tool version,1.2,,
+,single_assignment,,GenoDetection,single_assignment,Genotype Detections.Single Assignment,boolean,FALSE,Single assignment,TRUE,,
+,sample_basis,,GenoDetection,sample_basis,Genotype Detections.Repertoire or Germline,string,FALSE,Sample basis,Germline,,

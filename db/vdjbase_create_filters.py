@@ -13,7 +13,7 @@ prelude = '''
 # This file is created programmatically by db/vdjbase_create_filters.py. DO NOT UPDATE BY HAND. 
 
 from sqlalchemy import func
-from db.vdjbase_airr_model import Sample, Patient, Study, TissuePro, SeqProtocol, DataPro
+from db.vdjbase_airr_model import GenoDetection, Sample, Patient, Study, TissuePro, SeqProtocol, DataPro
 from db.vdjbase_model import Allele, Gene, AlleleConfidenceReport
 
 '''

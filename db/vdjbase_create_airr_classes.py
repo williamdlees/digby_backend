@@ -1,6 +1,5 @@
 # Create definitions for the MiAIRR SQLAlchemy classes, using the information from vdjbase_airr_schema_defs.csv
 
-import csv
 import stringcase
 
 from db.vdjbase_airr_common import read_definition_data
@@ -23,17 +22,18 @@ from db.vdjbase_model import Base
 '''
 
 specials = {
-    'igsnper_sample_id': "Column(ForeignKey('samples.id'), nullable=False, index=True)"
+    'igsnper_sample_id': "Column(ForeignKey('sample.id'), nullable=True, index=True)"
 }
 
 key_texts = {
     'Patient': """
-    study_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
+    study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
+    study = relationship('Study')
     samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
 """,
 
     'Sample': """
-    geno_detection_id = Column(ForeignKey('geno_detection.id'), nullable=False, index=True)
+    geno_detection_id = Column(ForeignKey('geno_detection.id'), nullable=True, index=True)
     patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
     seq_protocol_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
@@ -64,7 +64,7 @@ class {table_name}(Base):
 
     for item in items:
         decl = None
-        if item['type'] == 'string':
+        if item['type'] == 'string' or item['list'] == 'TRUE':
             decl = 'Column(String(100))'
         elif item['type'] == 'number':
             decl = 'Column(DECIMAL)'
@@ -79,10 +79,10 @@ class {table_name}(Base):
             print(f'Unrecognised type in {item} - skipped')
             continue
 
-        if simple_name in specials:
-            decl = specials[simple_name]
+        if item['simple_name'] in specials:
+            decl = specials[item['simple_name']]
 
-        fo.write(f"    {simple_name} = {decl}\n")
+        fo.write(f"    {item['simple_name']} = {decl}\n")
 
     if table_name in key_texts:
         fo.write(key_texts[table_name])

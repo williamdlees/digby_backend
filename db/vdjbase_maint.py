@@ -3,7 +3,6 @@
 #
 import os.path
 import os
-import shutil
 import sys
 import traceback
 import zipfile
@@ -17,7 +16,8 @@ from db.vdjbase_confidence import check_novel_confidence
 from db.vdjbase_cross_sample import update_alleles_appearance, calculate_gene_frequencies, calculate_patterns
 from db.vdjbase_model import *
 from db.vdjbase_reference import import_reference_alleles
-from db.vdjbase_projects import import_studies, process_genotypes, add_deleted_alleles, process_haplotypes_and_stats
+from db.vdjbase_projects import import_studies
+from db.vdjbase_genotypes import process_genotypes, add_deleted_alleles, process_haplotypes_and_stats
 from db.vdjbase_exceptions import *
 
 

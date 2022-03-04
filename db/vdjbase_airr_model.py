@@ -12,13 +12,48 @@ from db.vdjbase_model import Base
 
 
 
-class Study(Base):
-    __tablename__ = "study"
+class Sample(Base):
+    __tablename__ = "sample"
 
     id = Column(Integer, primary_key=True)
     repertoire_id = Column(String(100))
     repertoire_name = Column(String(100))
     repertoire_description = Column(String(100))
+    sample_processing_id = Column(String(100))
+    sample_id = Column(String(100))
+    sample_type = Column(String(100))
+    tissue_id = Column(String(100))
+    tissue_label = Column(String(100))
+    anatomic_site = Column(String(100))
+    disease_state_sample = Column(String(100))
+    collection_time_point_relative = Column(String(100))
+    collection_time_point_relative_unit_id = Column(String(100))
+    collection_time_point_relative_unit_label = Column(String(100))
+    collection_time_point_reference = Column(String(100))
+    biomaterial_provider = Column(String(100))
+    name = Column(String(100))
+    reads = Column(Integer)
+    genotype = Column(String(100))
+    genotype_graph = Column(String(100))
+    sample_group = Column(String(100))
+
+    geno_detection_id = Column(ForeignKey('geno_detection.id'), nullable=True, index=True)
+    patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
+    seq_protocol_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
+    study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
+    tissue_pro_id = Column(ForeignKey('tissue_pro.id'), nullable=False, index=True)    
+    geno_detection = relationship('GenoDetection')
+    seq_protocol = relationship('SeqProtocol')
+    study = relationship('Study')
+    tissue_pro = relationship('TissuePro')
+    alleles = relationship("AllelesSample", back_populates="sample")
+    patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
+
+
+class Study(Base):
+    __tablename__ = "study"
+
+    id = Column(Integer, primary_key=True)
     study_id = Column(String(100))
     study_title = Column(String(100))
     study_type_id = Column(String(100))
@@ -38,6 +73,7 @@ class Study(Base):
     num_subjects = Column(Integer)
     num_samples = Column(Integer)
     accession_reference = Column(String(100))
+    name = Column(String(100))
 
 
 class Patient(Base):
@@ -80,45 +116,11 @@ class Patient(Base):
     germline_set_ref = Column(String(100))
     genotype_process = Column(String(100))
     name = Column(String(100))
-    igsnper_sample_id = Column(ForeignKey('samples.id'), nullable=False, index=True)
+    igsnper_sample_id = Column(ForeignKey('sample.id'), nullable=True, index=True)
 
-    study_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
-    samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
-
-
-class Sample(Base):
-    __tablename__ = "sample"
-
-    id = Column(Integer, primary_key=True)
-    sample_processing_id = Column(String(100))
-    sample_id = Column(String(100))
-    sample_type = Column(String(100))
-    tissue_id = Column(String(100))
-    tissue_label = Column(String(100))
-    anatomic_site = Column(String(100))
-    disease_state_sample = Column(String(100))
-    collection_time_point_relative = Column(DECIMAL)
-    collection_time_point_relative_unit_id = Column(String(100))
-    collection_time_point_relative_unit_label = Column(String(100))
-    collection_time_point_reference = Column(String(100))
-    biomaterial_provider = Column(String(100))
-    name = Column(String(100))
-    reads = Column(Integer)
-    genotype = Column(String(100))
-    genotype_graph = Column(String(100))
-    samples_group = Column(String(100))
-
-    geno_detection_id = Column(ForeignKey('geno_detection.id'), nullable=False, index=True)
-    patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
-    seq_protocol_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
-    tissue_pro_id = Column(ForeignKey('tissue_pro.id'), nullable=False, index=True)    
-    geno_detection = relationship('GenoDetection')
-    seq_protocol = relationship('SeqProtocol')
     study = relationship('Study')
-    tissue_pro = relationship('TissuePro')
-    alleles = relationship("AllelesSample", back_populates="sample")
-    patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
+    samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
 
 
 class TissuePro(Base):
@@ -131,10 +133,10 @@ class TissuePro(Base):
     cell_phenotype = Column(String(100))
     cell_species_id = Column(String(100))
     cell_species_label = Column(String(100))
-    single_cell = Column(Boolean)
-    cell_number = Column(Integer)
-    cells_per_reaction = Column(Integer)
-    cell_storage = Column(Boolean)
+    single_cell = Column(String(100))
+    cell_number = Column(String(100))
+    cells_per_reaction = Column(String(100))
+    cell_storage = Column(String(100))
     cell_quality = Column(String(100))
     cell_isolation = Column(String(100))
     cell_processing_protocol = Column(String(100))
@@ -147,7 +149,7 @@ class SeqProtocol(Base):
     id = Column(Integer, primary_key=True)
     template_class = Column(String(100))
     template_quality = Column(String(100))
-    template_amount = Column(DECIMAL)
+    template_amount = Column(String(100))
     template_amount_unit_id = Column(String(100))
     template_amount_unit_label = Column(String(100))
     library_generation_method = Column(String(100))
@@ -159,7 +161,7 @@ class SeqProtocol(Base):
     complete_sequences = Column(String(100))
     physical_linkage = Column(String(100))
     sequencing_run_id = Column(String(100))
-    total_reads_passing_qc_filter = Column(Integer)
+    total_reads_passing_qc_filter = Column(String(100))
     sequencing_platform = Column(String(100))
     sequencing_facility = Column(String(100))
     sequencing_run_date = Column(String(100))
@@ -167,11 +169,10 @@ class SeqProtocol(Base):
     file_type = Column(String(100))
     filename = Column(String(100))
     read_direction = Column(String(100))
-    read_length = Column(Integer)
+    read_length = Column(String(100))
     paired_filename = Column(String(100))
     paired_read_direction = Column(String(100))
-    paired_read_length = Column(Integer)
-    UMI = Column(Boolean)
+    paired_read_length = Column(String(100))
 
 
 class DataPro(Base):
@@ -179,7 +180,7 @@ class DataPro(Base):
 
     id = Column(Integer, primary_key=True)
     data_processing_id = Column(String(100))
-    primary_annotation = Column(Boolean)
+    primary_annotation = Column(String(100))
     software_versions = Column(String(100))
     paired_reads_assembly = Column(String(100))
     quality_thresholds = Column(String(100))
@@ -189,4 +190,23 @@ class DataPro(Base):
     data_processing_files = Column(String(100))
     germline_database = Column(String(100))
     analysis_provenance_id = Column(String(100))
+
+
+class GenoDetection(Base):
+    __tablename__ = "geno_detection"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100))
+    prepro_tool = Column(String(100))
+    aligner_tool = Column(String(100))
+    aligner_ver = Column(String(100))
+    aligner_reference_v = Column(String(100))
+    aligner_reference_d = Column(String(100))
+    aligner_reference_j = Column(String(100))
+    geno_tool = Column(String(100))
+    geno_ver = Column(String(100))
+    haplotype_tool = Column(String(100))
+    haplotype_ver = Column(String(100))
+    single_assignment = Column(Boolean)
+    sample_basis = Column(String(100))
 

@@ -23,23 +23,6 @@ class Gene(Base):
     alleles = relationship("Allele")
 
 
-class GenoDetection(Base):
-    __tablename__ = 'geno_detection'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
-    prepro_tool = Column(String(50), nullable=False)
-    aligner_tool = Column(String(50), nullable=False)
-    aligner_ver = Column(String(20), nullable=False)
-    aligner_reference = Column(String(50))
-    geno_tool = Column(String(50), nullable=False)
-    geno_ver = Column(String(20), nullable=False)
-    haplotype_tool = Column(String(50))
-    haplotype_ver = Column(String(20))
-    single_assignment = Column(Boolean, nullable=False)
-    detection = Column(String(20), nullable=False)
-
-
 class HaplotypesFile(Base):
     __tablename__ = 'haplotypes_file'
 

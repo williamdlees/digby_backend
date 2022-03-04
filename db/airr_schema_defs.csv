@@ -1,5 +1,5 @@
 structured_name,simple_name,airr_object,VDJbase table,existing VDJbase attribute,type,list,title,description,example,notes
-Repertoire.repertoire_id,repertoire_id,Repertoire,Study,,string,FALSE,Repertoire ID,"Identifier for the repertoire object. This identifier should be globally unique so that repertoires from multiple studies can be combined together without conflict. The repertoire_id is used to link other AIRR data to a Repertoire. Specifically, the Rearrangements Schema includes repertoire_id for referencing the specific Repertoire for that Rearrangement.
+Repertoire.repertoire_id,repertoire_id,,,,string,FALSE,Repertoire ID,"Identifier for the repertoire object. This identifier should be globally unique so that repertoires from multiple studies can be combined together without conflict. The repertoire_id is used to link other AIRR data to a Repertoire. Specifically, the Rearrangements Schema includes repertoire_id for referencing the specific Repertoire for that Rearrangement.
 ",,
 Repertoire.repertoire_name,repertoire_name,Repertoire,Study,,string,FALSE,Repertoire name,Short generic display name for the repertoire,,
 Repertoire.repertoire_description,repertoire_description,Repertoire,Study,,string,FALSE,Repertoire description,Generic repertoire description,,
