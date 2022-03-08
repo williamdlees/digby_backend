@@ -69,10 +69,10 @@ def process_genotypes(ds_dir, species, dataset, session):
         genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.study_title, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
+            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.study_title, sample.name, sample.name + '.tsv').replace('\\', '/')  # another new directory layout
+            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '.tsv').replace('\\', '/')  # another new directory layout
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
@@ -496,10 +496,10 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
     samples = session.query(Sample).all()
 
     for sample in samples:
-        sample_dir = os.path.join('samples', sample.study.study_title, sample.patient.name) #old format
+        sample_dir = os.path.join('samples', sample.study.name, sample.patient.name) #old format
 
         if not os.path.isdir(os.path.join(ds_dir, sample_dir)):
-            sample_dir = os.path.join('samples', sample.study.study_title, sample.name) #new format
+            sample_dir = os.path.join('samples', sample.study.name, sample.name) #new format
 
         if os.path.isdir(os.path.join(ds_dir, sample_dir)):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):

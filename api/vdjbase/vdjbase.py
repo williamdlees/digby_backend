@@ -193,7 +193,7 @@ class DataSetInfoAPI(Resource):
         stats['total_subjects'] = session.query(Patient.id).count()
         stats['total_samples'] = session.query(Sample.id).count()
         stats['sex_count'] = session.query(Patient.sex, func.count(Patient.sex)).group_by(Patient.sex).order_by(func.count(Patient.sex).desc()).all()
-        stats['study_count'] = session.query(Study.study_title, func.count(Sample.name)).join(Sample, Sample.study_id == Study.id).group_by(Study.study_title).order_by(func.count(Sample.name).desc()).all()
+        stats['study_count'] = session.query(Study.name, func.count(Sample.name)).join(Sample, Sample.study_id == Study.id).group_by(Study.name).order_by(func.count(Sample.name).desc()).all()
         stats['condition_count'] = session.query(Patient.disease_diagnosis_label, func.count(Patient.disease_diagnosis_label)).group_by(Patient.disease_diagnosis_label).order_by(func.count(Patient.disease_diagnosis_label).desc()).all()
         stats['celltype_count'] = session.query(TissuePro.sub_cell_type, func.count(TissuePro.sub_cell_type)).group_by(TissuePro.sub_cell_type).order_by(func.count(TissuePro.sub_cell_type).desc()).all()
         stats['tissue_count'] = session.query(TissuePro.tissue_label, func.count(TissuePro.tissue_label)).group_by(TissuePro.tissue_label).order_by(func.count(TissuePro.tissue_label).desc()).all()

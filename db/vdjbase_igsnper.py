@@ -36,7 +36,7 @@ def do_igsnper(species, dataset):
         header = "TiggerFilePath     ProjectID     SubjectID\n"
         fo.write(header)
 
-        samples = db.session.query(Sample.genotype, Sample.name, Study.study_title, Patient.name).join(Study, Sample.study_id == Study.id).join(Patient, Sample.patient_id == Patient.id).all()
+        samples = db.session.query(Sample.genotype, Sample.name, Study.name, Patient.name).join(Study, Sample.study_id == Study.id).join(Patient, Sample.patient_id == Patient.id).all()
 
         for sample in samples:
             if 'S1' in sample[1]:

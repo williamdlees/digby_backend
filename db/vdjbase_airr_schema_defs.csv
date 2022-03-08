@@ -141,8 +141,10 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,name,,Sample,name,Samples.Name,string,FALSE,Sample name,Sample name as allocated by VDJbase,,Determined by pipeline
 ,reads,,Sample,reads,Samples.Reads,integer,FALSE,VDJbase reads,Reads processed by VDJbase pipeline,,Determined by pipeline
 ,genotype,,Sample,genotype,,string,FALSE,Genotype report,Link to genotype report,,Derived at take-on
-,genotype_graph,,Sample,genotype_graph,,string,FALSE,Genotype plots,Link to genotype plots,,Derived at take-on
+,igsnper_plot_path,,Sample,igsnper_plot_path,,string,FALSE,Igsnper plot path,Path for igsnper plot,,
 ,sample_group,,Sample,sample_group,Samples.Sample Group,string,FALSE,Sample group,Sample group,,? Possibly sample_processing_id
+,genotype_stats,,Sample,genotype_stats,,string,FALSE,Genotype stats,Path to genotype stats file,,
+,genotype_report,,Sample,genotype_report,,string,FALSE,Genotype report,Path to genotype report,,
 ,name,,Study,name,,string,FALSE,Study name,Study name,,
 ,name,,GenoDetection,name,Genotype Detections.Name,string,FALSE,Geno pipeline name,Geno pipeline name,Pipeline v. a034f5,
 ,prepro_tool,,GenoDetection,prepro_tool,Genotype Detections.Pre-processing,string,FALSE,Preprocessing tool,Preprocessing tool,PRESTO,
