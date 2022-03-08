@@ -20,7 +20,7 @@ class ProfileForm(FlaskForm):
 
 
 def save_Profile(db, object, form, new=False):
-    object.study_title = form.study_title.data
+    object.name = form.name.data
     object.address = form.address.data
     object.phone = form.phone.data
 

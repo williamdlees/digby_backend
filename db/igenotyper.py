@@ -49,17 +49,17 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 seq = save_novel_allele(session, row['genotyper_gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row['V-REGION'], row['V-REGION-GAPPED'])
 
             update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, seq)
-            feature = find_feature_by_name(session, 'V-REGION', seq.study_title, subject.ref_seq)
+            feature = find_feature_by_name(session, 'V-REGION', seq.name, subject.ref_seq)
 
             if feature and seq.sequence != feature.feature_seq:
-                print(f'Error: feature {feature.study_title} sequence does not match that of sequence {seq.study_title} in subject {subject.identifier}')
+                print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in subject {subject.identifier}')
 
             if not feature:
                 feature_id = session.query(Feature).count()
-                start = reference_features[subject.ref_seq.study_title][seq.gene]['exon_2']['start'] + 11
-                end = reference_features[subject.ref_seq.study_title][seq.gene]['exon_2']['end']
-                feature = add_feature_to_ref(seq.study_title, 'allele', 'V-REGION', seq.sequence, 'CDS', start, end, '+',
-                               f"Name={seq.study_title}_V-REGION;ID={feature_id}", feature_id, subject.ref_seq)
+                start = reference_features[subject.ref_seq.name][seq.gene]['exon_2']['start'] + 11
+                end = reference_features[subject.ref_seq.name][seq.gene]['exon_2']['end']
+                feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', seq.sequence, 'CDS', start, end, '+',
+                               f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
             link_sequence_to_feature(seq, feature)
 
@@ -85,19 +85,19 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
 
     update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, feature_seq)
 
-    feature_rec = find_feature_by_name(session, feature, feature_seq.study_title, subject.ref_seq)
+    feature_rec = find_feature_by_name(session, feature, feature_seq.name, subject.ref_seq)
 
     if not feature_rec:
         feature_id = session.query(Feature).count()
-        start = reference_features[subject.ref_seq.study_title][seq.gene][bed_name]['start']
+        start = reference_features[subject.ref_seq.name][seq.gene][bed_name]['start']
 
         if feature != 'L-PART2':
-            end = reference_features[subject.ref_seq.study_title][seq.gene][bed_name]['end']
+            end = reference_features[subject.ref_seq.name][seq.gene][bed_name]['end']
         else:
-            end = reference_features[subject.ref_seq.study_title][seq.gene][bed_name]['start'] + 11
+            end = reference_features[subject.ref_seq.name][seq.gene][bed_name]['start'] + 11
 
-        feature_rec = add_feature_to_ref(feature_seq.study_title, 'allele', feature, feature_seq.sequence, 'UTR', start, end, '+',
-                                     f"Name={feature_seq.study_title};ID={feature_id}", feature_id, subject.ref_seq)
+        feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence, 'UTR', start, end, '+',
+                                     f"Name={feature_seq.name};ID={feature_id}", feature_id, subject.ref_seq)
 
     link_sequence_to_feature(feature_seq, feature_rec)
 
@@ -120,7 +120,7 @@ def add_gene_level_subfeature(feature, imgt_feature_name, name_prefix, feature_i
 
 def add_gene_level_features(session, ref, reference_features):
     feature_id = 1
-    for gene, features in reference_features[ref.study_title].items():
+    for gene, features in reference_features[ref.name].items():
         parent_id = feature_id
         for feature_type, feature in features.items():
             if feature_type == 'gene':

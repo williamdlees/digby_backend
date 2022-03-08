@@ -52,8 +52,8 @@ def export_metadata():
                     }
 
                     for patient in patients:
-                        rec['Subjects'][patient.study_title] = {
-                            'Name': patient.study_title,
+                        rec['Subjects'][patient.name] = {
+                            'Name': patient.name,
                             'Original name': patient.name_in_paper,
                             'Sex': patient.sex,
                             'Ethnic': patient.ethnicity,
@@ -64,21 +64,21 @@ def export_metadata():
                         }
 
                     for sample in samples:
-                        rec['Samples'][sample.study_title] = {
-                            'Name': sample.study_title,
+                        rec['Samples'][sample.name] = {
+                            'Name': sample.name,
                             'Chain': sample.chain,
                             'Date': sample.date,
                             'Reads': sample.row_reads,
                             'Sample Group': sample.samples_group,
-                            'Subject Name': sample.patient.study_title,
-                            'Sequence Protocol Name': sample.seq_protocol.study_title,
-                            'Tissue Processing Name': sample.tissue_pro.study_title,
-                            'Genotype Detection Name': sample.geno_detection.study_title,
+                            'Subject Name': sample.patient.name,
+                            'Sequence Protocol Name': sample.seq_protocol.name,
+                            'Tissue Processing Name': sample.tissue_pro.name,
+                            'Genotype Detection Name': sample.geno_detection.name,
                         }
 
-                        if sample.seq_protocol.study_title not in rec['Sequence Protocol']:
-                            rec['Sequence Protocol'][sample.seq_protocol.study_title] = {
-                                'Name': sample.seq_protocol.study_title,
+                        if sample.seq_protocol.name not in rec['Sequence Protocol']:
+                            rec['Sequence Protocol'][sample.seq_protocol.name] = {
+                                'Name': sample.seq_protocol.name,
                                 'Sequencing_platform': sample.seq_protocol.sequencing_platform,
                                 'Sequencing_length': sample.seq_protocol.read_length,
                                 'UMI': sample.seq_protocol.umi != 0,
@@ -86,18 +86,18 @@ def export_metadata():
                                 'Primer 5 location': sample.seq_protocol.reverse_pcr_primer_target_location,
                                 'Primer 3 location': sample.seq_protocol.forward_pcr_primer_target_location,
                             }
-                        if sample.tissue_pro.study_title not in rec['Tissue Processing']:
-                            rec['Tissue Processing'][sample.tissue_pro.study_title] = {
-                                'Name': sample.tissue_pro.study_title,
+                        if sample.tissue_pro.name not in rec['Tissue Processing']:
+                            rec['Tissue Processing'][sample.tissue_pro.name] = {
+                                'Name': sample.tissue_pro.name,
                                 'Species': sample.tissue_pro.cell_species_label,
                                 'Tissue': sample.tissue_pro.tissue_label,
                                 'Cell Type': sample.tissue_pro.cell_subset_label,
                                 'Sub Cell Type': sample.tissue_pro.sub_cell_type,
                                 'Isotype': sample.tissue_pro.cell_phenotype,
                             }
-                        if sample.geno_detection.study_title not in rec['Genotype Detections']:
-                            rec['Genotype Detections'][sample.geno_detection.study_title] = {
-                                'Name': sample.geno_detection.study_title,
+                        if sample.geno_detection.name not in rec['Genotype Detections']:
+                            rec['Genotype Detections'][sample.geno_detection.name] = {
+                                'Name': sample.geno_detection.name,
                                 'Repertoire or Germline': sample.geno_detection.detection,
                                 'Pre-processing': sample.geno_detection.prepro_tool,
                                 'Aligner Tool': sample.geno_detection.aligner_tool,
@@ -109,8 +109,6 @@ def export_metadata():
                                 'Haplotyper Version': sample.geno_detection.haplotype_ver,
                                 'Single Assignment': sample.geno_detection.single_assignment,
                             }
-
-
 
                     meta[study.study_title] = rec
 

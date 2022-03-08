@@ -66,20 +66,20 @@ def process_genotypes(ds_dir, species, dataset, session):
                     add_compound_gene(session, allele_name, pipeline_gene_name)
 
     for sample in samples:
-        genotype_file = os.path.join('samples', sample.study.study_title, sample.patient.study_title, sample.study_title + '_geno_H_binom.tab').replace('\\', '/')
+        genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.study_title, sample.study_title, sample.study_title + '_genotype.tsv').replace('\\', '/')  # new directory layout
+            genotype_file = os.path.join('samples', sample.study.study_title, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.study_title, sample.study_title, sample.study_title + '.tsv').replace('\\', '/')  # another new directory layout
+            genotype_file = os.path.join('samples', sample.study.study_title, sample.name, sample.name + '.tsv').replace('\\', '/')  # another new directory layout
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
-            result.append('Error: no genotype file for sample %s' % sample.study_title)
+            result.append('Error: no genotype file for sample %s' % sample.name)
 
     return result
 
@@ -364,7 +364,7 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
 
     if same_seq_allele is not None:
         allele = None
-        temp = same_seq_allele.study_title
+        temp = same_seq_allele.name
         sim = same_seq_allele.similar
         if (temp == final_allele_name):
             allele = same_seq_allele
@@ -474,7 +474,7 @@ def add_deleted_alleles(session):
 
     for gene in genes:
         a = Allele(
-            name=gene.study_title + '*Del',
+            name=gene.name + '*Del',
             seq='',
             seq_len='0',
             gene_id=gene.id,
@@ -496,14 +496,14 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
     samples = session.query(Sample).all()
 
     for sample in samples:
-        sample_dir = os.path.join('samples', sample.study.study_title, sample.patient.study_title) #old format
+        sample_dir = os.path.join('samples', sample.study.study_title, sample.patient.name) #old format
 
         if not os.path.isdir(os.path.join(ds_dir, sample_dir)):
-            sample_dir = os.path.join('samples', sample.study.study_title, sample.study_title) #new format
+            sample_dir = os.path.join('samples', sample.study.study_title, sample.name) #new format
 
         if os.path.isdir(os.path.join(ds_dir, sample_dir)):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):
-                if sample.study_title in filename:
+                if sample.name in filename:
                     if 'haplotype.' in filename:
                         haplo_gene = filename.replace('_haplotype.tab', '')
                         haplo_gene = haplo_gene.replace('_haplotype.tsv', '')
@@ -515,11 +515,11 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
                         sample.genotype_stats = os.path.join(sample_dir, filename).replace('\\', '/')
 
             if sample.genotype_report is None:
-                print("No genotype report for sample %s" % sample.study_title)
+                print("No genotype report for sample %s" % sample.name)
             if sample.genotype_stats is None:
-                print("No genotype stats for sample %s" % sample.study_title)
+                print("No genotype stats for sample %s" % sample.name)
         else:
-            print("No sample directory for sample %s" % sample.study_title)
+            print("No sample directory for sample %s" % sample.name)
 
     session.flush()
     return result

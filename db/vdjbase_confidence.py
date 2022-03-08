@@ -138,7 +138,7 @@ def gather_haplo_data(novels, ds_dir, session):
         if allele.pipeline_name:
             for pa in allele.pipeline_name.split(', '):
                 pa = pa.split('*')[0] + '*' + pa.split('*')[1].lower()
-                vdjbase_allele[pa] = allele.study_title
+                vdjbase_allele[pa] = allele.name
 
     for sample_haplotype in sample_haplotypes:
         print(sample_haplotype.haplotypes_file.file)
@@ -215,7 +215,7 @@ def gather_haplo_data(novels, ds_dir, session):
                 for h in session.query(HaplotypeEvidence).filter(HaplotypeEvidence.sample_id == sample_id).all():
                     hap_genes.append('%s (%s)' % (h.hap_gene, h.counts))
 
-                detects.append('%s(%s)' % (session.query(Sample).filter(Sample.id == sample_id).one_or_none().study_title, ', '.join(hap_genes)))
+                detects.append('%s(%s)' % (session.query(Sample).filter(Sample.id == sample_id).one_or_none().name, ', '.join(hap_genes)))
 
             report_issue(novel, 'Confirmation from Haplotype', 'Inferred allele on one chromosome only in sample(s) %s.' % (', '.join(detects)), session, low_confidence=False)
 
@@ -253,7 +253,7 @@ def check_novel_aa(novels, session):
             ref_aa_gapped = Seq(novel.closest_ref.seq.upper()).translate(gap='.')
             seq_aa_gapped = Seq(novel.seq.upper()).translate(gap='.')
 
-            family = find_family(novel.closest_ref.study_title)
+            family = find_family(novel.closest_ref.name)
 
             for i in range( min(len(ref_aa_gapped), len(seq_aa_gapped))):
                 # if ref_aa_gapped[i] != seq_aa_gapped[i] and '*' not in (ref_aa_gapped[i], seq_aa_gapped[i]) and '.' not in (ref_aa_gapped[i], seq_aa_gapped[i]):
@@ -265,7 +265,7 @@ def check_novel_aa(novels, session):
                 report_issue(novel, 'Novel AA', 'Amino Acid(s) previously unreported in this family - %s' % ", ".join(q_codons), session, low_confidence=len(q_codons) > 1)
 
         except TranslationError:
-            result.append('Warning: in sequence %s or %s: %s' % (novel.study_title, novel.closest_ref.study_title, sys.exc_info()[1]))
+            result.append('Warning: in sequence %s or %s: %s' % (novel.name, novel.closest_ref.name, sys.exc_info()[1]))
 
     return result
 
@@ -317,10 +317,10 @@ def check_shared_snp(novels, session):
 
     for novel in novels:
         snps = session.query(SNP).filter(SNP.allele_id == novel.id).all()
-        positions[novel.study_title] = set(['%d%s' % (s.pos, s.to_base) for s in snps])
+        positions[novel.name] = set(['%d%s' % (s.pos, s.to_base) for s in snps])
 
     for novel in novels:
-        novel_positions = positions[novel.study_title]
+        novel_positions = positions[novel.name]
         issues = []
 
         for s_assoc in novel.samples:
@@ -329,11 +329,11 @@ def check_shared_snp(novels, session):
             for a_assoc in sample.alleles:
                 inf = a_assoc.allele
                 if inf.novel and inf != novel:
-                    shared = positions[inf.study_title] & novel_positions
+                    shared = positions[inf.name] & novel_positions
                     if shared:
-                        shared_infs.append(inf.study_title)
+                        shared_infs.append(inf.name)
             if shared_infs:
-                issues.append((', '.join(shared_infs), sample.study_title))
+                issues.append((', '.join(shared_infs), sample.name))
 
         if len(issues):
             report_issue(novel, 'Shared SNP', 'SNP(s) shared with inferences in %d sample(s).<br>Example: %s in sample %s' % (len(issues), issues[0][0], issues[0][1]), session)
@@ -342,7 +342,7 @@ def check_shared_snp(novels, session):
 # Report if an allele is present on both chromosomes, or if there is a deletion
 def check_for_singleton_infs(novels, ds_dir, session):
     sample_haplotypes = session.query(SamplesHaplotype).all()
-    novel_set = frozenset([n.study_title for n in novels])
+    novel_set = frozenset([n.name for n in novels])
     reported_duplicates = {}
     reported_deletions = {}
 
@@ -387,24 +387,24 @@ def check_for_singleton_infs(novels, ds_dir, session):
                                     if 'del' not in a and 'unk' not in a:
                                         novel_nondels.append(a)
 
-                                if novel.study_title not in reported_deletions:
-                                    reported_deletions[novel.study_title] = []
-                                if sample_haplotype.samples.study_title not in reported_deletions[novel.study_title]:
+                                if novel.name not in reported_deletions:
+                                    reported_deletions[novel.name] = []
+                                if sample_haplotype.samples.name not in reported_deletions[novel.name]:
                                     report_issue(novel, 'Deletion on other chromosome', 'In sample %s, allele(s) %s present on one chromosome, deletion on other (%s)'
-                                                 % (sample_haplotype.samples.study_title, ', '.join(novel_nondels), sample_haplotype.haplotypes_file.by_gene), session, low_confidence=False)
-                                    reported_deletions[novel.study_title].append(sample_haplotype.samples.study_title)
+                                                 % (sample_haplotype.samples.name, ', '.join(novel_nondels), sample_haplotype.haplotypes_file.by_gene), session, low_confidence=False)
+                                    reported_deletions[novel.name].append(sample_haplotype.samples.name)
 
                     else:
                         for n in novel_haplotyped:
                             if n in h1 and n in h2:
                                 novel = session.query(Allele).filter(Allele.name == n).one_or_none()
                                 if novel:
-                                    if novel.study_title not in reported_duplicates:
-                                        reported_duplicates[novel.study_title] = []
-                                    if sample_haplotype.samples.study_title not in reported_duplicates[novel.study_title]:
+                                    if novel.name not in reported_duplicates:
+                                        reported_duplicates[novel.name] = []
+                                    if sample_haplotype.samples.name not in reported_duplicates[novel.name]:
                                         report_issue(novel, 'Inferred allele on both chromosomes', 'In sample %s, allele %s is present on both chromosomes (%s).'
-                                                     % (sample_haplotype.samples.study_title, n, sample_haplotype.haplotypes_file.by_gene), session, low_confidence=True)
-                                        reported_duplicates[novel.study_title].append(sample_haplotype.samples.study_title)
+                                                     % (sample_haplotype.samples.name, n, sample_haplotype.haplotypes_file.by_gene), session, low_confidence=True)
+                                        reported_duplicates[novel.name].append(sample_haplotype.samples.name)
 
 # An allele should be low_confidence if it is exclusively found on both chromosomes
 # If there are some cases in which it's only found on one, we allow it through
@@ -457,8 +457,8 @@ def get_ref_vh_codon_usage(session):
     usage = {}
 
     for ref in refs:
-        if ref.study_title[3] == 'V':
-            family = find_family(ref.study_title)
+        if ref.name[3] == 'V':
+            family = find_family(ref.name)
             if family not in usage:
                 usage[family] = [[],]
 
@@ -471,7 +471,7 @@ def get_ref_vh_codon_usage(session):
                     if aa_seq[i] not in usage[family][i+1]:
                         usage[family][i+1].append(aa_seq[i])
             except TranslationError:
-                result.append('Warning: in sequence %s: %s' % (ref.study_title, sys.exc_info()[1]))
+                result.append('Warning: in sequence %s: %s' % (ref.name, sys.exc_info()[1]))
 
     return usage, result
 
@@ -481,7 +481,7 @@ def write_novels(novels, filename):
     novel_dict = {}
 
     for novel in novels:
-        novel_dict[novel.study_title] = novel.seq
+        novel_dict[novel.name] = novel.seq
 
     with open(filename, 'w') as fo:
         for name in sorted(list(novel_dict.keys())):
@@ -521,7 +521,7 @@ def check_novels_in_ogrdbstats(filename, expected):
     novels_as_non = []
 
     for xp in expected:
-        names = [xp.study_title.upper()]
+        names = [xp.name.upper()]
         if len(xp.similar) > 0:
             names.extend([alias.upper() for alias in xp.similar.split('|') if len(alias) > 0])
         if xp.pipeline_name:

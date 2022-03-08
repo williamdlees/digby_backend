@@ -22,7 +22,7 @@ def build_ref_seq_gff(session, dataset_dir, ref_seq, name_prefix):
 
         for feature in features:
             if feature.feature == 'CDS' or feature.feature == 'gene':
-                fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.study_title, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
+                fo.write('%s\t.\t%s\t%d\t%d\t.\t%s\t.\t%s\n' % (ref_seq.name, 'mRNA', feature.start, feature.end, feature.strand, feature.attribute))
 
 
 def build_gff(session, dataset_dir):
@@ -31,29 +31,29 @@ def build_gff(session, dataset_dir):
 
     ref_seqs = session.query(RefSeq).all()
     for ref_seq in ref_seqs:
-        name_prefix = f"{species.replace(' ', '_')}_{ref_seq.study_title}"
+        name_prefix = f"{species.replace(' ', '_')}_{ref_seq.name}"
         build_ref_seq_gff(session, dataset_dir, ref_seq, name_prefix)
         # Alignment file of all alleles and other annotated regions within samples aligned to this reference (SAM, needs external conversion to BAM)
         # FIX - add non coding regions
         with open(os.path.join(dataset_dir, 'samples', name_prefix + '.sam'), 'w') as fo:
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
-            fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.study_title, len(ref_seq.sequence)))
+            fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
             features = session.query(Feature).filter(Feature.refseq == ref_seq).order_by(Feature.start, Feature.name).all()
             for feature in features:
                 if feature.feature_level == 'allele':
                     for sequence in feature.sequences:
-                        legend = ('*' + sequence.study_title.split('*')[1] if '*' in sequence.study_title else sequence.study_title)
+                        legend = ('*' + sequence.name.split('*')[1] if '*' in sequence.name else sequence.name)
                         if sequence.functional == 'Functional' or not sequence.functional:
                             legend += f" ({sequence.appearances})"
                         else:
                             legend += f" ({sequence.appearances}, {sequence.functional[0]})"
-                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (sequence.study_title, ref_seq.study_title, feature.start, len(sequence.sequence), sequence.sequence, legend))
+                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, legend))
 
         # Alignment file of all alleles within IMGT, plus novel alleles from samples aligned to this reference (SAM, needs external conversion to BAM)
         with open(os.path.join(dataset_dir, 'samples', name_prefix + '_imgt.sam'), 'w') as fo:
             fo.write('@HD\tVN:1.3\tSO:coordinate\n')
-            fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.study_title, len(ref_seq.sequence)))
+            fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
             features = session.query(Feature).filter(Feature.refseq == ref_seq).filter(Feature.attribute.like('%REGION%')).order_by(Feature.start).all()
 
@@ -62,12 +62,12 @@ def build_gff(session, dataset_dir):
                 for sequence in feature.sequences:
                     if sequence.novel:
                         if sequence.type in ('V-REGION', 'D-REGION', 'J-REGION'):
-                            gene_name = sequence.study_title.split('*')[1] if '*' in sequence.study_title else sequence.study_title
+                            gene_name = sequence.name.split('*')[1] if '*' in sequence.name else sequence.name
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' %
-                                     (sequence.study_title, ref_seq.study_title, feature.start, len(sequence.sequence), sequence.sequence, order, 'novel *' + gene_name))
+                                     (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order, 'novel *' + gene_name))
                         else:
                             fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' %
-                                     (sequence.study_title, ref_seq.study_title, feature.start, len(sequence.sequence), sequence.sequence, order))
+                                     (sequence.name, ref_seq.name, feature.start, len(sequence.sequence), sequence.sequence, order))
                         order += 1
 
                 # TODO need a better way of identifying alleles here. Can't really rely on syntax. I think we need to store
@@ -75,9 +75,9 @@ def build_gff(session, dataset_dir):
                 imgts = session.query(Sequence)\
                     .join(SequenceFeature, SequenceFeature.sequence_id == Sequence.id) \
                     .join(Feature, Feature.id == SequenceFeature.feature_id) \
-                    .join(RefSeq).filter(RefSeq.name == ref_seq.study_title)\
+                    .join(RefSeq).filter(RefSeq.name == ref_seq.name)\
                     .filter(Feature.refseq_id == RefSeq.id) \
-                    .filter(or_(Sequence.name.like(feature.study_title.split('_')[0] + '*%'), Sequence.name == feature.study_title))\
+                    .filter(or_(Sequence.name.like(feature.name.split('_')[0] + '*%'), Sequence.name == feature.name))\
                     .filter(Sequence.novel == False).order_by(Sequence.name.desc()).all()
 
                 for imgt in imgts:
@@ -93,10 +93,10 @@ def build_gff(session, dataset_dir):
                         nt_sequence = pad + nt_sequence
 
                     if imgt.type in ('V-REGION', 'D-REGION', 'J-REGION'):
-                        legend = ('*' + imgt.study_title.split('*')[1]) if '*' in imgt.study_title else imgt.study_title
-                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' % (imgt.study_title, ref_seq.study_title, feature.start, len(nt_sequence), nt_sequence, order, legend))
+                        legend = ('*' + imgt.name.split('*')[1]) if '*' in imgt.name else imgt.name
+                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' % (imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order, legend))
                     else:
-                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' % (imgt.study_title, ref_seq.study_title, feature.start, len(nt_sequence), nt_sequence, order))
+                        fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' % (imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order))
                     order += 1
 
 
@@ -112,19 +112,19 @@ def build_fake_ref(session, dataset_dir):
         i = 1
         for feat in feats:
             if i <= feat.start and feat.sequences:
-                seq_01 = session.query(Sequence).filter(Sequence.name == feat.study_title.split('_')[0] + '*01').one_or_none()
+                seq_01 = session.query(Sequence).filter(Sequence.name == feat.name.split('_')[0] + '*01').one_or_none()
                 if seq_01:
                     fo.write('n'*(feat.start-i))
                     i += (feat.start-i)
                     fo.write(seq_01.sequence)
                     i += len(seq_01.sequence)
                 else:
-                    seqs = session.query(Sequence).filter(Sequence.name.like(feat.study_title + '*%')).all()
+                    seqs = session.query(Sequence).filter(Sequence.name.like(feat.name + '*%')).all()
                     if seqs:
                         fo.write('n'*(feat.start-i))
                         i += (feat.start-i)
                         fo.write(seqs[0].sequence)
                         i += len(seqs[0].sequence)
                     else:
-                        print('Human reference allele %s not found.' % (feat.study_title + '*01'))
+                        print('Human reference allele %s not found.' % (feat.name + '*01'))
 

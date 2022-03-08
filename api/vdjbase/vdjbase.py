@@ -79,7 +79,7 @@ class NovelsApi(Resource):
                             if ds_name not in ret[sp]:
                                 ret[sp][ds_name] = {}
                             for novel in novels:
-                                ret[sp][ds_name][novel.study_title] = (novel.seq.replace('.', ''), novel.appears)
+                                ret[sp][ds_name][novel.name] = (novel.seq.replace('.', ''), novel.appears)
 
         return ret
 
@@ -105,7 +105,7 @@ class NovelsSpApi(Resource):
         results = {}
         for novel in novels:
             result = {
-                'name': novel.study_title,
+                'name': novel.name,
                 'subject_count': len(set([sample.patient_id for sample in novel.samples])),
                 'j_haplotypes': 0,
                 'd_haplotypes': 0,
@@ -122,7 +122,7 @@ class NovelsSpApi(Resource):
             d_haps = 0
             j_haps = 0
             hetero_haps = 0
-            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.study_title}
+            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.name}
 
             for haplo in haplos:
                 gene_type = 'D' if 'D' in haplo.hap_gene else 'J'
@@ -137,7 +137,7 @@ class NovelsSpApi(Resource):
                 if hetero and gene_type == 'J':
                     hetero_haps += 1
 
-                novel_allele = novel.study_title.split('*')[1].upper()
+                novel_allele = novel.name.split('*')[1].upper()
                 novel_count = 0
 
                 try:
@@ -154,7 +154,7 @@ class NovelsSpApi(Resource):
                     or (best_hap['gene_type'] == 'D' and gene_type == 'J') \
                     or (best_hap['hetero'] and not hetero) \
                     or best_hap['count'] < novel_count:
-                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.study_title}
+                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.name}
 
             result['j_haplotypes'] = j_haps
             result['d_haplotypes'] = d_haps
@@ -740,7 +740,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
             # query = query.filter(Allele.name.in_(required_names))
 
         for r in res:
-            if len(required_names) == 0 or r.study_title in required_names:
+            if len(required_names) == 0 or r.name in required_names:
                 s = r._asdict()
                 for k, v in s.items():
                     if k == 'similar' and v is not None:
@@ -827,7 +827,7 @@ def apply_rep_filter_params(params, sample_list, session):
     if not params['f_pseudo_genes']:
         gq = gq.filter(Gene.pseudo_gene == 0)
     wanted_genes = gq.all()
-    wanted_genes = [gene.study_title for gene in wanted_genes]
+    wanted_genes = [gene.name for gene in wanted_genes]
     return sample_list, wanted_genes
 
 

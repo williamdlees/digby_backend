@@ -56,7 +56,7 @@ def process_digger_record(session, species, assembly, dataset_dir, subject, anno
                     else:
                         continue    # poor sequence, probably truncated alignment
 
-                name = allele.study_title
+                name = allele.name
 
                 def add_feature(name, feature_type, feature_seq, feature, start, end, strand, attribute, parent_id, ref):
                     start = int(start)

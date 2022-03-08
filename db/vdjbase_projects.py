@@ -41,8 +41,7 @@ compound_genes = {}
 
 
 def import_studies(ds_dir, species, dataset, session):
-    result = []
-    study_data = {}
+    result = ['Processing metadata']
 
     study_file = os.path.join(ds_dir, 'projects.yml')
     if os.path.isfile(study_file):
@@ -65,7 +64,7 @@ def import_studies(ds_dir, species, dataset, session):
 
     process_yml_metadata(yml_data, table_fields, yml_full, session)
     session.commit()
-    breakpoint()
+    return result
 
 
 def process_yml_metadata(yml_data, table_fields, yml_full, session):

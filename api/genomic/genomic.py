@@ -125,7 +125,7 @@ def enumerate_feature(f):
         ret['uniqueID'] = str(f.feature_id)
 
     if f.feature == 'gene':
-        ret['name'] = f.study_title
+        ret['name'] = f.name
 
     return ret
 
@@ -447,7 +447,7 @@ genomic_subject_filters = {
     'annotation_format': {'model': 'Subject', 'field': Subject.annotation_format},
     'annotation_reference': {'model': 'Subject', 'field': Subject.annotation_reference},
 
-    'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'name'},
+    'study_name': {'model': 'Study', 'field': Study.study_title.label('study_name'), 'fieldname': 'name'},
     'study_date': {'model': 'Study', 'field': Study.date.label('study_date'), 'fieldname': 'date'},
     'study_description': {'model': 'Study', 'field': Study.description.label('study_description'), 'fieldname': 'description'},
     'institute': {'model': 'Study', 'field': Study.institute},
