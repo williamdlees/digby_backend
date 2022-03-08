@@ -66,20 +66,20 @@ def process_genotypes(ds_dir, species, dataset, session):
                     add_compound_gene(session, allele_name, pipeline_gene_name)
 
     for sample in samples:
-        genotype_file = os.path.join('samples', sample.study.name, sample.patient.name, sample.name + '_geno_H_binom.tab').replace('\\', '/')
+        genotype_file = os.path.join('samples', sample.study.study_name, sample.patient.patient_name, sample.sample_name + '_geno_H_binom.tab').replace('\\', '/')
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '_genotype.tsv').replace('\\', '/')  # new directory layout
+            genotype_file = os.path.join('samples', sample.study.study_name, sample.sample_name, sample.sample_name + '_genotype.tsv').replace('\\', '/')  # new directory layout
 
         if not os.path.isfile(os.path.join(ds_dir, genotype_file)):
-            genotype_file = os.path.join('samples', sample.study.name, sample.name, sample.name + '.tsv').replace('\\', '/')  # another new directory layout
+            genotype_file = os.path.join('samples', sample.study.study_name, sample.sample_name, sample.sample_name + '.tsv').replace('\\', '/')  # another new directory layout
 
         if os.path.isfile(os.path.join(ds_dir, genotype_file)):
             sample.genotype = genotype_file
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
-            result.append('Error: no genotype file for sample %s' % sample.name)
+            result.append('Error: no genotype file for sample %s' % sample.sample_name)
 
     return result
 
@@ -496,14 +496,14 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
     samples = session.query(Sample).all()
 
     for sample in samples:
-        sample_dir = os.path.join('samples', sample.study.name, sample.patient.name) #old format
+        sample_dir = os.path.join('samples', sample.study.study_name, sample.patient.patient_name) #old format
 
         if not os.path.isdir(os.path.join(ds_dir, sample_dir)):
-            sample_dir = os.path.join('samples', sample.study.name, sample.name) #new format
+            sample_dir = os.path.join('samples', sample.study.study_name, sample.sample_name) #new format
 
         if os.path.isdir(os.path.join(ds_dir, sample_dir)):
             for filename in os.listdir(os.path.join(ds_dir, sample_dir)):
-                if sample.name in filename:
+                if sample.sample_name in filename:
                     if 'haplotype.' in filename:
                         haplo_gene = filename.replace('_haplotype.tab', '')
                         haplo_gene = haplo_gene.replace('_haplotype.tsv', '')
@@ -515,11 +515,11 @@ def process_haplotypes_and_stats(ds_dir, species, dataset, session):
                         sample.genotype_stats = os.path.join(sample_dir, filename).replace('\\', '/')
 
             if sample.genotype_report is None:
-                print("No genotype report for sample %s" % sample.name)
+                print("No genotype report for sample %s" % sample.sample_name)
             if sample.genotype_stats is None:
-                print("No genotype stats for sample %s" % sample.name)
+                print("No genotype stats for sample %s" % sample.sample_name)
         else:
-            print("No sample directory for sample %s" % sample.name)
+            print("No sample directory for sample %s" % sample.sample_name)
 
     session.flush()
     return result

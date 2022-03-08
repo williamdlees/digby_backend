@@ -35,15 +35,15 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         appearances = []
 
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+            sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
-            app_query = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.name, Gene.locus_order, Gene.alpha_order)\
+            app_query = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.sample_name, Gene.locus_order, Gene.alpha_order)\
                                 .filter(Sample.id == AllelesSample.sample_id)\
                                 .filter(Allele.id == AllelesSample.allele_id)\
                                 .filter(Gene.id == Allele.gene_id)\
-                                .filter(Sample.name.in_(sample_list))\
+                                .filter(Sample.sample_name.in_(sample_list))\
                                 .filter(Gene.name.in_(wanted_genes))
 
             if params['novel_alleles'] == 'Exclude':

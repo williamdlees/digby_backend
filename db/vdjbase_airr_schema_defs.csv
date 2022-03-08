@@ -66,7 +66,7 @@ Repertoire.sample.SampleProcessing.sample_processing_id,sample_processing_id,Sam
 Repertoire.sample.Sample.sample_id,sample_id,Sample,Sample,,,string,TRUE,Biological sample ID,"Sample ID assigned by submitter, unique within study",SUP52415,
 Repertoire.sample.Sample.sample_type,sample_type,Sample,Sample,,,string,TRUE,Sample type,"The way the sample was obtained, e.g. fine-needle aspirate, organ harvest, peripheral venous puncture",Biopsy,
 Repertoire.sample.Sample.tissue.id,tissue.id,Sample,Sample,,,string,TRUE,Tissue,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.Sample.tissue.label,tissue.label,Sample,Sample,TissuePro.tissue,Tissue Processing.Tissue,string,TRUE,Tissue,Label of the concept in the respective ontology,,
+Repertoire.sample.Sample.tissue.label,tissue.label,Sample,TissuePro,TissuePro.tissue,Tissue Processing.Tissue,string,TRUE,Tissue,Label of the concept in the respective ontology,,
 Repertoire.sample.Sample.anatomic_site,anatomic_site,Sample,Sample,,,string,TRUE,Anatomic site,"The anatomic location of the tissue, e.g. Inguinal, femur",Iliac crest,
 Repertoire.sample.Sample.disease_state_sample,disease_state_sample,Sample,Sample,,,string,TRUE,Disease state of sample,Histopathologic evaluation of the sample,Tumor infiltration,
 Repertoire.sample.Sample.collection_time_point_relative,collection_time_point_relative,Sample,Sample,(Sample.date),,number,TRUE,Sample collection time,"Time point at which sample was taken, relative to `Collection time event`",14,
@@ -136,17 +136,16 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,accession_reference,,Study,accession_reference,,string,FALSE,Study Ref,"URL of the study in the registry
 ",,Derived from study.study_id
 ,sub_cell_type,,TissuePro,sub_cell_type,Tissue Processing.Sub Cell Type,string,FALSE,Sub Cell Type,Sub cell type,,?
-,name,,Patient,name,Subjects.Name,string,FALSE,Subject name,Subject name as allocated by VDJbase,,Determined by pipeline
+,patient_name,,Patient,name,Subjects.Name,string,FALSE,Subject name,Subject name as allocated by VDJbase,,Determined by pipeline
 ,igsnper_sample_id,,Patient,igsnper_sample_id,,integer,FALSE,Igsnper Sample ID,Sample ID as allocated by IgSNPer,,Detemined at take-on
-,name,,Sample,name,Samples.Name,string,FALSE,Sample name,Sample name as allocated by VDJbase,,Determined by pipeline
+,sample_name,,Sample,name,Samples.Name,string,FALSE,Sample name,Sample name as allocated by VDJbase,,Determined by pipeline
 ,reads,,Sample,reads,Samples.Reads,integer,FALSE,VDJbase reads,Reads processed by VDJbase pipeline,,Determined by pipeline
 ,genotype,,Sample,genotype,,string,FALSE,Genotype report,Link to genotype report,,Derived at take-on
 ,igsnper_plot_path,,Sample,igsnper_plot_path,,string,FALSE,Igsnper plot path,Path for igsnper plot,,
 ,sample_group,,Sample,sample_group,Samples.Sample Group,string,FALSE,Sample group,Sample group,,? Possibly sample_processing_id
 ,genotype_stats,,Sample,genotype_stats,,string,FALSE,Genotype stats,Path to genotype stats file,,
 ,genotype_report,,Sample,genotype_report,,string,FALSE,Genotype report,Path to genotype report,,
-,name,,Study,name,,string,FALSE,Study name,Study name,,
-,name,,GenoDetection,name,Genotype Detections.Name,string,FALSE,Geno pipeline name,Geno pipeline name,Pipeline v. a034f5,
+,study_name,,Study,name,,string,FALSE,Study name,Study name,,
 ,prepro_tool,,GenoDetection,prepro_tool,Genotype Detections.Pre-processing,string,FALSE,Preprocessing tool,Preprocessing tool,PRESTO,
 ,aligner_tool,,GenoDetection,aligner_tool,Genotype Detections.Alignment Tool,string,FALSE,Aligner tool,Aligner tool,IgBLAST,
 ,aligner_ver,,GenoDetection,aligner_ver,Genotype Detections.Aligner Version,string,FALSE,Aligner version,Aligner version,1.18,

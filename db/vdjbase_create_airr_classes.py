@@ -12,7 +12,7 @@ prelude = '''
 # This file is created programmatically by db/vdjbase_create_airr_classes.py. DO NOT UPDATE BY HAND. 
 
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, DECIMAL
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
@@ -69,7 +69,7 @@ class {table_name}(Base):
         if item['type'] == 'string' or item['list'] == 'TRUE':
             decl = 'Column(String(100))'
         elif item['type'] == 'number':
-            decl = 'Column(DECIMAL)'
+            decl = 'Column(Float)'
         elif item['type'] == 'integer':
             decl = 'Column(Integer)'
         elif item['type'] == 'date':

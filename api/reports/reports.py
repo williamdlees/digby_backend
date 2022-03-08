@@ -148,7 +148,7 @@ class ReportsRunApi(Resource):
                 rep_filters = json.loads(args.rep_filters)
 
                 if rep_datasets is not None and len(rep_datasets) > 0:
-                    rep_samples = find_vdjbase_samples([vdjb_Sample.name, vdjb_Sample.id, vdjb_Sample.chain], args.species, rep_datasets, rep_filters)
+                    rep_samples = find_vdjbase_samples([vdjb_Sample.sample_name, vdjb_Sample.id, vdjb_Sample.chain], args.species, rep_datasets, rep_filters)
                 else:
                     rep_samples = []
                 params = json.loads(args.params)

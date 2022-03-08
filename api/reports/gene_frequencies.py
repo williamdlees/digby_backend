@@ -35,8 +35,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         session = vdjbase_dbs[species][dataset].session
 
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id)\
-                .filter(Sample.name.in_(sample_chunk))\
+            sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id)\
+                .filter(Sample.sample_name.in_(sample_chunk))\
                 .filter(Sample.samples_group >= single_sample_filter)\
                 .all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
@@ -50,7 +50,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 .join(Sample)\
                 .filter(GenesDistribution.count_by_clones == calc_by_clone)\
                 .filter(Gene.name.in_(wanted_genes)) \
-                .filter(Sample.name.in_(sample_list)) \
+                .filter(Sample.sample_name.in_(sample_list)) \
                 .all()
 
             for frequency in frequencies:

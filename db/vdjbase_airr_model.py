@@ -4,7 +4,7 @@
 # This file is created programmatically by db/vdjbase_create_airr_classes.py. DO NOT UPDATE BY HAND. 
 
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, DECIMAL
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
@@ -23,7 +23,6 @@ class Sample(Base):
     sample_id = Column(String(100))
     sample_type = Column(String(100))
     tissue_id = Column(String(100))
-    tissue_label = Column(String(100))
     anatomic_site = Column(String(100))
     disease_state_sample = Column(String(100))
     collection_time_point_relative = Column(String(100))
@@ -39,7 +38,7 @@ class Sample(Base):
     read_direction = Column(String(100))
     paired_filename = Column(String(100))
     paired_read_direction = Column(String(100))
-    name = Column(String(100))
+    sample_name = Column(String(100))
     reads = Column(Integer)
     genotype = Column(String(100))
     igsnper_plot_path = Column(String(100))
@@ -85,7 +84,7 @@ class Study(Base):
     num_subjects = Column(Integer)
     num_samples = Column(Integer)
     accession_reference = Column(String(100))
-    name = Column(String(100))
+    study_name = Column(String(100))
 
 
 class Patient(Base):
@@ -99,8 +98,8 @@ class Patient(Base):
     organism_id = Column(String(100))
     organism_label = Column(String(100))
     sex = Column(String(100))
-    age_min = Column(DECIMAL)
-    age_max = Column(DECIMAL)
+    age_min = Column(Float)
+    age_max = Column(Float)
     age_unit_id = Column(String(100))
     age_unit_label = Column(String(100))
     age_event = Column(String(100))
@@ -127,7 +126,7 @@ class Patient(Base):
     gene_symbol = Column(String(100))
     germline_set_ref = Column(String(100))
     genotype_process = Column(String(100))
-    name = Column(String(100))
+    patient_name = Column(String(100))
     igsnper_sample_id = Column(ForeignKey('sample.id'), nullable=True, index=True)
 
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
@@ -139,6 +138,7 @@ class TissuePro(Base):
     __tablename__ = "tissue_pro"
 
     id = Column(Integer, primary_key=True)
+    tissue_label = Column(String(100))
     tissue_processing = Column(String(100))
     cell_subset_id = Column(String(100))
     cell_subset_label = Column(String(100))
@@ -200,7 +200,6 @@ class GenoDetection(Base):
     __tablename__ = "geno_detection"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100))
     prepro_tool = Column(String(100))
     aligner_tool = Column(String(100))
     aligner_ver = Column(String(100))

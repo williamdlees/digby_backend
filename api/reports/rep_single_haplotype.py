@@ -30,7 +30,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     p = session.query(HaplotypesFile.file)\
         .join(SamplesHaplotype)\
         .join(Sample)\
-        .filter(Sample.name == rep_sample['name'])\
+        .filter(Sample.sample_name == rep_sample['name'])\
         .filter(HaplotypesFile.by_gene_s == params['haplo_gene']).one_or_none()
 
     p = p[0].replace('samples/','')

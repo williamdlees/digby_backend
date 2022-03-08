@@ -89,7 +89,7 @@ def process_yml_metadata(yml_data, table_fields, yml_full, session):
             # We should be able to rely on all records already being present, apart from GenoDetection
             # Find the Sample record, use that as the link to the rest
 
-            sample_rec = session.query(Sample).filter(Sample.name==sample_name).one_or_none()
+            sample_rec = session.query(Sample).filter(Sample.sample_name==sample_name).one_or_none()
 
             if not sample_rec:
                 print(f"Error: no sample record found for {sample_name} while processing YML")
@@ -317,9 +317,9 @@ def find_repertoire(miairr_file, rep_id):
 def commit_database(meta_records, vdjbase_name, session):
     row_ids = {}
     (p_n, i_n, s_n) = vdjbase_name.split('_')
-    meta_records['Study']['name'] = p_n
-    meta_records['Patient']['name'] = f'{p_n}_{i_n}'
-    meta_records['Sample']['name'] = f'{p_n}_{i_n}_{s_n}'
+    meta_records['Study']['study_name'] = p_n
+    meta_records['Patient']['patient_name'] = f'{p_n}_{i_n}'
+    meta_records['Sample']['sample_name'] = f'{p_n}_{i_n}_{s_n}'
     meta_records['Sample']['sample_group'] = s_n.replace('S', '')
 
     for table in [Study, TissuePro, SeqProtocol, DataPro]:

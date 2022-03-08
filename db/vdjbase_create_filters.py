@@ -36,7 +36,7 @@ extras = {
     'notes': {'model': Allele, 'field': func.group_concat(AlleleConfidenceReport.notes, '\\n').label('notes')},
     'notes_count': {'model': Allele, 'field': func.count(AlleleConfidenceReport.id).label('notes_count'), 'sort': 'numeric'},
 
-    'sample_id': {'model': None, 'fieldname': 'sample_id'},
+    'sample_id': {'model': None, 'field': None, 'fieldname': 'sample_id'},
     'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},    
 """
 }

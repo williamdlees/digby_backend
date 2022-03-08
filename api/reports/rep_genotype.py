@@ -30,7 +30,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     for dataset in samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
         primer_trans, gene_subs = find_primer_translations(session)
-        sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(samples_by_dataset[dataset])).all()
+        sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(samples_by_dataset[dataset])).all()
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
 
         if len(wanted_genes) > 0:

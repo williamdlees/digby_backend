@@ -99,10 +99,10 @@ def allele_copy_stats():
                             if not contains_novel and len(haplotyped) > 0:
                                 if row[2] not in allele_report_samples:
                                     allele_report_samples[row[2]] = {}
-                                if sample.name not in allele_report_samples[row[2]]:
-                                    allele_report_samples[row[2]][sample.name] = len(haplotyped)
+                                if sample.sample_name not in allele_report_samples[row[2]]:
+                                    allele_report_samples[row[2]][sample.sample_name] = len(haplotyped)
                                 else:
-                                    allele_report_samples[row[2]][sample.name] = max(allele_report_samples[row[2]][sample.name], len(haplotyped))
+                                    allele_report_samples[row[2]][sample.sample_name] = max(allele_report_samples[row[2]][sample.sample_name], len(haplotyped))
 
     allele_report = {}
     allele_report_samples3 = {}
@@ -215,7 +215,7 @@ def gather_haplo_data(novels, ds_dir, session):
                 for h in session.query(HaplotypeEvidence).filter(HaplotypeEvidence.sample_id == sample_id).all():
                     hap_genes.append('%s (%s)' % (h.hap_gene, h.counts))
 
-                detects.append('%s(%s)' % (session.query(Sample).filter(Sample.id == sample_id).one_or_none().name, ', '.join(hap_genes)))
+                detects.append('%s(%s)' % (session.query(Sample).filter(Sample.id == sample_id).one_or_none().sample_name, ', '.join(hap_genes)))
 
             report_issue(novel, 'Confirmation from Haplotype', 'Inferred allele on one chromosome only in sample(s) %s.' % (', '.join(detects)), session, low_confidence=False)
 
@@ -304,7 +304,7 @@ def check_snp_in_short(novels, session):
     for novel in short_studies_only:
         min_snp = session.query(SNP).filter(SNP.allele_id == novel.id).order_by(SNP.pos).limit(1).one_or_none()
         if min_snp is not None and min_snp.pos <= 40:
-            sample_names = session.query(Sample.name)\
+            sample_names = session.query(Sample.sample_name)\
                 .join(AllelesSample)\
                 .join(Allele)\
                 .filter(Allele.id == novel.id).all()
@@ -333,7 +333,7 @@ def check_shared_snp(novels, session):
                     if shared:
                         shared_infs.append(inf.name)
             if shared_infs:
-                issues.append((', '.join(shared_infs), sample.name))
+                issues.append((', '.join(shared_infs), sample.sample_name))
 
         if len(issues):
             report_issue(novel, 'Shared SNP', 'SNP(s) shared with inferences in %d sample(s).<br>Example: %s in sample %s' % (len(issues), issues[0][0], issues[0][1]), session)
@@ -389,10 +389,10 @@ def check_for_singleton_infs(novels, ds_dir, session):
 
                                 if novel.name not in reported_deletions:
                                     reported_deletions[novel.name] = []
-                                if sample_haplotype.samples.name not in reported_deletions[novel.name]:
+                                if sample_haplotype.samples.sample_name not in reported_deletions[novel.name]:
                                     report_issue(novel, 'Deletion on other chromosome', 'In sample %s, allele(s) %s present on one chromosome, deletion on other (%s)'
-                                                 % (sample_haplotype.samples.name, ', '.join(novel_nondels), sample_haplotype.haplotypes_file.by_gene), session, low_confidence=False)
-                                    reported_deletions[novel.name].append(sample_haplotype.samples.name)
+                                                 % (sample_haplotype.samples.sample_name, ', '.join(novel_nondels), sample_haplotype.haplotypes_file.by_gene), session, low_confidence=False)
+                                    reported_deletions[novel.name].append(sample_haplotype.samples.sample_name)
 
                     else:
                         for n in novel_haplotyped:
@@ -401,10 +401,10 @@ def check_for_singleton_infs(novels, ds_dir, session):
                                 if novel:
                                     if novel.name not in reported_duplicates:
                                         reported_duplicates[novel.name] = []
-                                    if sample_haplotype.samples.name not in reported_duplicates[novel.name]:
+                                    if sample_haplotype.samples.sample_name not in reported_duplicates[novel.name]:
                                         report_issue(novel, 'Inferred allele on both chromosomes', 'In sample %s, allele %s is present on both chromosomes (%s).'
-                                                     % (sample_haplotype.samples.name, n, sample_haplotype.haplotypes_file.by_gene), session, low_confidence=True)
-                                        reported_duplicates[novel.name].append(sample_haplotype.samples.name)
+                                                     % (sample_haplotype.samples.sample_name, n, sample_haplotype.haplotypes_file.by_gene), session, low_confidence=True)
+                                        reported_duplicates[novel.name].append(sample_haplotype.samples.sample_name)
 
 # An allele should be low_confidence if it is exclusively found on both chromosomes
 # If there are some cases in which it's only found on one, we allow it through

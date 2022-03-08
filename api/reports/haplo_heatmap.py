@@ -33,11 +33,11 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         haplos = []
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+            sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
-            haplo_query = session.query(Sample.name, HaplotypesFile.file)\
-                .filter(Sample.name.in_(sample_list))\
+            haplo_query = session.query(Sample.sample_name, HaplotypesFile.file)\
+                .filter(Sample.sample_name.in_(sample_list))\
                 .join(SamplesHaplotype, Sample.id == SamplesHaplotype.samples_id)\
                 .filter(SamplesHaplotype.haplotypes_file_id == HaplotypesFile.id)\
                 .filter(HaplotypesFile.by_gene == params['haplo_gene'])

@@ -39,7 +39,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         allele_recs = []
 
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+            sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
@@ -51,7 +51,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 .filter(Gene.name.in_(wanted_genes)) \
                 .filter(Allele.name.notlike('%Del%')) \
                 .filter(Allele.name.notlike('%OR%')) \
-                .filter(Sample.name.in_(sample_list)) \
+                .filter(Sample.sample_name.in_(sample_list)) \
                 .filter(AllelesSample.kdiff >= kdiff)
 
             if 'sort_order' in params and params['sort_order'] == 'Locus':

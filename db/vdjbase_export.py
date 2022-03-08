@@ -52,8 +52,8 @@ def export_metadata():
                     }
 
                     for patient in patients:
-                        rec['Subjects'][patient.name] = {
-                            'Name': patient.name,
+                        rec['Subjects'][patient.patient_name] = {
+                            'Name': patient.patient_name,
                             'Original name': patient.name_in_paper,
                             'Sex': patient.sex,
                             'Ethnic': patient.ethnicity,
@@ -64,13 +64,13 @@ def export_metadata():
                         }
 
                     for sample in samples:
-                        rec['Samples'][sample.name] = {
-                            'Name': sample.name,
+                        rec['Samples'][sample.sample_name] = {
+                            'Name': sample.sample_name,
                             'Chain': sample.chain,
                             'Date': sample.date,
                             'Reads': sample.row_reads,
                             'Sample Group': sample.samples_group,
-                            'Subject Name': sample.patient.name,
+                            'Subject Name': sample.patient.patient_name,
                             'Sequence Protocol Name': sample.seq_protocol.name,
                             'Tissue Processing Name': sample.tissue_pro.name,
                             'Genotype Detection Name': sample.geno_detection.name,

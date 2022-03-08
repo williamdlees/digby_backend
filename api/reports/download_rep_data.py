@@ -52,7 +52,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             session = vdjbase_dbs[species][dataset].session
 
             for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
-                sample_list = session.query(Sample.name, Sample.genotype, Sample.patient_id).filter(Sample.name.in_(sample_chunk)).all()
+                sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(sample_chunk)).all()
                 sample_list = [s[0] for s in sample_list]
 
                 results = session.query(*attribute_query)\
@@ -61,7 +61,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                     .join(SeqProtocol)\
                     .join(TissuePro)\
                     .join(Study, Sample.study_id == Study.id)\
-                    .filter(Sample.name.in_(sample_list)).all()
+                    .filter(Sample.sample_name.in_(sample_list)).all()
 
                 rows.extend(results)
 
@@ -89,7 +89,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 print('adding dataset')
                 session = vdjbase_dbs[species][dataset].session
                 for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
-                    sample_list = session.query(Sample.genotype, Sample.igsnper_plot_path).filter(Sample.name.in_(sample_chunk)).all()
+                    sample_list = session.query(Sample.genotype, Sample.igsnper_plot_path).filter(Sample.sample_name.in_(sample_chunk)).all()
                     for p1, p2 in sample_list:
                         if p1 is not None and len(p1) > 0:
                             sample_dir = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, os.path.dirname(p1.replace('samples/', '')))

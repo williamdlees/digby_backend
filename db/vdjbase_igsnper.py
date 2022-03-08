@@ -36,7 +36,7 @@ def do_igsnper(species, dataset):
         header = "TiggerFilePath     ProjectID     SubjectID\n"
         fo.write(header)
 
-        samples = db.session.query(Sample.genotype, Sample.name, Study.name, Patient.name).join(Study, Sample.study_id == Study.id).join(Patient, Sample.patient_id == Patient.id).all()
+        samples = db.session.query(Sample.genotype, Sample.sample_name, Study.study_name, Patient.patient_name).join(Study, Sample.study_id == Study.id).join(Patient, Sample.patient_id == Patient.id).all()
 
         for sample in samples:
             if 'S1' in sample[1]:
@@ -73,11 +73,11 @@ def do_igsnper(species, dataset):
         study, individual = subject.split('_')
         sample_name = subject + '_S1'
 
-        sample_query = db.session.query(Sample).filter(Sample.name == sample_name)
+        sample_query = db.session.query(Sample).filter(Sample.sample_name == sample_name)
         if sample_query.count() == 1:
             sample_query.update({Sample.igsnper_plot_path: 'igsnper/%s_processed/%s.txt' % (study, subject)})
             sample_id = sample_query.one_or_none().id
-            db.session.query(Patient).filter(Patient.name == subject).update({Patient.igsnper_sample_id: sample_id})
+            db.session.query(Patient).filter(Patient.patient_name == subject).update({Patient.igsnper_sample_id: sample_id})
         else:
             print('Cant find the record for sample %s' % sample_name)
 

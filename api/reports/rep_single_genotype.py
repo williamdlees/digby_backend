@@ -26,7 +26,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     session = vdjbase_dbs[species][rep_sample['dataset']].session
     primer_trans, gene_subs = find_primer_translations(session)
-    p = session.query(Sample.genotype).filter(Sample.name == rep_sample['name']).one_or_none()
+    p = session.query(Sample.genotype).filter(Sample.sample_name == rep_sample['name']).one_or_none()
     p = p[0].replace('samples/', '')
     sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, rep_sample['dataset'], p)
 

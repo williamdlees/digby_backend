@@ -10,7 +10,7 @@ from math import ceil
 import json
 from sqlalchemy_filters import apply_filters
 from werkzeug.exceptions import BadRequest
-from datetime import datetime
+import datetime
 import decimal
 import os.path
 from os.path import isfile
@@ -18,9 +18,9 @@ from db.filter_list import apply_filter_to_list
 from api.system.system import digby_protected
 
 from app import vdjbase_dbs, app, genomic_dbs
-from db.vdjbase_api_query_filters import sample_info_filters
+from db.vdjbase_api_query_filters import sample_info_filters, sequence_filters
 from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
-from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample
+from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
@@ -122,7 +122,7 @@ class NovelsSpApi(Resource):
             d_haps = 0
             j_haps = 0
             hetero_haps = 0
-            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.name}
+            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.sample_name}
 
             for haplo in haplos:
                 gene_type = 'D' if 'D' in haplo.hap_gene else 'J'
@@ -154,7 +154,7 @@ class NovelsSpApi(Resource):
                     or (best_hap['gene_type'] == 'D' and gene_type == 'J') \
                     or (best_hap['hetero'] and not hetero) \
                     or best_hap['count'] < novel_count:
-                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.name}
+                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.sample_name}
 
             result['j_haplotypes'] = j_haps
             result['d_haplotypes'] = d_haps
@@ -193,7 +193,7 @@ class DataSetInfoAPI(Resource):
         stats['total_subjects'] = session.query(Patient.id).count()
         stats['total_samples'] = session.query(Sample.id).count()
         stats['sex_count'] = session.query(Patient.sex, func.count(Patient.sex)).group_by(Patient.sex).order_by(func.count(Patient.sex).desc()).all()
-        stats['study_count'] = session.query(Study.name, func.count(Sample.name)).join(Sample, Sample.study_id == Study.id).group_by(Study.name).order_by(func.count(Sample.name).desc()).all()
+        stats['study_count'] = session.query(Study.study_name, func.count(Sample.sample_name)).join(Sample, Sample.study_id == Study.id).group_by(Study.study_name).order_by(func.count(Sample.sample_name).desc()).all()
         stats['condition_count'] = session.query(Patient.disease_diagnosis_label, func.count(Patient.disease_diagnosis_label)).group_by(Patient.disease_diagnosis_label).order_by(func.count(Patient.disease_diagnosis_label).desc()).all()
         stats['celltype_count'] = session.query(TissuePro.sub_cell_type, func.count(TissuePro.sub_cell_type)).group_by(TissuePro.sub_cell_type).order_by(func.count(TissuePro.sub_cell_type).desc()).all()
         stats['tissue_count'] = session.query(TissuePro.tissue_label, func.count(TissuePro.tissue_label)).group_by(TissuePro.tissue_label).order_by(func.count(TissuePro.tissue_label).desc()).all()
@@ -210,8 +210,8 @@ class DataSetInfoAPI(Resource):
 
         for row in studies:
             row = row._asdict()
-            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_title == row['name']).count()
-            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_title == row['name']).count()
+            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_title == row['study_title']).count()
+            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_title == row['study_title']).count()
             stats['studies'].append(row)
 
         return stats
@@ -241,15 +241,21 @@ class SampleInfoApi(Resource):
         info = session.query(*attribute_query)\
             .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
             .join(Patient, Patient.id == Sample.patient_id)\
-            .join(SeqProtocol)\
-            .join(TissuePro)\
+            .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
+            .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
+            .join(DataPro, DataPro.id == Sample.data_pro_id) \
             .join(Study, Sample.study_id == Study.id)\
-            .filter(Sample.name==sample).one_or_none()
+            .filter(Sample.sample_name==sample).one_or_none()
 
         if info:
             info = info._asdict()
-            info['date'] = info['date'].isoformat()
-            haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Sample).filter(Sample.name==sample).order_by(HaplotypesFile.by_gene_s).all()
+
+            for k,v in info.items():
+                if v:
+                    if isinstance(v, (datetime.datetime, datetime.date)):
+                        info[k] = v.isoformat()
+
+            haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Sample).filter(Sample.sample_name==sample).order_by(HaplotypesFile.by_gene_s).all()
             info['haplotypes'] = [(h[0]) for h in haplotypes]
 
         return info
@@ -276,9 +282,9 @@ class SamplesApi(Resource):
 
         args = filter_arguments.parse_args(request)
 
-        required_cols = json.loads(args['cols'])
-        if 'name' not in required_cols:
-            required_cols.append('name')
+        required_cols = json.loads(args['cols']) if args['cols'] else list(sample_info_filters.keys())
+        if 'sample_name' not in required_cols:
+            required_cols.append('sample_name')
         if 'dataset' not in required_cols:
             required_cols.append('dataset')
 
@@ -287,18 +293,20 @@ class SamplesApi(Resource):
                 raise BadRequest('Bad filter string %s' % args['filter'])
 
         if 'genotypes' in required_cols:                # needed to compose paths to files
-            for field in ('name', 'patient_name', 'study_name'):
+            for field in ('patient_name', 'study_name'):
                 if field not in required_cols:
                     required_cols.append(field)
             required_cols.append('genotype')
             required_cols.append('genotype_stats')
             required_cols.append('genotype_report')
 
-        attribute_query = [sample_info_filters['id']['field']]        # the query requires the first field to be from Sample
+        attribute_query = [sample_info_filters['sample_id']['field']]        # the query requires the first field to be from Sample
 
         for col in required_cols:
-            if col != 'id' and sample_info_filters[col]['field'] is not None:
+            if col != 'sample_id' and sample_info_filters[col]['field'] is not None:
                 attribute_query.append(sample_info_filters[col]['field'])
+
+        attribute_query.append(Sample.id)
 
         filter = json.loads(args['filter'])
         ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), filter)
@@ -324,7 +332,7 @@ class SamplesApi(Resource):
             for f in required_cols:
                 if sample_info_filters[f]['field'] is not None and 'no_uniques' not in sample_info_filters[f]:
                     el = s[f]
-                    if isinstance(el, datetime):
+                    if isinstance(el, (datetime.datetime, datetime.date)):
                         el = el.date().isoformat()
                     elif isinstance(el, bool):
                         if f in rep_sample_bool_values:
@@ -392,7 +400,7 @@ class SamplesApi(Resource):
 
         for rec in ret:
             for k, v in rec.items():
-                if isinstance(v, datetime):
+                if isinstance(v, (datetime.datetime, datetime.date)):
                     rec[k] = v.date().isoformat()
                 elif isinstance(v, decimal.Decimal):
                     rec[k] = '%0.2f' % v
@@ -400,7 +408,7 @@ class SamplesApi(Resource):
         if 'genotypes' in required_cols:
             for r in ret:
                 r['genotypes'] = {}
-                r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name'], 'sort_order': 'Locus'})
+                r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'sort_order': 'Locus'})
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
                 sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
@@ -412,7 +420,7 @@ class SamplesApi(Resource):
                 del r['genotype_report']
 
                 session = vdjbase_dbs[species][r['dataset']].session
-                igsnper_path = session.query(Sample.igsnper_plot_path, Sample.genotype_report).filter(Sample.name == r['name']).one_or_none()
+                igsnper_path = session.query(Sample.igsnper_plot_path, Sample.genotype_report).filter(Sample.sample_name == r['sample_name']).one_or_none()
 
                 if igsnper_path is not None and igsnper_path[0] is not None:
                     r['genotypes']['igsnper'] = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], igsnper_path[0]])
@@ -423,8 +431,8 @@ class SamplesApi(Resource):
         if 'haplotypes' in required_cols:
             for r in ret:
                 session = vdjbase_dbs[species][r['dataset']].session
-                haplotypes = session.query(Sample.name, func.group_concat(HaplotypesFile.by_gene_s), func.group_concat(HaplotypesFile.file))
-                h = haplotypes.filter(Sample.name == r['name'])\
+                haplotypes = session.query(Sample.sample_name, func.group_concat(HaplotypesFile.by_gene_s), func.group_concat(HaplotypesFile.file))
+                h = haplotypes.filter(Sample.sample_name == r['sample_name'])\
                     .join(SamplesHaplotype, SamplesHaplotype.samples_id == Sample.id)\
                     .join(HaplotypesFile, HaplotypesFile.id == SamplesHaplotype.haplotypes_file_id)\
                     .one_or_none()
@@ -437,7 +445,7 @@ class SamplesApi(Resource):
                         sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], filename])
                         if isfile(fp):
                             r['haplotypes'][hap] = {}
-                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['name'], 'hap_gene': hap, 'sort_order' : 'Locus'})
+                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'hap_gene': hap, 'sort_order' : 'Locus'})
                             r['haplotypes'][hap]['rabhit'] = sp
                 else:
                     r['haplotypes'] = ''
@@ -495,50 +503,30 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
         query = apply_filters(query, filter_spec)
 
         if hap_filters:
-            hap_samples = session.query(Sample.name.distinct()).join(SamplesHaplotype).join(HaplotypesFile).filter(
+            hap_samples = session.query(Sample.sample_name.distinct()).join(SamplesHaplotype).join(HaplotypesFile).filter(
                 HaplotypesFile.by_gene_s.in_(hap_filters['value']))
-            query = query.filter(Sample.name.in_(hap_samples))
+            query = query.filter(Sample.sample_name.in_(hap_samples))
 
         if allele_filters:
-            allele_samples = session.query(Sample.name.distinct()).join(AllelesSample,
+            allele_samples = session.query(Sample.sample_name.distinct()).join(AllelesSample,
                                                                         Sample.id == AllelesSample.sample_id).join(
                 Allele, Allele.id == AllelesSample.allele_id).filter(Allele.name.in_(allele_filters['value'])).all()
             if allele_samples is None:
                 allele_samples = []
-            query = query.filter(Sample.name.in_([s[0] for s in allele_samples]))
+            query = query.filter(Sample.sample_name.in_([s[0] for s in allele_samples]))
 
         res = query.all()
 
         for r in res:
             s = r._asdict()
             for k, v in s.items():
-                if isinstance(v, datetime):
+                if isinstance(v, (datetime.datetime, datetime.date)):
                     s[k] = v.date().isoformat()
             s['dataset'] = dset
             s['id'] = '%s.%d' % (dset, s['id'])
             ret.append(s)
     return ret
 
-
-sequence_filters = {
-    'name': {'model': 'Allele', 'field': Allele.name, 'sort': 'allele'},
-    'gene_name': {'model': 'Gene', 'field': Gene.name.label('gene_name'), 'fieldname': 'name'},
-    'igsnper_plot_path': {'model': 'Gene', 'field': Gene.igsnper_plot_path},
-    'pipeline_name': {'model': 'Allele', 'field': Allele.pipeline_name},
-    'seq': {'model': 'Allele', 'field': Allele.seq, 'no_uniques': True},
-    'seq_len': {'model': 'Allele', 'field': Allele.seq_len, 'sort': 'numeric'},
-    'similar': {'model': 'Allele', 'field': Allele.similar},
-    'appears': {'model': 'Allele', 'field': Allele.appears, 'sort': 'numeric'},
-    'is_single_allele': {'model': 'Allele', 'field': Allele.is_single_allele},
-    'low_confidence': {'model': 'Allele', 'field': Allele.low_confidence},
-    'novel': {'model': 'Allele', 'field': Allele.novel},
-    'max_kdiff': {'model': 'Allele', 'field': Allele.max_kdiff, 'sort': 'numeric'},
-    'notes': {'model': Allele, 'field': func.group_concat(AlleleConfidenceReport.notes, '\n').label('notes')},
-    'notes_count': {'model': Allele, 'field': func.count(AlleleConfidenceReport.id).label('notes_count'), 'sort': 'numeric'},
-
-    'sample_id': {'model': None, 'fieldname': 'sample_id'},
-    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
-}
 
 rep_sequence_bool_values = {
     'is_single_allele': ('Unambiguous', '(blank)'),
@@ -561,9 +549,9 @@ class SequencesApi(Resource):
             return list()
 
         if args['cols'] is None or not args['cols']:
-            return list()
-
-        required_cols = json.loads(args['cols'])
+            required_cols = list(sequence_filters.keys())
+        else:
+            required_cols = json.loads(args['cols'])
 
         for col in required_cols:
             if col not in sequence_filters.keys():
@@ -585,7 +573,7 @@ class SequencesApi(Resource):
             for f in required_cols:
                 if sequence_filters[f]['field'] is not None and 'no_uniques' not in sequence_filters[f]:
                     el = s[f]
-                    if isinstance(el, datetime):        # convert and add to uniques. Can't convert the returned records until we sort
+                    if isinstance(el, (datetime.datetime, datetime.date)):        # convert and add to uniques. Can't convert the returned records until we sort
                         el = el.date().isoformat()
                     elif isinstance(el, decimal.Decimal):
                         el = '%0.2f' % el
@@ -652,7 +640,7 @@ class SequencesApi(Resource):
 
         for rec in ret:
             for k, v in rec.items():
-                if isinstance(v, datetime):
+                if isinstance(v, (datetime.datetime, datetime.date)):
                     rec[k] = v.date().isoformat()
                 elif isinstance(v, decimal.Decimal):
                     rec[k] = '%0.2f' % v
@@ -711,6 +699,8 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
         attribute_query = []
 
         for col in required_cols:
+            if col not in sequence_filters or 'field' not in sequence_filters[col]:
+                breakpoint()
             if sequence_filters[col]['field'] is not None:
                 attribute_query.append(sequence_filters[col]['field'])
 
@@ -733,7 +723,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
             alleles_with_samples = session.query(Allele.name) \
                 .join(AllelesSample) \
                 .join(Sample) \
-                .filter(Sample.name.in_(required_ids)).all()
+                .filter(Sample.sample_name.in_(required_ids)).all()
 
             for a in alleles_with_samples:
                 required_names.append(a[0])
