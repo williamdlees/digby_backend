@@ -10,7 +10,7 @@ import sys
 import receptor_utils.simple_bio_seq as simple
 
 from db.vdjbase_exceptions import DbCreationError
-from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
+from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample, DataPro, GenoDetection
 from db.vdjbase_airr_common import read_definition_data
 
 
@@ -63,7 +63,133 @@ def import_studies(ds_dir, species, dataset, session):
         process_airr_metadata(ds_dir, airr_corresp, table_fields, session)
         yml_full = False
 
-    process_yml_metadata(yml_data, table_fields, yml_full)
+    process_yml_metadata(yml_data, table_fields, yml_full, session)
+    session.commit()
+    breakpoint()
+
+
+def process_yml_metadata(yml_data, table_fields, yml_full, session):
+    for project_name, project_data in yml_data.items():
+        for sample_name in project_data['Samples'].keys():
+            meta_records = {
+                'Study': {},
+                'Patient': {},
+                'TissuePro': {},
+                'SeqProtocol': {},
+                'DataPro': {},
+                'GenoDetection': {},
+                'Sample': {}
+            }
+
+            build_yml_metadata(sample_name, table_fields, project_data, meta_records, yml_full)
+
+            if yml_full:
+                commit_database(meta_records, sample_name, session)
+                continue
+
+            # We should be able to rely on all records already being present, apart from GenoDetection
+            # Find the Sample record, use that as the link to the rest
+
+            sample_rec = session.query(Sample).filter(Sample.name==sample_name).one_or_none()
+
+            if not sample_rec:
+                print(f"Error: no sample record found for {sample_name} while processing YML")
+                continue
+
+            def setattrs(_self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(_self, k, v)
+
+            if meta_records['Study']:
+                setattrs(sample_rec.study, **meta_records['Study'])
+
+            if meta_records['Patient']:
+                setattrs(sample_rec.patient, **meta_records['Patient'])
+
+            if meta_records['TissuePro']:
+                setattrs(sample_rec.tissue_pro, **meta_records['TissuePro'])
+
+            if meta_records['SeqProtocol']:
+                setattrs(sample_rec.seq_protocol, **meta_records['SeqProtocol'])
+
+            if meta_records['DataPro']:
+                setattrs(sample_rec.data_pro, **meta_records['DataPro'])
+
+            if meta_records['Sample']:
+                setattrs(sample_rec, **meta_records['Sample'])
+
+            if meta_records['GenoDetection']:
+                geno_rec = session.query(GenoDetection).filter_by(**meta_records['GenoDetection']).one_or_none()
+                if not geno_rec:
+                    geno_rec = GenoDetection(**meta_records['GenoDetection'])
+                    session.add(geno_rec)
+                    session.flush()
+                sample_rec.geno_detection_id = geno_rec.id
+
+            # DataPro should be constructed entirely from MiAIRR
+
+            if meta_records['DataPro']:
+                print(f"Unexpected Data Processing metadata in YML record.")
+
+
+
+
+
+# Commit data for one sample, creating other associated rows as needed
+def build_yml_metadata(sample_name, table_fields, project_data, meta_records, yml_full):
+    desired_attributes = {}
+
+    for table in meta_records.keys():
+            desired_attributes[table] = {rec['YML attribute']: rec['simple_name'].replace('.', '_')
+                                         for rec in table_fields[table].values()
+                                         if rec['VDJbase table'] == table and rec['YML attribute'] and (yml_full or not rec['structured_name'])}
+
+    # dict attributes are not the same as names - so find indexes into the various YML objects
+
+    yml_objects = {
+        'Genotype Detections': {},
+        'Sequence Protocol': {},
+        'Tissue Processing': {},
+    }
+
+    for obj_type in yml_objects.keys():
+        for obj_val in project_data[obj_type].values():
+            yml_objects[obj_type][obj_val['Name']] = obj_val
+
+
+    for table in meta_records.keys():
+        for desired_attribute, table_attribute in desired_attributes[table].items():
+            value = None
+            try:
+                if '.' not in desired_attribute:
+                    value = project_data[desired_attribute]
+
+                else:
+                    section, desired_attribute = desired_attribute.split('.')
+
+                    if section == 'Genotype Detections':
+                        section_name = project_data['Samples'][sample_name]['Genotype Detection Name']
+                        named_section = yml_objects[section][section_name]
+                        value = named_section[desired_attribute]
+                    elif section == 'Samples':
+                        value = project_data['Samples'][sample_name][desired_attribute]
+                    elif section == 'Sequence Protocol':
+                        section_name = project_data['Samples'][sample_name]['Sequence Protocol Name']
+                        named_section = yml_objects[section][section_name]
+                        value = named_section[desired_attribute]
+                    elif section == 'Subjects':
+                        value = project_data['Subjects'][project_data['Samples'][sample_name]['Subject Name']][desired_attribute]
+                    elif section == 'Tissue Processing':
+                        section_name = project_data['Samples'][sample_name]['Tissue Processing Name']
+                        named_section = yml_objects[section][section_name]
+                        value = named_section[desired_attribute]
+                    else:
+                        print(f'Unrecognised section name {section} for attribute {desired_attribute}')
+            except Exception as e:
+                print(f'Parsing error in section name {section} for attribute {desired_attribute}: {e}')
+
+            if value and table_attribute:
+                meta_records[table][table_attribute] = value
 
 
 # Read airr metadata, using info from the correspondence file. Add to meta_records
@@ -216,6 +342,7 @@ def commit_database(meta_records, vdjbase_name, session):
     meta_records['Sample']['seq_protocol_id'] = row_ids['SeqProtocol']
     meta_records['Sample']['study_id'] = row_ids['Study']
     meta_records['Sample']['tissue_pro_id'] = row_ids['TissuePro']
+    meta_records['Sample']['data_pro_id'] = row_ids['DataPro']
     sample = Sample(**meta_records['Sample'])
     session.add(sample)
     session.commit()

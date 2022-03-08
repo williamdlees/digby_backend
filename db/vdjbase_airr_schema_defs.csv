@@ -30,7 +30,7 @@ Repertoire.subject.species.id,species.id,subject,Patient,,,string,FALSE,Organism
 Repertoire.subject.species.label,species.label,subject,Patient,,,string,FALSE,Organism,Label of the concept in the respective ontology,,
 Repertoire.subject.organism.id,organism.id,subject,Patient,,,string,FALSE,,"CURIE of the concept, encoding the ontology and the local ID",,
 Repertoire.subject.organism.label,organism.label,subject,Patient,,,string,FALSE,,Label of the concept in the respective ontology,,
-Repertoire.subject.sex,sex,subject,Patient,Patient.sex,Subjects.Sec,string,FALSE,Sex,Biological sex of subject,female,
+Repertoire.subject.sex,sex,subject,Patient,Patient.sex,Subjects.Sex,string,FALSE,Sex,Biological sex of subject,female,
 Repertoire.subject.age_min,age_min,subject,Patient,,,number,FALSE,Age minimum,Specific age or lower boundary of age range.,60,
 Repertoire.subject.age_max,age_max,subject,Patient,,,number,FALSE,Age maximum,"Upper boundary of age range or equal to age_min for specific age. This field should only be null if age_min is null.
 ",80,
@@ -106,18 +106,18 @@ Repertoire.sample.NucleicAcidProcessing.complete_sequences,complete_sequences,Nu
 ",partial,
 Repertoire.sample.NucleicAcidProcessing.physical_linkage,physical_linkage,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,Physical linkage of different rearrangements,"In case an experimental setup is used that physically links nucleic acids derived from distinct `Rearrangements` before library preparation, this field describes the mode of that linkage. All `hetero_*` terms indicate that in case of paired-read sequencing, the two reads should be expected to map to distinct IG/TR loci. `*_head-head` refers to techniques that link the 5' ends of transcripts in a single-cell context. `*_tail-head` refers to techniques that link the 3' end of one transcript to the 5' end of another one in a single-cell context. This term does not provide any information whether a continuous reading-frame between the two is generated. `*_prelinked` refers to constructs in which the linkage was already present on the DNA level (e.g. scFv).
 ",hetero_head-head,
-Repertoire.sample.SequencingRun.sequencing_run_id,sequencing_run_id,SequencingRun,SeqProtocol,,,string,TRUE,Batch number,ID of sequencing run assigned by the sequencing facility,160101_M01234,
-Repertoire.sample.SequencingRun.total_reads_passing_qc_filter,total_reads_passing_qc_filter,SequencingRun,SeqProtocol,,,integer,TRUE,Total reads passing QC filter,Number of usable reads for analysis,10365118,
+Repertoire.sample.SequencingRun.sequencing_run_id,sequencing_run_id,SequencingRun,Sample,,,string,TRUE,Batch number,ID of sequencing run assigned by the sequencing facility,160101_M01234,
+Repertoire.sample.SequencingRun.total_reads_passing_qc_filter,total_reads_passing_qc_filter,SequencingRun,Sample,,,integer,TRUE,Total reads passing QC filter,Number of usable reads for analysis,10365118,
 Repertoire.sample.SequencingRun.sequencing_platform,sequencing_platform,SequencingRun,SeqProtocol,SeqProtocol.sequencing_platform,Sequence Protocol.Sequencing_platform,string,TRUE,Sequencing platform,Designation of sequencing instrument used,Alumina LoSeq 1000,
 Repertoire.sample.SequencingRun.sequencing_facility,sequencing_facility,SequencingRun,SeqProtocol,,,string,TRUE,Sequencing facility,Name and address of sequencing facility,"Seqs-R-Us, Vancouver, BC, Canada",
-Repertoire.sample.SequencingRun.sequencing_run_date,sequencing_run_date,SequencingRun,SeqProtocol,,,string,TRUE,Date of sequencing run,Date of sequencing run,16/12/2016,
+Repertoire.sample.SequencingRun.sequencing_run_date,sequencing_run_date,SequencingRun,Sample,,,string,TRUE,Date of sequencing run,Date of sequencing run,16/12/2016,
 Repertoire.sample.SequencingRun.sequencing_kit,sequencing_kit,SequencingRun,SeqProtocol,,,string,TRUE,Sequencing kit,"Name, manufacturer, order and lot numbers of sequencing kit","FullSeq 600, Alumina, #M123456C0, 789G1HK",
-Repertoire.sample.SequencingRun.sequencing_files.file_type,file_type,SequencingRun,SeqProtocol,,,string,TRUE,Raw sequencing data file type,File format for the raw reads or sequences,,
-Repertoire.sample.SequencingRun.sequencing_files.filename,filename,SequencingRun,SeqProtocol,,,string,TRUE,Raw sequencing data file name,File name for the raw reads or sequences. The first file in paired-read sequencing.,MS10R-NMonson-C7JR9_S1_R1_001.fastq,
-Repertoire.sample.SequencingRun.sequencing_files.read_direction,read_direction,SequencingRun,SeqProtocol,,,string,TRUE,Read direction,Read direction for the raw reads or sequences. The first file in paired-read sequencing.,forward,
+Repertoire.sample.SequencingRun.sequencing_files.file_type,file_type,SequencingRun,Sample,,,string,TRUE,Raw sequencing data file type,File format for the raw reads or sequences,,
+Repertoire.sample.SequencingRun.sequencing_files.filename,filename,SequencingRun,Sample,,,string,TRUE,Raw sequencing data file name,File name for the raw reads or sequences. The first file in paired-read sequencing.,MS10R-NMonson-C7JR9_S1_R1_001.fastq,
+Repertoire.sample.SequencingRun.sequencing_files.read_direction,read_direction,SequencingRun,Sample,,,string,TRUE,Read direction,Read direction for the raw reads or sequences. The first file in paired-read sequencing.,forward,
 Repertoire.sample.SequencingRun.sequencing_files.read_length,read_length,SequencingRun,SeqProtocol,SeqProtocol.sequencing_length,Sequence Protocol.Sequencing_length,integer,TRUE,Forward read length,Read length in bases for the first file in paired-read sequencing,300,
-Repertoire.sample.SequencingRun.sequencing_files.paired_filename,paired_filename,SequencingRun,SeqProtocol,,,string,TRUE,Paired raw sequencing data file name,File name for the second file in paired-read sequencing,MS10R-NMonson-C7JR9_S1_R2_001.fastq,
-Repertoire.sample.SequencingRun.sequencing_files.paired_read_direction,paired_read_direction,SequencingRun,SeqProtocol,,,string,TRUE,Paired read direction,Read direction for the second file in paired-read sequencing,reverse,
+Repertoire.sample.SequencingRun.sequencing_files.paired_filename,paired_filename,SequencingRun,Sample,,,string,TRUE,Paired raw sequencing data file name,File name for the second file in paired-read sequencing,MS10R-NMonson-C7JR9_S1_R2_001.fastq,
+Repertoire.sample.SequencingRun.sequencing_files.paired_read_direction,paired_read_direction,SequencingRun,Sample,,,string,TRUE,Paired read direction,Read direction for the second file in paired-read sequencing,reverse,
 Repertoire.sample.SequencingRun.sequencing_files.paired_read_length,paired_read_length,SequencingRun,SeqProtocol,,,integer,TRUE,Paired read length,Read length in bases for the second file in paired-read sequencing,300,
 Repertoire.data_processing.DataProcessing.data_processing_id,data_processing_id,data_processing,DataPro,,,string,TRUE,Data processing ID,Identifier for the data processing object.,,
 Repertoire.data_processing.DataProcessing.primary_annotation,primary_annotation,data_processing,DataPro,,,boolean,TRUE,Primary annotation,"If true, indicates this is the primary or default data processing for the repertoire and its rearrangements. If false, indicates this is a secondary or additional data processing.
@@ -136,24 +136,24 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,accession_reference,,Study,accession_reference,,string,FALSE,Study Ref,"URL of the study in the registry
 ",,Derived from study.study_id
 ,sub_cell_type,,TissuePro,sub_cell_type,Tissue Processing.Sub Cell Type,string,FALSE,Sub Cell Type,Sub cell type,,?
-,name,,Patient,name,,string,FALSE,Subject name,Subject name as allocated by VDJbase,,Determined by pipeline
+,name,,Patient,name,Subjects.Name,string,FALSE,Subject name,Subject name as allocated by VDJbase,,Determined by pipeline
 ,igsnper_sample_id,,Patient,igsnper_sample_id,,integer,FALSE,Igsnper Sample ID,Sample ID as allocated by IgSNPer,,Detemined at take-on
-,name,,Sample,name,,string,FALSE,Sample name,Sample name as allocated by VDJbase,,Determined by pipeline
-,reads,,Sample,reads,Samples.Reads,integer,FALSE,Reads,Number of reads,,Determined by pipeline
+,name,,Sample,name,Samples.Name,string,FALSE,Sample name,Sample name as allocated by VDJbase,,Determined by pipeline
+,reads,,Sample,reads,Samples.Reads,integer,FALSE,VDJbase reads,Reads processed by VDJbase pipeline,,Determined by pipeline
 ,genotype,,Sample,genotype,,string,FALSE,Genotype report,Link to genotype report,,Derived at take-on
 ,genotype_graph,,Sample,genotype_graph,,string,FALSE,Genotype plots,Link to genotype plots,,Derived at take-on
 ,sample_group,,Sample,sample_group,Samples.Sample Group,string,FALSE,Sample group,Sample group,,? Possibly sample_processing_id
 ,name,,Study,name,,string,FALSE,Study name,Study name,,
-,name,,GenoDetection,name,Genotype Detections.name,string,FALSE,Geno pipeline name,Pipeline v. a034f5,,
-,prepro_tool,,GenoDetection,prepro_tool,Genotype Detections.Pre-processing,string,FALSE,Preprocessing tool,PRESTO,,
-,aligner_tool,,GenoDetection,aligner_tool,Genotype Detections.Alignment Tool,string,FALSE,Aligner tool,IgBLAST,,
-,aligner_ver,,GenoDetection,aligner_ver,Genotype Detections.Aligner Version,string,FALSE,Aligner version,1.18,,
-,aligner_reference_v,,GenoDetection,aligner_reference_v,Genotype Detections.Alignment reference v,string,FALSE,Aligner ref V,IMGT full - version 2021-06-06,,
-,aligner_reference_d,,GenoDetection,aligner_reference_d,Genotype Detections.Alignment reference d,string,FALSE,Aligner ref D,IMGT full - version 2021-06-06,,
-,aligner_reference_j,,GenoDetection,aligner_reference_j,Genotype Detections.Alignment reference j,string,FALSE,Aligner ref J,IMGT full - version 2021-06-06,,
-,geno_tool,,GenoDetection,geno_tool,Genotype Detections.Genotyper Tool,string,FALSE,Genotyping tool,TIgGER,,
-,geno_ver,,GenoDetection,geno_ver,Genotype Detections.Genotyper Version,string,FALSE,Genotyping tool version,1.2,,
-,haplotype_tool,,GenoDetection,haplotype_tool,Genotype Detections.Haplotyper Tool,string,FALSE,Haplotyping tool,RabHIT,,
-,haplotype_ver,,GenoDetection,haplotype_ver,Genotype Detections.Haplotyper Version,string,FALSE,Haplotyping tool version,1.2,,
-,single_assignment,,GenoDetection,single_assignment,Genotype Detections.Single Assignment,boolean,FALSE,Single assignment,TRUE,,
-,sample_basis,,GenoDetection,sample_basis,Genotype Detections.Repertoire or Germline,string,FALSE,Sample basis,Germline,,
+,name,,GenoDetection,name,Genotype Detections.Name,string,FALSE,Geno pipeline name,Geno pipeline name,Pipeline v. a034f5,
+,prepro_tool,,GenoDetection,prepro_tool,Genotype Detections.Pre-processing,string,FALSE,Preprocessing tool,Preprocessing tool,PRESTO,
+,aligner_tool,,GenoDetection,aligner_tool,Genotype Detections.Alignment Tool,string,FALSE,Aligner tool,Aligner tool,IgBLAST,
+,aligner_ver,,GenoDetection,aligner_ver,Genotype Detections.Aligner Version,string,FALSE,Aligner version,Aligner version,1.18,
+,aligner_reference_v,,GenoDetection,aligner_reference_v,Genotype Detections.Alignment reference v,string,FALSE,Aligner ref V,Aligner ref V,IMGT full - version 2021-06-06,
+,aligner_reference_d,,GenoDetection,aligner_reference_d,Genotype Detections.Alignment reference d,string,FALSE,Aligner ref D,Aligner ref D,IMGT full - version 2021-06-06,
+,aligner_reference_j,,GenoDetection,aligner_reference_j,Genotype Detections.Alignment reference j,string,FALSE,Aligner ref J,Aligner ref J,IMGT full - version 2021-06-06,
+,geno_tool,,GenoDetection,geno_tool,Genotype Detections.Genotyper Tool,string,FALSE,Genotyping tool,Genotyping tool,TIgGER,
+,geno_ver,,GenoDetection,geno_ver,Genotype Detections.Genotyper Version,string,FALSE,Genotyping tool version,Genotyping tool version,1.2,
+,haplotype_tool,,GenoDetection,haplotype_tool,Genotype Detections.Haplotyper Tool,string,FALSE,Haplotyping tool,Haplotyping tool,RabHIT,
+,haplotype_ver,,GenoDetection,haplotype_ver,Genotype Detections.Haplotyper Version,string,FALSE,Haplotyping tool version,Haplotyping tool version,1.2,
+,single_assignment,,GenoDetection,single_assignment,Genotype Detections.Single Assignment,boolean,FALSE,Single assignment,TRUE if the processed reads are restricted to those that have a single V_call,TRUE,
+,sample_basis,,GenoDetection,sample_basis,Genotype Detections.Repertoire or Germline,string,FALSE,Sample basis,Repertoire or germline,Germline,

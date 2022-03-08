@@ -38,10 +38,12 @@ key_texts = {
     seq_protocol_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
     tissue_pro_id = Column(ForeignKey('tissue_pro.id'), nullable=False, index=True)    
+    data_pro_id = Column(ForeignKey('data_pro.id'), nullable=False, index=True)    
     geno_detection = relationship('GenoDetection')
     seq_protocol = relationship('SeqProtocol')
     study = relationship('Study')
     tissue_pro = relationship('TissuePro')
+    data_pro = relationship('DataPro')
     alleles = relationship("AllelesSample", back_populates="sample")
     patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
 """,
