@@ -296,7 +296,7 @@ class SamplesApi(Resource):
             for field in ('patient_name', 'study_name'):
                 if field not in required_cols:
                     required_cols.append(field)
-            required_cols.append('genotype')
+            required_cols.append('genotypes')
             required_cols.append('genotype_stats')
             required_cols.append('genotype_report')
 
@@ -339,7 +339,7 @@ class SamplesApi(Resource):
                             el = rep_sample_bool_values[f][0 if el else 1]
                     if (not isinstance(el, str) or len(el) > 0) and el not in uniques[f]:
                         uniques[f].append(el)
-                    if isinstance(el, str) and len(el) == 0 and '(blank)' not in uniques[f]:
+                    if (sample_info_filters[f]['field'].type.python_type is str) and len(el) == 0 and '(blank)' not in uniques[f]:
                         uniques[f].append('(blank)')
 
             if filter_applied:
@@ -412,10 +412,9 @@ class SamplesApi(Resource):
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
                 sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
-                r['genotypes']['tigger'] = sp + r['genotype'].replace('samples', '') if r['genotype'] else ''
+                r['genotypes']['tigger'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
                 r['genotypes']['ogrdbstats'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
                 r['genotypes']['ogrdbplot'] = sp + r['genotype_report'].replace('samples', '') if r['genotype_report'] else ''
-                del r['genotype']
                 del r['genotype_stats']
                 del r['genotype_report']
 
@@ -522,6 +521,8 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
             for k, v in s.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
                     s[k] = v.date().isoformat()
+                if v is None:
+                    s[k] = ''
             s['dataset'] = dset
             s['id'] = '%s.%d' % (dset, s['id'])
             ret.append(s)

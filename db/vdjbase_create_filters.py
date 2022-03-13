@@ -19,7 +19,7 @@ from db.vdjbase_model import Allele, Gene, AlleleConfidenceReport
 '''
 
 required_classes = {
-    'sample_info_filters': [Sample, Patient, Study, TissuePro, SeqProtocol, DataPro],
+    'sample_info_filters': [Sample, Patient, Study, TissuePro, SeqProtocol, DataPro, GenoDetection],
     'sequence_filters': [Allele, Gene]
 }
 

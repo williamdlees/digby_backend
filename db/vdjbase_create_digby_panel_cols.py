@@ -2,7 +2,7 @@
 
 from db.vdjbase_airr_common import read_definition_data
 
-cols_file = 'rep-sample-panel-cols.ts'
+cols_file = '../../digby/src/app/rep-sample/rep-sample-panel/rep-sample-panel-cols.ts'
 
 prelude = '''
 // Material table column definitions
@@ -31,10 +31,23 @@ def write_table(fo, table_name, items):
         if 'TRUE' in item['display']:
             rec = []
             rec.append(f"id: '{item['simple_name'].replace('.', '_')}'")
-            rec.append(f"name: '{item['title']}'")
+
+            name = item['title']
+
+            if len(name) > 30:
+                print(f"{item['simple_name']}: title truncated to {name}")
+                name = name[0:30]
+
+            rec.append(f"name: '{name}'")
             rec.append(f"section: '{table_name}'")
             rec.append(f"hidden: {'true' if 'TRUE' in item['hide'] else 'false'}")
-            rec.append(f"type: '{item['type']}'")
+
+            if item['list'] == 'TRUE':
+                item_type = 'string'
+            else:
+                item_type = item['type']
+
+            rec.append(f"type: '{item_type}'")
             rec.append(f"size: '{'small-col' if 'short' in item['size'] else 'large-col'}'")
             desc_text = item['description'].replace("'", '"').replace('\n', '')
             rec.append(f"description: '{desc_text}'")

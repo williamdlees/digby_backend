@@ -66,6 +66,7 @@ class {table_name}(Base):
 
     for item in items:
         decl = None
+
         if item['type'] == 'string' or item['list'] == 'TRUE':
             decl = 'Column(String(100))'
         elif item['type'] == 'number':
