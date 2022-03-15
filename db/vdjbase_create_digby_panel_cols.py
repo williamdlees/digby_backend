@@ -1,6 +1,7 @@
 # Create sample panel column information for use in the front end
 
 from db.vdjbase_airr_common import read_definition_data
+from operator import attrgetter
 
 cols_file = '../../digby/src/app/rep-sample/rep-sample-panel/rep-sample-panel-cols.ts'
 
@@ -27,6 +28,8 @@ def write_postlude(fo):
 
 
 def write_table(fo, table_name, items):
+    hidden_recs = []
+    default_recs = {}
     for item in items:
         if 'TRUE' in item['display']:
             rec = []
@@ -54,7 +57,16 @@ def write_table(fo, table_name, items):
             example_text = item['example'].replace("'", '"').replace('\n', '')
             rec.append(f"example: '{example_text}'")
 
-            fo.write('    {' + ', '.join(rec) + '},\n')
+            if item['order']:
+                default_recs[item['order']] = rec
+            else:
+                hidden_recs.append(rec)
+
+    for ind in sorted(list(default_recs.keys())):
+        fo.write('    {' + ', '.join(default_recs[ind]) + '},\n')
+
+    for rec in hidden_recs:
+        fo.write('    {' + ', '.join(rec) + '},\n')
 
 
 def main():
