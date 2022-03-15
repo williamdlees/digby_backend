@@ -5,7 +5,7 @@ import yaml
 import csv
 
 schema_file = 'airr-schema-openapi3.yaml'
-output_file = 'vdjbase_airr_schema_defs.csv'
+output_file = 'airr_schema_defs.csv'
 fieldnames = ['structured_name', 'simple_name', 'airr_object', 'vdjbase_table', 'type', 'list', 'title', 'description', 'example']
 
 required_objects = ['Repertoire']
