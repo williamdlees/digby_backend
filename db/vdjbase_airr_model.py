@@ -40,6 +40,7 @@ class Sample(Base):
     paired_read_direction = Column(String(100))
     sample_name = Column(String(100))
     reads = Column(Integer)
+    genotype = Column(String(100))
     igsnper_plot_path = Column(String(100))
     sample_group = Column(String(100))
     genotype_stats = Column(String(100))

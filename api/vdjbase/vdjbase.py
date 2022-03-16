@@ -219,7 +219,8 @@ class DataSetInfoAPI(Resource):
 
 
 rep_sample_bool_values = {
-    'umi': ('UMI', '(blank)')
+    'synthetic': ('Synthetic', '(blank)'),
+    'single_assignment': ('Single', '(blank)'),
 }
 
 @ns.route('/sample_info/<string:species>/<string:dataset>/<string:sample>')
@@ -292,7 +293,7 @@ class SamplesApi(Resource):
             if col not in sample_info_filters.keys():
                 raise BadRequest('Bad filter string %s' % args['filter'])
 
-        if 'genotypes' in required_cols:                # needed to compose paths to files
+        if 'genotype' in required_cols:                # needed to compose paths to files
             for field in ('patient_name', 'study_name'):
                 if field not in required_cols:
                     required_cols.append(field)
@@ -343,7 +344,7 @@ class SamplesApi(Resource):
                         uniques[f].append('(blank)')
 
             if filter_applied:
-                uniques['names_by_dataset'][s['dataset']].append(s['name'])
+                uniques['names_by_dataset'][s['dataset']].append(s['sample_name'])
 
         def name_sort_key(name):
             name = name.split('_')

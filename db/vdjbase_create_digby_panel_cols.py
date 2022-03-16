@@ -26,12 +26,14 @@ def write_prelude(fo):
 def write_postlude(fo):
     fo.write(postlude)
 
+hidden_recs = []
+default_recs = {}
 
 def write_table(fo, table_name, items):
-    hidden_recs = []
-    default_recs = {}
     for item in items:
         if 'TRUE' in item['display']:
+            #if item['simple_name'] == 'lab_name':
+            #    breakpoint()
             rec = []
             rec.append(f"id: '{item['simple_name'].replace('.', '_')}'")
 
@@ -62,12 +64,6 @@ def write_table(fo, table_name, items):
             else:
                 hidden_recs.append(rec)
 
-    for ind in sorted(list(default_recs.keys())):
-        fo.write('    {' + ', '.join(default_recs[ind]) + '},\n')
-
-    for rec in hidden_recs:
-        fo.write('    {' + ', '.join(rec) + '},\n')
-
 
 def main():
     defs = read_definition_data()
@@ -76,6 +72,13 @@ def main():
         write_prelude(fo)
         for table, items in defs.items():
             write_table(fo, table, items.values())
+
+        for ind in sorted(list(default_recs.keys())):
+            fo.write('    {' + ', '.join(default_recs[ind]) + '},\n')
+
+        for rec in hidden_recs:
+            fo.write('    {' + ', '.join(rec) + '},\n')
+
         write_postlude(fo)
 
 

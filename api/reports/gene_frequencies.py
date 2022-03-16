@@ -37,7 +37,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
             sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id)\
                 .filter(Sample.sample_name.in_(sample_chunk))\
-                .filter(Sample.samples_group >= single_sample_filter)\
+                .filter(Sample.sample_group >= single_sample_filter)\
                 .all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]

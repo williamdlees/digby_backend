@@ -67,7 +67,7 @@ class {table_name}(Base):
     for item in items:
         decl = None
 
-        if item['type'] == 'string' or item['list'] == 'TRUE':
+        if item['type'] == 'string' or item['type'] == 'genotype' or item['list'] == 'TRUE':
             decl = 'Column(String(100))'
         elif item['type'] == 'number':
             decl = 'Column(Float)'
@@ -79,7 +79,10 @@ class {table_name}(Base):
             decl = 'Column(Boolean)'
 
         if not decl:
-            print(f'Unrecognised type in {item} - skipped')
+            if item['type'] == 'haplotype':
+                print('Intentionally skipping haplotypes field')
+            else:
+                print(f'Unrecognised type in {item} - skipped')
             continue
 
         if item['simple_name'] in specials:

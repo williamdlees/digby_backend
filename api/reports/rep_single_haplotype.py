@@ -30,14 +30,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     p = session.query(HaplotypesFile.file)\
         .join(SamplesHaplotype)\
         .join(Sample)\
-        .filter(Sample.sample_name == rep_sample['name'])\
+        .filter(Sample.sample_name == rep_sample['sample_name'])\
         .filter(HaplotypesFile.by_gene_s == params['haplo_gene']).one_or_none()
 
     p = p[0].replace('samples/','')
     sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, rep_sample['dataset'], p)
 
     if not os.path.isfile(sample_path):
-        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
+        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['sample_name']))
 
     sample_path = check_tab_file(sample_path)
 
@@ -55,10 +55,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
     gene_order_file = get_order_file(species, rep_sample['dataset'], locus_order=locus_order)
 
-    report_path = personal_haplotype(rep_sample['name'], sample_path, gene_order_file, rep_sample['chain'], html)
+    report_path = personal_haplotype(rep_sample['sample_name'], sample_path, gene_order_file, rep_sample['pcr_target_locus'], html)
 
     if format == 'pdf':
-        attachment_filename = '%s_%s_%s_%s_haplotype.pdf' % (species, rep_sample['dataset'], rep_sample['name'], params['haplo_gene'])
+        attachment_filename = '%s_%s_%s_%s_haplotype.pdf' % (species, rep_sample['dataset'], rep_sample['sample_name'], params['haplo_gene'])
     else:
         attachment_filename = None
 

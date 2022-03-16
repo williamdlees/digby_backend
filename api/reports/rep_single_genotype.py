@@ -26,12 +26,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     session = vdjbase_dbs[species][rep_sample['dataset']].session
     primer_trans, gene_subs = find_primer_translations(session)
-    p = session.query(Sample.genotype).filter(Sample.sample_name == rep_sample['name']).one_or_none()
+    print(rep_sample)
+    p = session.query(Sample.genotype).filter(Sample.sample_name == rep_sample['sample_name']).one_or_none()
     p = p[0].replace('samples/', '')
     sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, rep_sample['dataset'], p)
 
     if not os.path.isfile(sample_path):
-        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['name']))
+        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['sample_name']))
 
     sample_path = check_tab_file(sample_path)
 
@@ -48,10 +49,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
     gene_order_file = get_order_file(species, rep_sample['dataset'], locus_order=locus_order)
 
-    report_path = personal_genotype(rep_sample['name'], sample_path, rep_sample['chain'], gene_order_file, html)
+    report_path = personal_genotype(rep_sample['sample_name'], sample_path, rep_sample['pcr_target_locus'], gene_order_file, html)
 
     if format == 'pdf':
-        attachment_filename = '%s_%s_%s_genotype.pdf' % (species, rep_sample['dataset'], rep_sample['name'])
+        attachment_filename = '%s_%s_%s_genotype.pdf' % (species, rep_sample['dataset'], rep_sample['sample_name'])
     else:
         attachment_filename = None
 

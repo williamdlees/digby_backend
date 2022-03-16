@@ -36,7 +36,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         for rep_sample in rep_samples:
             if rep_sample['dataset'] not in samples_by_dataset:
                 samples_by_dataset[rep_sample['dataset']] = []
-            samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
+            samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
 
         attribute_query = []
         headers = []
@@ -81,7 +81,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             for rep_sample in rep_samples:
                 if rep_sample['dataset'] not in samples_by_dataset:
                     samples_by_dataset[rep_sample['dataset']] = []
-                samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
+                samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
 
             added_files = []            # handle multiple samples in same dir etc
             added_dirs = []

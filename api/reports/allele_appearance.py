@@ -24,7 +24,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     for rep_sample in rep_samples:
         if rep_sample['dataset'] not in samples_by_dataset:
             samples_by_dataset[rep_sample['dataset']] = []
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
+        samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
 
     # Format we need to produce is [gene_name, [allele names], [allele appearances], gene appearances]
     # Start with a dict indexed by gene, then convert to appropriately sorted list

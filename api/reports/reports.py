@@ -9,7 +9,7 @@ from api.restx import api
 import json
 from werkzeug.exceptions import BadRequest
 from db.genomic_db import RefSeq, Subject
-from db.vdjbase_airr_model import Sample as vdjb_Sample
+from db.vdjbase_airr_model import Sample as vdjb_Sample, SeqProtocol as vdjb_SeqProtocol
 from api.genomic.genomic import find_genomic_filter_params, find_genomic_subjects
 from api.vdjbase.vdjbase import find_vdjbase_samples, find_rep_filter_params
 from app import app
@@ -148,7 +148,7 @@ class ReportsRunApi(Resource):
                 rep_filters = json.loads(args.rep_filters)
 
                 if rep_datasets is not None and len(rep_datasets) > 0:
-                    rep_samples = find_vdjbase_samples([vdjb_Sample.sample_name, vdjb_Sample.id, vdjb_Sample.chain], args.species, rep_datasets, rep_filters)
+                    rep_samples = find_vdjbase_samples([vdjb_Sample.sample_name, vdjb_Sample.id, vdjb_SeqProtocol.pcr_target_locus], args.species, rep_datasets, rep_filters)
                 else:
                     rep_samples = []
                 params = json.loads(args.params)
@@ -205,7 +205,7 @@ class ReportsStatus(Resource):
     @digby_protected()
     def get(self, job_id):
         res = celery.AsyncResult(job_id)
-        status = res.disease_diagnosis_label
+        status = res.status
 
         print('Get report status called for %s: returning %s, %s' % (job_id, status, res.info))
 

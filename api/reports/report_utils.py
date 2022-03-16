@@ -111,10 +111,10 @@ def collate_samples(rep_samples):
         if rep_sample['dataset'] not in samples_by_dataset:
             samples_by_dataset[rep_sample['dataset']] = []
             if chain is None:
-                chain = rep_sample['chain']
-            elif chain != rep_sample['chain']:
+                chain = rep_sample['pcr_target_locus']
+            elif chain != rep_sample['pcr_target_locus']:
                 raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['name'])
+        samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
 
     return chain, samples_by_dataset
 
