@@ -198,9 +198,9 @@ class DataSetInfoAPI(Resource):
         stats['celltype_count'] = session.query(TissuePro.sub_cell_type, func.count(TissuePro.sub_cell_type)).group_by(TissuePro.sub_cell_type).order_by(func.count(TissuePro.sub_cell_type).desc()).all()
         stats['tissue_count'] = session.query(TissuePro.tissue_label, func.count(TissuePro.tissue_label)).group_by(TissuePro.tissue_label).order_by(func.count(TissuePro.tissue_label).desc()).all()
         studies = session.query(
-            Study.study_title,
+            Study.study_name,
             Study.study_id,
-            Study.lab_address,
+            Study.lab_name,
             Study.num_subjects,
             Study.num_samples,
             Study.pub_ids,
@@ -210,8 +210,8 @@ class DataSetInfoAPI(Resource):
 
         for row in studies:
             row = row._asdict()
-            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_title == row['study_title']).count()
-            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_title == row['study_title']).count()
+            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
+            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
             stats['studies'].append(row)
 
         return stats
