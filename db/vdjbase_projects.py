@@ -8,6 +8,7 @@ import traceback
 import json
 import sys
 import receptor_utils.simple_bio_seq as simple
+from sqlalchemy import inspect
 
 from db.vdjbase_exceptions import DbCreationError
 from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample, DataPro, GenoDetection
@@ -54,81 +55,58 @@ def import_studies(ds_dir, species, dataset, session):
     # we read this directly so that we retain the '.' delimiters for some fields in simple_name
     table_fields = read_definition_data(remove_dots=False)
 
-    # process MiAIRR metadata if present
-    yml_full = True
+    miairr_projects = []
+    airr_corresp = []
 
     if os.path.isfile(os.path.join(ds_dir, 'airr_correspondence.csv')):
         airr_corresp = simple.read_csv(os.path.join(ds_dir, 'airr_correspondence.csv'))
-        process_airr_metadata(ds_dir, airr_corresp, table_fields, session)
-        yml_full = False
 
-    process_yml_metadata(yml_data, table_fields, yml_full, session)
+        for rec in airr_corresp:
+            proj = rec['vdjbase_name'].split('_')[0]
+            if proj not in miairr_projects:
+                miairr_projects.append(proj)
+
+    for project_name in yml_data.keys():
+        miairr_metadata = {}
+        if project_name in miairr_projects:
+            miairr_metadata = process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, session)
+
+        process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, session)
+
     session.commit()
     return result
 
 
-def process_yml_metadata(yml_data, table_fields, yml_full, session):
-    for project_name, project_data in yml_data.items():
-        for sample_name in project_data['Samples'].keys():
-            meta_records = {
-                'Study': {},
-                'Patient': {},
-                'TissuePro': {},
-                'SeqProtocol': {},
-                'DataPro': {},
-                'GenoDetection': {},
-                'Sample': {}
-            }
+def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, session):
+    project_data = yml_data[project_name]
+    for sample_name in project_data['Samples'].keys():
+        meta_records = {
+            'Study': {},
+            'Patient': {},
+            'TissuePro': {},
+            'SeqProtocol': {},
+            'DataPro': {},
+            'GenoDetection': {},
+            'Sample': {}
+        }
 
-            build_yml_metadata(sample_name, table_fields, project_data, meta_records, yml_full)
+        if sample_name not in miairr_metadata:
+            # get everything we can from yml
+            build_yml_metadata(sample_name, table_fields, project_data, meta_records, True)
+            commit_database(meta_records, sample_name, session)     # fall back to YML exclusively
+            print(f"No MiAIRR data found for sample {sample_name}")
+            continue
 
-            if yml_full:
-                commit_database(meta_records, sample_name, session)
-                continue
+        build_yml_metadata(sample_name, table_fields, project_data, meta_records, False)
 
-            # We should be able to rely on all records already being present, apart from GenoDetection
-            # Find the Sample record, use that as the link to the rest
+        def setattrs(_self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(_self, k, v)
 
-            sample_rec = session.query(Sample).filter(Sample.sample_name==sample_name).one_or_none()
+        for table in meta_records.keys():
+            if table in miairr_metadata:
+                setattrs(meta_records[table], **miairr_metadata[table])
 
-            if not sample_rec:
-                print(f"Error: no sample record found for {sample_name} while processing YML")
-                continue
-
-            def setattrs(_self, **kwargs):
-                for k, v in kwargs.items():
-                    setattr(_self, k, v)
-
-            if meta_records['Study']:
-                setattrs(sample_rec.study, **meta_records['Study'])
-
-            if meta_records['Patient']:
-                setattrs(sample_rec.patient, **meta_records['Patient'])
-
-            if meta_records['TissuePro']:
-                setattrs(sample_rec.tissue_pro, **meta_records['TissuePro'])
-
-            if meta_records['SeqProtocol']:
-                setattrs(sample_rec.seq_protocol, **meta_records['SeqProtocol'])
-
-            if meta_records['DataPro']:
-                setattrs(sample_rec.data_pro, **meta_records['DataPro'])
-
-            if meta_records['Sample']:
-                setattrs(sample_rec, **meta_records['Sample'])
-
-            if meta_records['GenoDetection']:
-                geno_rec = session.query(GenoDetection).filter_by(**meta_records['GenoDetection']).one_or_none()
-                if not geno_rec:
-                    geno_rec = GenoDetection(**meta_records['GenoDetection'])
-                    session.add(geno_rec)
-                    session.flush()
-                sample_rec.geno_detection_id = geno_rec.id
-
-            # DataPro should be constructed entirely from MiAIRR
-
-            if meta_records['DataPro']:
-                print(f"Unexpected Data Processing metadata in YML record.")
 
 
 
@@ -194,30 +172,34 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
 # Read airr metadata, using info from the correspondence file. Add to meta_records
 # Note that more than one repertoire may contribute to a VDJbase sample if records
 # have been combined, hence we need to cope with data merging in any field
-def process_airr_metadata(ds_dir, airr_corresp, table_fields, session):
+def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, session):
     miairr_json = {}
+    project_meta_records = {}
 
     for rec in airr_corresp:
-        meta_records = {
-            'Study': {},
-            'Patient': {},
-            'TissuePro': {},
-            'SeqProtocol': {},
-            'DataPro': {},
-            'GenoDetection': {},
-            'Sample': {}
-        }
+        if project_name + '_' in rec['vdjbase_name'] and rec['airr_repertoire_id']:
+            meta_records = {
+                'Study': {},
+                'Patient': {},
+                'TissuePro': {},
+                'SeqProtocol': {},
+                'DataPro': {},
+                'GenoDetection': {},
+                'Sample': {}
+            }
 
-        if rec['airr_file'] not in miairr_json:
-            with open(os.path.join(ds_dir, rec['airr_file']), 'r') as fi:
-                miairr_json[rec['airr_file']] = json.load(fi)
-        rep_ids = rec['airr_repertoire_id'].split(';')
+            if rec['airr_file'] not in miairr_json:
+                with open(os.path.join(ds_dir, rec['airr_file']), 'r') as fi:
+                    miairr_json[rec['airr_file']] = json.load(fi)
+            rep_ids = rec['airr_repertoire_id'].split(';')
 
-        # specify tables explicitly, so that they get traversed in the desired order
-        tables = ['Study', 'TissuePro', 'SeqProtocol', 'DataPro', 'Patient', 'Sample']
-        build_metadata(tables, table_fields, rec['vdjbase_name'], miairr_json, rec['airr_file'], rep_ids, meta_records)
-        merge_attributes(meta_records, table_fields)
-        commit_database(meta_records, rec['vdjbase_name'], session)
+            # specify tables explicitly, so that they get traversed in the desired order
+            tables = ['Study', 'TissuePro', 'SeqProtocol', 'DataPro', 'Patient', 'Sample']
+            build_metadata(tables, table_fields, rec['vdjbase_name'], miairr_json, rec['airr_file'], rep_ids, meta_records)
+            merge_attributes(meta_records, table_fields)
+            project_meta_records[rec['vdjbase_name']] = meta_records
+
+    return project_meta_records
 
 
 # Build metadata 'rows' for a VDJbase sample by walking the schema, looking for desired attributes
@@ -322,15 +304,42 @@ def commit_database(meta_records, vdjbase_name, session):
     meta_records['Sample']['sample_name'] = f'{p_n}_{i_n}_{s_n}'
     meta_records['Sample']['sample_group'] = s_n.replace('S', '')
 
-    for table in [Study, TissuePro, SeqProtocol, DataPro]:
+    defaults = {}
+    for table in [Study, TissuePro, SeqProtocol, GenoDetection, DataPro]:
+        defaults[table.__name__] = {}
+        for column_name, column in inspect(table).column_attrs.items():
+            if column.expression.nullable:
+                defaults[table.__name__][column_name] = None
+
+    for table in [Study, TissuePro, SeqProtocol, GenoDetection, DataPro]:
         table_name = table.__name__
 
-        db_row = session.query(table).filter_by(**meta_records[table_name]).one_or_none()
-        if db_row is None:
-            db_row = table(**meta_records[table_name])
-            session.add(db_row)
-            session.flush()
-        row_ids[table.__name__] = db_row.id
+        if not meta_records[table_name]:
+            db_row = session.query(table).filter_by(**defaults[table_name]).one_or_none()
+
+            if not db_row:
+                print(f'Creating blank record for table {table} in sample {vdjbase_name}')
+                db_row = table()
+                session.add(db_row)
+                session.flush()
+            row_ids[table.__name__] = db_row.id
+        else:
+            # add defaults for any unspecified attributes
+
+            for k, v in defaults[table_name].items():
+                if k not in meta_records[table_name]:
+                    meta_records[table_name][k] = v
+
+            db_row = session.query(table).filter_by(**meta_records[table_name]).all()
+            if db_row and len(db_row) > 1:
+                breakpoint()
+
+            db_row = session.query(table).filter_by(**meta_records[table_name]).one_or_none()
+            if db_row is None:
+                db_row = table(**meta_records[table_name])
+                session.add(db_row)
+                session.commit()
+            row_ids[table.__name__] = db_row.id
 
     meta_records['Patient']['study_id'] = row_ids['Study']
     patient = Patient(**meta_records['Patient'])
@@ -342,6 +351,7 @@ def commit_database(meta_records, vdjbase_name, session):
     meta_records['Sample']['study_id'] = row_ids['Study']
     meta_records['Sample']['tissue_pro_id'] = row_ids['TissuePro']
     meta_records['Sample']['data_pro_id'] = row_ids['DataPro']
+    meta_records['Sample']['geno_detection_id'] = row_ids['GenoDetection']
     sample = Sample(**meta_records['Sample'])
     session.add(sample)
     session.commit()
