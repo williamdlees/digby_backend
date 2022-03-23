@@ -200,7 +200,7 @@ class DataSetInfoAPI(Resource):
         studies = session.query(
             Study.study_name,
             Study.study_id,
-            Study.lab_name,
+            Study.lab_address,
             Study.num_subjects,
             Study.num_samples,
             Study.pub_ids,
@@ -212,9 +212,46 @@ class DataSetInfoAPI(Resource):
             row = row._asdict()
             row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
             row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
+            row['study_id'] = link_convert(row['study_id'])
+            row['pub_ids'] = link_convert(row['pub_ids'])
             stats['studies'].append(row)
 
+        stats['studies'].sort(key = lambda p: int(p['study_name'].replace('P', '')))
+
         return stats
+
+
+# Convert some frequently occurring accession ids to links
+def link_convert(item):
+    res = []
+
+    if not item:
+        return None
+
+    for el in item.split(','):
+        for prefix in ['BioProject:', 'SRA:']:
+            if prefix in el:
+                el = el.replace(prefix, '')
+        el = el.strip()
+
+        if 'PMID:' in el:
+            el = el.replace('PMID:', '')
+            el = el.strip()
+            el = f'https://pubmed.ncbi.nlm.nih.gov/{el}'
+        elif ' ' not in el:   # general safety measure for things that won't translate
+            if 'PRJNA' in el:
+                el = f'https://www.ncbi.nlm.nih.gov/bioproject/?term={el}'
+            elif 'PRJEB' in el:
+                el = f'https://www.ebi.ac.uk/ena/browser/view/{el}'
+            elif 'PRJCA' in el:
+                el = f'https://ngdc.cncb.ac.cn/bioproject/browse/{el}'
+            elif 'SRP' in el:
+                el = f'https://www.ncbi.nlm.nih.gov/sra/?term={el}'
+
+        res.append(el)
+
+    return ','.join(res)
+
 
 
 

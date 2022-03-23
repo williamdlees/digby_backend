@@ -65,6 +65,7 @@ def process_genotypes(ds_dir, species, dataset, session):
                 if gene_name != pipeline_gene_name:
                     add_compound_gene(session, allele_name, pipeline_gene_name)
 
+    sample_bin = []
     for sample in samples:
         genotype_file = os.path.join('samples', sample.study.study_name, sample.patient.patient_name, sample.sample_name + '_geno_H_binom.tab').replace('\\', '/')
 
@@ -79,7 +80,12 @@ def process_genotypes(ds_dir, species, dataset, session):
             sample_genotype(os.path.join(ds_dir, genotype_file), sample.id, sample.patient.id, pipeline_names, allele_names, session)
             session.commit()
         else:
-            result.append('Error: no genotype file for sample %s' % sample.sample_name)
+            result.append('Error: no genotype file for sample %s - removing from sample list' % sample.sample_name)
+            sample_bin.append(sample)
+
+    for sample in sample_bin:
+        session.delete(sample)
+    session.commit()
 
     return result
 

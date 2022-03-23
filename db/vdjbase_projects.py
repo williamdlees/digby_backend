@@ -97,22 +97,26 @@ def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, 
             print(f"No MiAIRR data found for sample {sample_name}")
             continue
 
+        #if 'P8' in project_name:
+        #   breakpoint()
+
         build_yml_metadata(sample_name, table_fields, project_data, meta_records, False)
 
         def setattrs(_self, **kwargs):
             for k, v in kwargs.items():
-                setattr(_self, k, v)
+                _self[k] = v
 
         for table in meta_records.keys():
-            if table in miairr_metadata:
-                setattrs(meta_records[table], **miairr_metadata[table])
+            if table in miairr_metadata[sample_name]:
+                setattrs(meta_records[table], **miairr_metadata[sample_name][table])
+
+        commit_database(meta_records, sample_name, session)
 
 
 
 
 
-
-# Commit data for one sample, creating other associated rows as needed
+    # Commit data for one sample, creating other associated rows as needed
 def build_yml_metadata(sample_name, table_fields, project_data, meta_records, yml_full):
     desired_attributes = {}
 
@@ -147,7 +151,10 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
                     if section == 'Genotype Detections':
                         section_name = project_data['Samples'][sample_name]['Genotype Detection Name']
                         named_section = yml_objects[section][section_name]
-                        value = named_section[desired_attribute]
+                        if desired_attribute in named_section:
+                            value = named_section[desired_attribute]
+                        elif desired_attribute == 'Alignment Tool' and 'Aligner Tool' in named_section:
+                            value = named_section['Aligner Tool']       # fudge for old-style naming used in TCRB
                     elif section == 'Samples':
                         value = project_data['Samples'][sample_name][desired_attribute]
                     elif section == 'Sequence Protocol':
@@ -167,6 +174,18 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
 
             if value and table_attribute:
                 meta_records[table][table_attribute] = value
+
+    if 'sex' in meta_records['Patient'] and meta_records['Patient']['sex']:
+        disc = meta_records['Patient']['sex'].upper()[0]
+        if disc == 'F':
+            meta_records['Patient']['sex'] = 'female'
+        elif disc == 'M':
+            meta_records['Patient']['sex'] = 'male'
+        else:
+            meta_records['Patient']['sex'] = 'not collected'
+
+    if 'tissue_label' in meta_records['TissuePro'] and meta_records['TissuePro']['tissue_label']:
+        meta_records['TissuePro']['tissue_label'] = meta_records['TissuePro']['tissue_label'].lower()
 
 
 # Read airr metadata, using info from the correspondence file. Add to meta_records
@@ -341,10 +360,13 @@ def commit_database(meta_records, vdjbase_name, session):
                 session.commit()
             row_ids[table.__name__] = db_row.id
 
-    meta_records['Patient']['study_id'] = row_ids['Study']
-    patient = Patient(**meta_records['Patient'])
-    session.add(patient)
-    session.flush()
+    patient = session.query(Patient).filter(Patient.patient_name == meta_records['Patient']['patient_name']).one_or_none()
+
+    if not patient:
+        meta_records['Patient']['study_id'] = row_ids['Study']
+        patient = Patient(**meta_records['Patient'])
+        session.add(patient)
+        session.flush()
 
     meta_records['Sample']['patient_id'] = patient.id
     meta_records['Sample']['seq_protocol_id'] = row_ids['SeqProtocol']
