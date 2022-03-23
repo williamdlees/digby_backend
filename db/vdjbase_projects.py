@@ -298,7 +298,7 @@ def merge_attributes(meta_records, table_fields):
                         if v:
                             meta_records[table][attr] = 1
             except:
-                print(f"Error combining value {v} in attribute {attr}: cannot coerce to {row_spec[attr]['type']}")
+                print(f"Error combining value in attribute {attr}: cannot coerce to {row_spec[attr]['type']}")
 
             if '.' in attr:
                 meta_records[table][attr.replace('.', '_')] = meta_records[table][attr]
