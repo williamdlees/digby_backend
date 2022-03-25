@@ -146,6 +146,19 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                                            subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'],
                                            subject['Reference_assembly'], study_obj)
 
+        optional_subject_items = [
+            ('Capture_probes', 'capture_probes'),
+            ('Ethnicity', 'ethnicity'),
+            ('IGHV4-59_coverage', 'IGHV4_59_coverage'),
+            ('IGHV4-59_coverage_var', 'IGHV4_59_coverage_var'),
+            ('IGH_coverage', 'IGH_coverage'),
+            ('Sequencing_platform', 'sequencing_platform'),
+        ]
+
+        for yml_attr, sql_attr in optional_subject_items:
+            if yml_attr in subject and subject[yml_attr]:
+                setattr(subject_obj, sql_attr, subject[yml_attr])
+
         assembly_objs = []
         for assembly in subject['Assemblies'].values():
             needed_assembly_items = {'Assembly_id', 'Assembly_reference', 'Assembly_file', 'Chromosome', 'Start_CoOrd', 'End_CoOrd'}

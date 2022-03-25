@@ -96,6 +96,13 @@ class Subject(Base):
     annotation_method = Column(String(100))
     annotation_format = Column(String(100))
     annotation_reference = Column(String(100))
+    capture_probes = Column(String(100))
+    ethnicity = Column(String(100))
+    IGHV4_59_coverage = Column(Integer)
+    IGHV4_59_coverage_var = Column(Float)
+    IGH_coverage = Column(Float)
+    sequencing_platform = Column(String(200))
+
     ref_seq_id = Column(Integer, ForeignKey('ref_seq.id'))
     study_id = Column(Integer, ForeignKey('study.id'))
     sequences = relationship('Sequence', secondary='subject_sequence', back_populates='subjects')

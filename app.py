@@ -156,12 +156,6 @@ def profile():
     return render_template('profile.html', form=form, current_user=current_user, url='profile')
 
 
-@app.route('/update_genomic', methods=['GET', 'POST'])
-@login_required
-def update_genomic():
-    return update_genomic_db()
-
-
 @app.route('/airrseq', methods=['GET', 'POST'])
 def airrseq():
     return manage_airrseq(app)

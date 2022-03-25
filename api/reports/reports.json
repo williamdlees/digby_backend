@@ -364,6 +364,19 @@
       "format": [
         "file"
       ]
+    },
+    "allele_support": {
+      "title": "Allele Support",
+      "description": "Summarise support for each allele from selected sources",
+      "thumbnail": "",
+      "params": [],
+      "scope": [
+        "gen_or_rep_sample"
+      ],
+      "filter_params": false,
+      "format": [
+        "xls"
+      ]
     }
   }
 }

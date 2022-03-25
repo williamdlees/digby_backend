@@ -36,10 +36,12 @@ def load_report_defs():
             if 'thumbnail' in report_def:
                 report_defs[k]['thumbnail'] = app.config['STATIC_LINK'] + 'img/reports/' + report_def['thumbnail']
 
+
 report_list_arguments = reqparse.RequestParser()
 report_list_arguments.add_argument('species', type=str)
 report_list_arguments.add_argument('genomic_datasets', type=str)
 report_list_arguments.add_argument('rep_datasets', type=str)
+
 
 @ns.route('/reports/list')
 @api.response(404, 'No reports available!')
@@ -53,13 +55,13 @@ class ReportsApi(Resource):
 
             if len(args.genomic_datasets):
                 genomic_datasets = args.genomic_datasets.split(',')
-                scope |= {'gen_sample'}
+                scope |= {'gen_sample', 'gen_or_rep_sample'}
             else:
                 genomic_datasets = None
 
             if len(args.rep_datasets):
                 rep_datasets = args.rep_datasets.split(',')
-                scope |= {'rep_sample'}
+                scope |= {'rep_sample', 'gen_or_rep_sample'}
             else:
                 rep_datasets = None
 
@@ -174,9 +176,9 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # IN THE IMPORT BELOW, CHOOSE THE REPORT YOU WISH TO DEBUG
-            #from api.reports.download_gen_data import run
-            #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
-            #raise BadRequest("we're debugging!")
+            from api.reports.allele_support import run
+            run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
+            raise BadRequest("we're debugging!")
 
             # Pass to Celery
 

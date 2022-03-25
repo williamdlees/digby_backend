@@ -27,7 +27,7 @@ def build_ref_seq_gff(session, dataset_dir, ref_seq, name_prefix):
 
 def build_gff(session, dataset_dir):
     details = session.query(Details).one_or_none()
-    species = details.cell_species_label
+    species = details.species
 
     ref_seqs = session.query(RefSeq).all()
     for ref_seq in ref_seqs:

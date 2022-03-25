@@ -446,6 +446,12 @@ genomic_subject_filters = {
     'annotation_method': {'model': 'Subject', 'field': Subject.annotation_method},
     'annotation_format': {'model': 'Subject', 'field': Subject.annotation_format},
     'annotation_reference': {'model': 'Subject', 'field': Subject.annotation_reference},
+    'capture_probes': {'model': 'Subject', 'field': Subject.capture_probes},
+    'ethnicity': {'model': 'Subject', 'field': Subject.ethnicity},
+    'IGHV4_59_coverage': {'model': 'Subject', 'field': Subject.IGHV4_59_coverage},
+    'IGHV4_59_coverage_var': {'model': 'Subject', 'field': Subject.IGHV4_59_coverage_var},
+    'IGH_coverage': {'model': 'Subject', 'field': Subject.IGH_coverage},
+    'sequencing_platform': {'model': 'Subject', 'field': Subject.sequencing_platform},
 
     'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'name'},
     'study_date': {'model': 'Study', 'field': Study.date.label('study_date'), 'fieldname': 'date'},
