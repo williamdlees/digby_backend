@@ -27,15 +27,19 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     imgt_refs = {}
     gene_order = {}
+    sequences = {}
 
     for dataset in rep_samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
 
-        refs = session.query(Allele).filter(Allele.novel==0).all()
+        refs = session.query(Allele).all()
 
         for ref in refs:
-            if ref.name not in imgt_refs:
+            if ref.novel == 0 and ref.name not in imgt_refs:
                 imgt_refs[ref.name] = ref.seq.replace('.', '')
+
+            if ref.name not in sequences:
+                sequences[ref.name.upper()] = ref.seq.replace('.', '').lower()
 
         genes = session.query(Gene).filter(Gene.pseudo_gene==0).all()
 
@@ -68,9 +72,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 rep_counts[gene] = [{}, []]
             if allele not in rep_counts[gene][0]:
                 rep_counts[gene][0][allele] = []
-            if pid not in rep_counts[gene][0][allele]:
+            if patient_name not in rep_counts[gene][0][allele]:
                 rep_counts[gene][0][allele].append(patient_name)
-            if pid not in rep_counts[gene][1]:
+            if patient_name not in rep_counts[gene][1]:
                 rep_counts[gene][1].append(patient_name)
 
         gen_samples_by_dataset = {}
@@ -82,11 +86,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         for dataset in gen_samples_by_dataset.keys():
             session = genomic_dbs[species][dataset].session
 
-            refs = session.query(GenomicSequence).filter(GenomicSequence.novel == 0).all()
+            refs = session.query(GenomicSequence).all()
 
             for ref in refs:
-                if ref.name not in imgt_refs:
+                if ref.novel == 0 and ref.name not in imgt_refs:
                     imgt_refs[ref.name] = ref.sequence.replace('.', '')
+
+                if ref.name not in sequences:
+                    sequences[ref.name.upper()] = ref.sequence.replace('.', '').lower()
 
             genes = session.query(GenomicGene).filter(GenomicGene.pseudo_gene==0).all()
 
@@ -103,25 +110,37 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 sample_list = session.query(GenomicSubject.identifier).filter(GenomicSubject.identifier.in_(sample_chunk)).all()
                 sample_list = [s[0] for s in sample_list]
 
-                app_query = session.query(GenomicSubject.id, GenomicSequence.gene, GenomicSequence.name, GenomicSubject.identifier) \
+                app_query = session.query(GenomicSubject.id,
+                                          GenomicSequence.gene,
+                                          GenomicSequence.name,
+                                          GenomicSubject.identifier,
+                                          GenomicSubject.sequencing_platform,
+                                          GenomicSubject.capture_probes) \
                     .filter(GenomicSubject.id == GenomicSubjectSequence.subject_id) \
                     .filter(GenomicSequence.id == GenomicSubjectSequence.sequence_id) \
-                    .filter(GenomicSequence.type.in_(['V-REGION', 'D-REGION', 'J-REGION'])) \
+                    .filter(GenomicSequence.type.in_(['D-REGION', 'J-REGION'])) \
                     .filter(GenomicSubject.identifier.in_(sample_list))
 
                 appearances.extend(app_query.all())
 
             for app in appearances:
-                pid, gene, allele, patient_name = app
+                pid, gene, allele, patient_name, platform, probes = app
                 allele = allele.split('*', 1)[1].upper()
                 if gene not in gen_counts:
-                    gen_counts[gene] = [{}, []]
+                    gen_counts[gene] = [{}, [], {}, {}]
                 if allele not in gen_counts[gene][0]:
                     gen_counts[gene][0][allele] = []
-                if pid not in gen_counts[gene][0][allele]:
+                    gen_counts[gene][2][allele] = []
+                    gen_counts[gene][3][allele] = []
+                if patient_name not in gen_counts[gene][0][allele]:
                     gen_counts[gene][0][allele].append(patient_name)
-                if pid not in gen_counts[gene][1]:
+                if patient_name not in gen_counts[gene][1]:
                     gen_counts[gene][1].append(patient_name)
+                if platform and platform not in gen_counts[gene][2][allele]:
+                    gen_counts[gene][2][allele].append(platform)
+                if probes and probes not in gen_counts[gene][3][allele]:
+                    gen_counts[gene][3][allele].append(probes)
+
 
         imgt_counts = {}
 
@@ -167,13 +186,43 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                     return 0
                 return len(counts[gene][0][allele])
 
+            def best_platform(gene, allele, counts):
+                platforms = ['RS', 'SEQUEL', 'SEQUELII']
+                if gene not in counts:
+                    return ''
+                if allele not in counts[gene][2]:
+                    return ''
+
+                best = ''
+                for platform in platforms:
+                    if platform in counts[gene][2][allele]:
+                        best = platform
+
+                return best
+
+            def best_probes(gene, allele, counts):
+                probes = ['V2', 'V3']
+                if gene not in counts:
+                    return ''
+                if allele not in counts[gene][3]:
+                    return ''
+
+                best = ''
+                for probe in probes:
+                    if probe in counts[gene][3][allele]:
+                        best = probe
+
+                return best
+
             for allele in ref_alleles:
                 row = {
                     'Allele': f'{gene}*{allele}',
                     'IMGT': allele_count(gene, allele, imgt_counts),
                     'AIRR-Seq': allele_count(gene, allele, rep_counts),
                     'Genomic': allele_count(gene, allele, gen_counts),
-
+                    'Best platform': best_platform(gene, allele, gen_counts),
+                    'Best probes': best_probes(gene, allele, gen_counts),
+                    'Sequence': sequences[f'{gene}*{allele}'.upper()]
                 }
                 results.append(row)
 

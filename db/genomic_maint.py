@@ -127,9 +127,14 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
     needed_study_items = {'Study', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
     if needed_study_items - set(list(study.keys())):
         raise ImportException(f'Error - study attributes missing: {",".join(list(needed_study_items - set(study.keys())))}')
+
+    study_date = study['Date']
+    if isinstance(study_date, str):
+        study_date = date.fromisoformat(study_date)
+
     study_obj = save_genomic_study(session,
                                    study['Study'],
-                                   date.fromisoformat(study['Date']),
+                                   study_date,
                                    study['Institute'],
                                    study['Study_description'],
                                    study['Researcher'],
