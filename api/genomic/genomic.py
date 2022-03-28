@@ -1,4 +1,5 @@
 # Services related to genomic sequences and features
+import os
 
 from flask import request
 from flask_restx import Resource, reqparse, inputs
@@ -632,7 +633,7 @@ def find_genomic_subjects(attribute_query, species, genomic_datasets, genomic_fi
                 if isinstance(v, datetime):
                     r[k] = v.date().isoformat()
                 elif k == 'annotation_path' and 'http' not in v:
-                    r[k] = '/'.join([app.config['STATIC_LINK'], 'study_data/Genomic/samples', r[k]])
+                    r[k] = os.path.join(app.config['STATIC_LINK'], 'study_data/Genomic/samples', r[k])
             r['dataset'] = dataset
             results.append(r)
 
