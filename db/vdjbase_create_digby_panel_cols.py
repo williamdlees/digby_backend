@@ -44,7 +44,16 @@ def write_table(fo, table_name, items):
                 name = name[0:30]
 
             rec.append(f"name: '{name}'")
-            rec.append(f"section: '{table_name}'")
+
+            section_name = table_name
+
+            # Use Subejct as section name rather than Patient
+            # bit of a fudge but we don't want to rename the VDJbase table as it has lots of dependencies
+
+            if section_name == 'Patient':
+                section_name = 'Subject'
+
+            rec.append(f"section: '{section_name}'")
             rec.append(f"hidden: {'true' if 'TRUE' in item['hide'] else 'false'}")
 
             if item['list'] == 'TRUE':
