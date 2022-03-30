@@ -21,18 +21,31 @@ def update_genomic_ref(session, ref_file):
     for name, seq in refs.items():
         # determine gene/allele
         if '*' in name:
-            gene = name.split('*')[0]
+            gene_name = name.split('*')[0]
         elif '.' in name and len(name.split('.')) == 3:     # cirelli format
-            gene = name.split('.')[0] + '.' + name.split('.')[1]
+            gene_name = name.split('.')[0] + '.' + name.split('.')[1]
         else:
-            gene = name
+            gene_name = name
 
         if 'V' in name and '.' not in seq:
             print(f'Error in reference set {ref_file}: V-sequence {name} is not gapped')
 
+        gene_id = session.query(Gene.id).filter(Gene.name==gene_name).one_or_none()
+
+        if not gene_id:
+            family = ''
+            if '-' in gene_name[4:]:
+                family = gene_name[4:].split('-')[0]
+
+            gene_type = gene_name[:4]
+
+            gene_obj = save_gene(session, gene_name, gene_type, family, 0, 0, False)
+            gene_id = gene_obj.id
+        else:
+            gene_id = gene_id[0]
+
         s = Sequence(
             name=name,
-            gene=gene,
             imgt_name='',
             type=find_type(name),
             sequence=seq.replace('.', ''),
@@ -42,6 +55,7 @@ def update_genomic_ref(session, ref_file):
             gapped_sequence=seq,
             functional='Functional',
             notes='',
+            gene_id=gene_id,
         )
         session.add(s)
 
@@ -77,9 +91,9 @@ def read_gene_order(session, dataset_dir):
         if '-' in gene[4:]:
             family = gene[4:].split('-')[0]
 
-        type = gene[:4]
+        gene_type = gene[:4]
 
-        save_gene(session, gene, type, family, locus_order, alpha_order, pseudo)
+        save_gene(session, gene, gene_type, family, locus_order, alpha_order, pseudo)
         alpha_order += 1
 
     session.commit()
@@ -95,4 +109,5 @@ def save_gene(session, name, type, family, locus_order, alpha_order, pseudo_gene
         pseudo_gene=pseudo_gene,
     )
     session.add(g)
+    session.flush()
     return g

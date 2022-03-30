@@ -45,15 +45,20 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         for gene in genes:
             if gene.name not in gene_order:
-                gene_order[gene.name] = gene.locus_order
+                if params['sort_order'] == 'Alphabetic':
+                        gene_order[gene.name] = gene.alpha_order
+                else:
+                        gene_order[gene.name] = gene.locus_order
 
     rep_counts = {}
 
     for dataset in rep_samples_by_dataset.keys():
+        session = vdjbase_dbs[species][dataset].session
         appearances = []
 
         for sample_chunk in chunk_list(rep_samples_by_dataset[dataset], SAMPLE_CHUNKS):
             sample_list = session.query(Sample.sample_name).filter(Sample.sample_name.in_(sample_chunk)).all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
             app_query = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.sample_name, Patient.patient_name)\
@@ -61,7 +66,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                                 .filter(Allele.id == AllelesSample.allele_id)\
                                 .filter(Gene.id == Allele.gene_id)\
                                 .filter(Patient.id == AllelesSample.patient_id)\
-                                .filter(Sample.sample_name.in_(sample_list))
+                                .filter(Sample.sample_name.in_(sample_list))\
+                                .filter(Gene.name.in_(wanted_genes))
+
+            if params['novel_alleles'] == 'Exclude':
+                app_query = app_query.filter(Allele.novel == 0)
+
+            if params['ambiguous_alleles'] == 'Exclude':
+                app_query = app_query.filter(Allele.is_single_allele == 1)
 
             appearances.extend(app_query.all())
 
@@ -83,151 +95,162 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 gen_samples_by_dataset[gen_sample['dataset']] = []
             gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
 
-        for dataset in gen_samples_by_dataset.keys():
-            session = genomic_dbs[species][dataset].session
+    for dataset in gen_samples_by_dataset.keys():
+        session = genomic_dbs[species][dataset].session
 
-            refs = session.query(GenomicSequence).all()
+        refs = session.query(GenomicSequence).all()
 
-            for ref in refs:
-                if ref.novel == 0 and ref.name not in imgt_refs:
-                    imgt_refs[ref.name] = ref.sequence.replace('.', '')
+        for ref in refs:
+            if ref.novel == 0 and ref.name not in imgt_refs:
+                imgt_refs[ref.name] = ref.sequence.replace('.', '')
 
-                if ref.name not in sequences:
-                    sequences[ref.name.upper()] = ref.sequence.replace('.', '').lower()
+            if ref.name not in sequences:
+                sequences[ref.name.upper()] = ref.sequence.replace('.', '').lower()
 
-            genes = session.query(GenomicGene).filter(GenomicGene.pseudo_gene==0).all()
+        genes = session.query(GenomicGene).filter(GenomicGene.pseudo_gene==0).all()
 
-            for gene in genes:
-                if gene.name not in gene_order:
+        for gene in genes:
+            if gene.name not in gene_order:
+                if params['sort_order'] == 'Alphabetic':
+                    gene_order[gene.name] = gene.alpha_order
+                else:
                     gene_order[gene.name] = gene.locus_order
 
-        gen_counts = {}
+    gen_counts = {}
 
-        for dataset in gen_samples_by_dataset.keys():
-            appearances = []
+    for dataset in gen_samples_by_dataset.keys():
+        session = genomic_dbs[species][dataset].session
+        appearances = []
 
-            for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
-                sample_list = session.query(GenomicSubject.identifier).filter(GenomicSubject.identifier.in_(sample_chunk)).all()
-                sample_list = [s[0] for s in sample_list]
+        for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list = session.query(GenomicSubject.identifier).filter(GenomicSubject.identifier.in_(sample_chunk)).all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            sample_list = [s[0] for s in sample_list]
 
-                app_query = session.query(GenomicSubject.id,
-                                          GenomicSequence.gene,
-                                          GenomicSequence.name,
-                                          GenomicSubject.identifier,
-                                          GenomicSubject.sequencing_platform,
-                                          GenomicSubject.capture_probes) \
-                    .filter(GenomicSubject.id == GenomicSubjectSequence.subject_id) \
-                    .filter(GenomicSequence.id == GenomicSubjectSequence.sequence_id) \
-                    .filter(GenomicSequence.type.in_(['D-REGION', 'J-REGION'])) \
-                    .filter(GenomicSubject.identifier.in_(sample_list))
+            app_query = session.query(GenomicSubject.id,
+                                      GenomicSubject.identifier,
+                                      GenomicSubject.sequencing_platform,
+                                      GenomicSubject.capture_probes,
+                                      GenomicSequence.name,
+                                      GenomicGene.name) \
+                .filter(GenomicSubject.id == GenomicSubjectSequence.subject_id) \
+                .filter(GenomicSequence.id == GenomicSubjectSequence.sequence_id) \
+                .filter(GenomicSequence.type.in_(['V-REGION', 'D-REGION', 'J-REGION'])) \
+                .filter(GenomicGene.id == GenomicSequence.gene_id)\
+                .filter(GenomicSubject.identifier.in_(sample_list))\
+                .filter(GenomicGene.name.in_(wanted_genes))
 
-                appearances.extend(app_query.all())
+            if params['novel_alleles'] == 'Exclude':
+                app_query = app_query.filter(GenomicSequence.novel == 0)
 
-            for app in appearances:
-                pid, gene, allele, patient_name, platform, probes = app
-                allele = allele.split('*', 1)[1].upper()
-                if gene not in gen_counts:
-                    gen_counts[gene] = [{}, [], {}, {}]
-                if allele not in gen_counts[gene][0]:
-                    gen_counts[gene][0][allele] = []
-                    gen_counts[gene][2][allele] = []
-                    gen_counts[gene][3][allele] = []
-                if patient_name not in gen_counts[gene][0][allele]:
-                    gen_counts[gene][0][allele].append(patient_name)
-                if patient_name not in gen_counts[gene][1]:
-                    gen_counts[gene][1].append(patient_name)
-                if platform and platform not in gen_counts[gene][2][allele]:
-                    gen_counts[gene][2][allele].append(platform)
-                if probes and probes not in gen_counts[gene][3][allele]:
-                    gen_counts[gene][3][allele].append(probes)
+            appearances.extend(app_query.all())
+
+        for app in appearances:
+            _, patient_name, platform, probes, allele, gene = app
+            allele = allele.split('*', 1)[1].upper()
+            if gene not in gen_counts:
+                gen_counts[gene] = [{}, [], {}, {}]
+            if allele not in gen_counts[gene][0]:
+                gen_counts[gene][0][allele] = []
+                gen_counts[gene][2][allele] = []
+                gen_counts[gene][3][allele] = []
+            if patient_name not in gen_counts[gene][0][allele]:
+                gen_counts[gene][0][allele].append(patient_name)
+            if patient_name not in gen_counts[gene][1]:
+                gen_counts[gene][1].append(patient_name)
+            if platform and platform not in gen_counts[gene][2][allele]:
+                gen_counts[gene][2][allele].append(platform)
+            if probes and probes not in gen_counts[gene][3][allele]:
+                gen_counts[gene][3][allele].append(probes)
 
 
-        imgt_counts = {}
+    imgt_counts = {}
 
-        for ref in imgt_refs.keys():
-            ref = ref.upper()
-            gene, allele = ref.split('*')
+    for ref in imgt_refs.keys():
+        ref = ref.upper()
+        gene, allele = ref.split('*')
+        if gene in wanted_genes:
             if gene not in imgt_counts:
                 imgt_counts[gene] = [{}, [1]]
             if allele not in imgt_counts[gene][0] and allele != 'DEL':
                 imgt_counts[gene][0][allele] = [1]
 
-        headers = ['Allele', 'IMGT', 'AIRR-Seq', 'Genomic']
+    headers = ['Allele', 'IMGT', 'AIRR-Seq', 'Genomic']
 
-        genes_in_order = sorted(gene_order.items(), key=lambda x: x[1], reverse=True)
-        genes_in_order = [g[0] for g in genes_in_order]
+    genes_in_order = sorted(gene_order.items(), key=lambda x: x[1])
+    genes_in_order = [g[0] for g in genes_in_order]
 
-        results = []
+    results = []
 
-        for gene in genes_in_order:
-            # Assemble the set of alleles to list for this gene
-            ref_alleles = []
-            novel_alleles = []
+    for gene in genes_in_order:
+        # Assemble the set of alleles to list for this gene
+        ref_alleles = []
+        novel_alleles = []
 
-            for counts in [imgt_counts, rep_counts, gen_counts]:
-                if gene in counts:
-                    for allele in counts[gene][0].keys():
-                        if '_' in allele:
-                            if allele not in novel_alleles:
-                                novel_alleles.append(allele)
-                        else:
-                            if allele not in ref_alleles:
-                                ref_alleles.append(allele)
+        for counts in [imgt_counts, rep_counts, gen_counts]:
+            if gene in counts:
+                for allele in counts[gene][0].keys():
+                    if '_' in allele:
+                        if allele not in novel_alleles:
+                            novel_alleles.append(allele)
+                    else:
+                        if allele not in ref_alleles:
+                            ref_alleles.append(allele)
 
-            ref_alleles.sort()
-            novel_alleles.sort()
+        ref_alleles.sort()
+        novel_alleles.sort()
 
-            ref_alleles.extend(novel_alleles)
+        ref_alleles.extend(novel_alleles)
 
-            def allele_count(gene, allele, counts):
-                if gene not in counts:
-                    return 0
-                if allele not in counts[gene][0]:
-                    return 0
-                return len(counts[gene][0][allele])
+        def allele_count(gene, allele, counts):
+            if gene not in counts:
+                return 0
+            if allele not in counts[gene][0]:
+                return 0
+            return len(counts[gene][0][allele])
 
-            def best_platform(gene, allele, counts):
-                platforms = ['RS', 'SEQUEL', 'SEQUELII']
-                if gene not in counts:
-                    return ''
-                if allele not in counts[gene][2]:
-                    return ''
+        def best_platform(gene, allele, counts):
+            platforms = ['RS', 'SEQUEL', 'SEQUELII']
+            if gene not in counts:
+                return ''
+            if allele not in counts[gene][2]:
+                return ''
 
-                best = ''
-                for platform in platforms:
-                    if platform in counts[gene][2][allele]:
-                        best = platform
+            best = ''
+            for platform in platforms:
+                if platform in counts[gene][2][allele]:
+                    best = platform
 
-                return best
+            return best
 
-            def best_probes(gene, allele, counts):
-                probes = ['V2', 'V3']
-                if gene not in counts:
-                    return ''
-                if allele not in counts[gene][3]:
-                    return ''
+        def best_probes(gene, allele, counts):
+            probes = ['V2', 'V3']
+            if gene not in counts:
+                return ''
+            if allele not in counts[gene][3]:
+                return ''
 
-                best = ''
-                for probe in probes:
-                    if probe in counts[gene][3][allele]:
-                        best = probe
+            best = ''
+            for probe in probes:
+                if probe in counts[gene][3][allele]:
+                    best = probe
 
-                return best
+            return best
 
-            for allele in ref_alleles:
-                row = {
-                    'Allele': f'{gene}*{allele}',
-                    'IMGT': allele_count(gene, allele, imgt_counts),
-                    'AIRR-Seq': allele_count(gene, allele, rep_counts),
-                    'Genomic': allele_count(gene, allele, gen_counts),
-                    'Best platform': best_platform(gene, allele, gen_counts),
-                    'Best probes': best_probes(gene, allele, gen_counts),
-                    'Sequence': sequences[f'{gene}*{allele}'.upper()]
-                }
-                results.append(row)
+        for allele in ref_alleles:
+            row = {
+                'Allele': f'{gene}*{allele}',
+                'IMGT': allele_count(gene, allele, imgt_counts),
+                'AIRR-Seq': allele_count(gene, allele, rep_counts),
+                'Genomic': allele_count(gene, allele, gen_counts),
+                'Best platform': best_platform(gene, allele, gen_counts),
+                'Best probes': best_probes(gene, allele, gen_counts),
+                'Sequence': sequences[f'{gene}*{allele}'.upper()]
+            }
+            results.append(row)
 
-        output_path = make_output_file('csv')
-        write_csv(output_path, results)
-        return send_report(output_path, 'csv', f'{species}_allele_usage.csv')
+    output_path = make_output_file('csv')
+    write_csv(output_path, results)
+    return send_report(output_path, 'csv', f'{species}_allele_usage.csv')
 
 
