@@ -56,8 +56,8 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
             if not feature:
                 feature_id = session.query(Feature).count()
-                start = reference_features[subject.ref_seq.name][seq.gene]['exon_2']['start'] + 11
-                end = reference_features[subject.ref_seq.name][seq.gene]['exon_2']['end']
+                start = reference_features[subject.ref_seq.name][seq.gene.name]['exon_2']['start'] + 11
+                end = reference_features[subject.ref_seq.name][seq.gene.name]['exon_2']['end']
                 feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', seq.sequence, 'CDS', start, end, '+',
                                f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
@@ -77,11 +77,11 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
     if not row[feature]:
         return
 
-    feature_seq = find_sequence_by_sequence(session, feature, seq.gene, row[feature])
+    feature_seq = find_sequence_by_sequence(session, feature, seq.gene.name, row[feature])
 
     if not feature_seq:
-        feature_name = f"{seq.gene}*{sha256(row[feature].encode('utf-8')).hexdigest()[-4:]}"
-        feature_seq = save_genomic_sequence(session, feature_name, seq.gene, feature, True, False, '', row[feature], '')
+        feature_name = f"{seq.gene.name}*{sha256(row[feature].encode('utf-8')).hexdigest()[-4:]}"
+        feature_seq = save_genomic_sequence(session, feature_name, seq.gene.name, feature, True, False, '', row[feature], '')
 
     update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, feature_seq)
 
@@ -89,12 +89,12 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
 
     if not feature_rec:
         feature_id = session.query(Feature).count()
-        start = reference_features[subject.ref_seq.name][seq.gene][bed_name]['start']
+        start = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['start']
 
         if feature != 'L-PART2':
-            end = reference_features[subject.ref_seq.name][seq.gene][bed_name]['end']
+            end = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['end']
         else:
-            end = reference_features[subject.ref_seq.name][seq.gene][bed_name]['start'] + 11
+            end = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['start'] + 11
 
         feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence, 'UTR', start, end, '+',
                                      f"Name={feature_seq.name};ID={feature_id}", feature_id, subject.ref_seq)

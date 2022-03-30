@@ -49,7 +49,15 @@ def add_feature_to_ref(name, feature_level, feature_type, feature_seq, feature, 
 
 
 def save_genomic_sequence(session, name, gene, allele_type, novel, deleted, functional, sequence, gapped_sequence, imgt_name=''):
-    sequence = Sequence(name=name, gene=gene, type=allele_type, novel=novel, functional=functional, deleted=deleted, sequence=sequence.upper(),
+    gene_id = session.query(Gene.id).filter_by(name=gene).one_or_none()
+
+    if not gene_id:
+        print(f"Can't add sequence {name}: gene {gene} not found")
+        return None
+
+    gene_id = gene_id[0]
+
+    sequence = Sequence(name=name, gene_id=gene_id, type=allele_type, novel=novel, functional=functional, deleted=deleted, sequence=sequence.upper(),
                         gapped_sequence=gapped_sequence.upper(), imgt_name=imgt_name, appearances=0)
     session.add(sequence)
     return sequence
@@ -127,9 +135,16 @@ def find_or_assign_allele(session, gene_sequence, v_gene, functional):
     ref_set = get_ref_set(session)
     name, gapped_seq, notes = novel_allele_name.name_novel(gene_sequence, ref_set, v_gene)
     name, root_name = rationalise_name(gene_sequence, name)
-    gene = session.query(Sequence.gene).filter(Sequence.name == root_name).one_or_none()[0]
+    gene = session.query(Gene)\
+        .join(Sequence, Gene.id == Sequence.gene_id)\
+        .filter(Sequence.name == root_name)\
+        .one_or_none()
 
-    s = save_novel_allele(session, gene, name, notes, gene_sequence, gapped_seq)
+    if not gene:
+        print(f'Error: gene {root_name} not found when trying to name novel allele {name}')
+        return None
+
+    s = save_novel_allele(session, gene.name, name, notes, gene_sequence, gapped_seq)
 
     return s
 
@@ -140,7 +155,7 @@ def link_sequence_to_feature(sequence, feature):
     sf.feature = feature
 
 
-def save_novel_allele(session, gene, name, notes, sequence, gapped_sequence):
+def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence):
     if not notes:
         functionality = 'Functional'
     elif 'Stop' in notes:
@@ -148,9 +163,17 @@ def save_novel_allele(session, gene, name, notes, sequence, gapped_sequence):
     else:
         functionality = 'ORF'
 
+    gene_id = session.query(Gene.id).filter_by(name=gene_name).one_or_none()
+
+    if not gene_id:
+        print(f"Can't add sequence {name}: gene {gene_name} not found")
+        return None
+
+    gene_id = gene_id[0]
+
     s = Sequence(
         name=name,
-        gene=gene,
+        gene_id=gene_id,
         imgt_name='',
         type=find_type(name),
         sequence=sequence,
@@ -232,8 +255,11 @@ def find_feature_by_sequence(session, feature_type, seq, ref_seq):
 
 
 def find_sequence_by_sequence(session, sequence_type, gene, seq):
-    seq_object = session.query(Sequence) \
-        .filter(and_(Sequence.type == sequence_type, Sequence.sequence == seq, Sequence.gene == gene)) \
+    seq_object = session.query(Sequence)\
+        .join(Gene)\
+        .filter(Sequence.gene_id == Gene.id)\
+        .filter(Gene.name == gene)\
+        .filter(and_(Sequence.type == sequence_type, Sequence.sequence == seq)) \
         .one_or_none()
     return seq_object
 

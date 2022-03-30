@@ -71,7 +71,6 @@ class Sequence(Base):
     __tablename__ = 'sequence'
     id = Column(Integer, primary_key=True)
     name = Column(String(100))
-    gene = Column(String(100))
     imgt_name = Column(String(100))
     type = Column(String(100))
     novel = Column(Boolean)
@@ -81,6 +80,7 @@ class Sequence(Base):
     notes = Column(String(200))
     sequence = Column(Text(1000))
     gapped_sequence = Column(Text(1000))
+    gene_id = Column(Integer, ForeignKey('gene.id'))
     subjects = relationship('Subject', secondary='subject_sequence', back_populates='sequences')
     features = relationship('Feature', secondary='sequence_feature')
 
@@ -144,6 +144,7 @@ class Gene(Base):
     locus_order = Column(Integer)
     alpha_order = Column(Integer)
     pseudo_gene = Column(Boolean)
+    sequences = relationship('Sequence', backref='gene')
 
 
 

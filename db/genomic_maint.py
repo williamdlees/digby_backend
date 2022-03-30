@@ -21,6 +21,7 @@ from db.genomic_db_functions import save_genomic_study, save_genomic_subject, sa
 #from db.imgt_assembly import process_imgt_assembly
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
+from db.genomic_db import Sequence
 
 Session = sessionmaker()
 
