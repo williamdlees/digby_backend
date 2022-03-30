@@ -3,9 +3,10 @@
 from werkzeug.exceptions import BadRequest
 from api.reports.reports import SYSDATA, run_rscript, send_report
 from api.reports.report_utils import make_output_file, chunk_list
-from app import app, vdjbase_dbs
+from app import app, vdjbase_dbs, genomic_dbs
 from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele
-from db.vdjbase_airr_model import Sample
+from db.vdjbase_airr_model import Sample, Patient
+from db.genomic_db import Sequence as GenomicSequence, Subject as GenomicSubject, SubjectSequence as GenomicSubjectSequence, Gene as GenomicGene
 import os
 from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
 import xlwt
@@ -14,35 +15,33 @@ APPEARANCE_SCRIPT = 'allele_appeareance2.R'
 SAMPLE_CHUNKS = 400
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
-    if len(rep_samples) == 0:
-        raise BadRequest('No repertoire-derived genotypes were selected.')
-
     if format != 'pdf' and format != 'xls':
         raise BadRequest('Invalid format requested')
 
-    samples_by_dataset = {}
+    rep_samples_by_dataset = {}
     for rep_sample in rep_samples:
-        if rep_sample['dataset'] not in samples_by_dataset:
-            samples_by_dataset[rep_sample['dataset']] = []
-        samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
+        if rep_sample['dataset'] not in rep_samples_by_dataset:
+            rep_samples_by_dataset[rep_sample['dataset']] = []
+        rep_samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
 
     # Format we need to produce is [gene_name, [allele names], [allele appearances], gene appearances]
     # Start with a dict indexed by gene, then convert to appropriately sorted list
     counts = {}
 
-    for dataset in samples_by_dataset.keys():
+    for dataset in rep_samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
         appearances = []
 
-        for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
+        for sample_chunk in chunk_list(rep_samples_by_dataset[dataset], SAMPLE_CHUNKS):
             sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
-            app_query = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.sample_name, Gene.locus_order, Gene.alpha_order)\
+            app_query = session.query(AllelesSample.patient_id, Patient.patient_name, Gene.name, Allele.name, Sample.sample_name, Gene.locus_order, Gene.alpha_order)\
                                 .filter(Sample.id == AllelesSample.sample_id)\
                                 .filter(Allele.id == AllelesSample.allele_id)\
                                 .filter(Gene.id == Allele.gene_id)\
+                                .filter(Patient.id == AllelesSample.patient_id)\
                                 .filter(Sample.sample_name.in_(sample_list))\
                                 .filter(Gene.name.in_(wanted_genes))
 
@@ -55,7 +54,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             appearances.extend(app_query.all())
 
         for app in appearances:
-            pid, gene, allele, sample, locus_order, alpha_order = app
+            _, patient_name, gene, allele, sample, locus_order, alpha_order = app
             allele = allele.split('*', 1)[1].upper()
             if gene not in counts:
                 if params['sort_order'] == 'Alphabetic':
@@ -64,10 +63,56 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                     counts[gene] = [{}, [], locus_order]
             if allele not in counts[gene][0]:
                 counts[gene][0][allele] = []
-            if pid not in counts[gene][0][allele]:
-                counts[gene][0][allele].append(pid)
-            if pid not in counts[gene][1]:
-                counts[gene][1].append(pid)
+            if patient_name not in counts[gene][0][allele]:
+                counts[gene][0][allele].append(patient_name)
+            if patient_name not in counts[gene][1]:
+                counts[gene][1].append(patient_name)
+
+    gen_samples_by_dataset = {}
+    for gen_sample in genomic_samples:
+        if gen_sample['dataset'] not in gen_samples_by_dataset:
+            gen_samples_by_dataset[gen_sample['dataset']] = []
+        gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
+
+    for dataset in gen_samples_by_dataset.keys():
+        session = genomic_dbs[species][dataset].session
+        appearances = []
+
+        for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
+            sample_list = session.query(GenomicSubject.identifier).filter(GenomicSubject.identifier.in_(sample_chunk)).all()
+            sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            sample_list = [s[0] for s in sample_list]
+
+            app_query = session.query(GenomicSubject.identifier,
+                                      GenomicGene.name,
+                                      GenomicSequence.name,
+                                      GenomicGene.locus_order,
+                                      GenomicGene.alpha_order)\
+                .filter(GenomicSubject.id == GenomicSubjectSequence.subject_id) \
+                .filter(GenomicSequence.id == GenomicSubjectSequence.sequence_id) \
+                .filter(GenomicGene.id == GenomicSequence.gene_id) \
+                .filter(GenomicSequence.type.in_(['V-REGION', 'D-REGION', 'J-REGION'])) \
+                .filter(GenomicSubject.identifier.in_(sample_list))\
+                .filter(GenomicGene.name.in_(wanted_genes))
+
+            if params['novel_alleles'] == 'Exclude':
+                app_query = app_query.filter(GenomicSequence.novel == 0)
+            appearances.extend(app_query.all())
+
+        for app in appearances:
+            patient_name, gene, allele, locus_order, alpha_order = app
+            allele = allele.split('*', 1)[1].upper()
+            if gene not in counts:
+                if params['sort_order'] == 'Alphabetic':
+                    counts[gene] = [{}, [], alpha_order]
+                else:
+                    counts[gene] = [{}, [], locus_order]
+            if allele not in counts[gene][0]:
+                counts[gene][0][allele] = []
+            if patient_name not in counts[gene][0][allele]:
+                counts[gene][0][allele].append(patient_name)
+            if patient_name not in counts[gene][1]:
+                counts[gene][1].append(patient_name)
 
     single_alleles = []
     multi_alleles = []

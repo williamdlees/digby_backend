@@ -133,7 +133,6 @@ def enumerate_feature(f):
 
 genomic_sequence_filters = {
     'name': {'model': 'Sequence', 'field': Sequence.name, 'sort': 'gene'},
-    'gene': {'model': 'Sequence', 'field': Sequence.gene, 'sort': 'gene'},
     'imgt_name': {'model': 'Sequence', 'field': Sequence.imgt_name},
     'type': {'model': 'Sequence', 'field': Sequence.type},
     'novel': {'model': 'Sequence', 'field': Sequence.novel},
@@ -143,6 +142,8 @@ genomic_sequence_filters = {
     'sequence': {'model': 'Sequence', 'field': Sequence.sequence, 'no_uniques': True},
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
     'appearances': {'model': 'Sequence', 'field': Sequence.appearances, 'fieldname': 'appearances', 'sort': 'numeric'},
+
+    'gene': {'model': 'Gene', 'field': Gene.name, 'sort': 'gene'},
 
     'subject_id': {'model': None, 'fieldname': 'subject_id'},
     'dataset': {'model': None, 'fieldname': 'dataset'},
@@ -642,6 +643,7 @@ def find_genomic_subjects(attribute_query, species, genomic_datasets, genomic_fi
 
 def find_genomic_filter_params(species, genomic_datasets):
     genes = []
+    gene_types = []
 
     for dset in genomic_datasets:
         db = get_genomic_db(species, dset)
@@ -649,17 +651,13 @@ def find_genomic_filter_params(species, genomic_datasets):
         if db is None:
             raise BadRequest('Bad species or dataset name')
 
-        g = db.session.query(Sequence.name)\
-            .join(SubjectSequence, SubjectSequence.sequence_id == Sequence.id)\
-            .join(Subject, SubjectSequence.subject_id == Subject.id)\
-            .filter(Sequence.type.like('%REGION')) \
-            .all()
-
+        g = db.session.query(Gene.name).all()
         genes.extend(g)
+        g_t = db.session.query(Gene.type).distinct().all()
+        gene_types.extend(g_t)
 
-    genes = sorted([gene[0] for gene in genes])
-    gene_types = [gene[0:4] for gene in genes]
-    gene_types = sorted(set(gene_types))
+    genes = sorted(set([gene[0] for gene in genes]))
+    gene_types = sorted(set([gene_type[0] for gene_type in gene_types]))
 
     params = [
         {

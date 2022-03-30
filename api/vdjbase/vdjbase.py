@@ -21,6 +21,7 @@ from app import vdjbase_dbs, app, genomic_dbs
 from db.vdjbase_api_query_filters import sample_info_filters, sequence_filters
 from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
 from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
+from db.genomic_db import Gene as GenomicGene
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
@@ -834,29 +835,41 @@ def find_rep_filter_params(species, datasets):
 
     return (params, haplotypes)
 
+# Test if session refers to an AIRR-seq database
+
+def is_session_airrseq(session):
+    for species in vdjbase_dbs.keys():
+        for dataset in vdjbase_dbs[species].keys():
+            if vdjbase_dbs[species][dataset] == session:
+                return True
 
 # Apply filter params to a list of samples in the context of a specific dataset
 # wanted_genes is returned in the required search order
 
 def apply_rep_filter_params(params, sample_list, session):
+    if is_session_airrseq(session):
+        gene = Gene
+    else:
+        gene = GenomicGene
+
     if 'per_sample' in params:
         sample_list = filter_per_sample(params['per_sample'], sample_list)
     if 'sort_order' in params:
         if params['sort_order'] == 'Alphabetic':
-            gq = session.query(Gene).order_by(Gene.alpha_order)
+            gq = session.query(gene).order_by(gene.alpha_order)
         else:
-            gq = session.query(Gene).order_by(Gene.locus_order)
+            gq = session.query(gene).order_by(gene.locus_order)
     else:
-        gq = session.query(Gene).order_by(Gene.alpha_order)
+        gq = session.query(gene).order_by(gene.alpha_order)
 
     if len(params['f_gene_types']) > 0:
-        gq = gq.filter(Gene.type.in_(params['f_gene_types']))
+        gq = gq.filter(gene.type.in_(params['f_gene_types']))
     if len(params['f_genes']) > 0:
-        gq = gq.filter(Gene.name.in_(params['f_genes']))
+        gq = gq.filter(gene.name.in_(params['f_genes']))
     if not params['f_pseudo_genes']:
-        gq = gq.filter(Gene.pseudo_gene == 0)
+        gq = gq.filter(gene.pseudo_gene == 0)
     wanted_genes = gq.all()
-    wanted_genes = [gene.name for gene in wanted_genes]
+    wanted_genes = [g.name for g in wanted_genes]
     return sample_list, wanted_genes
 
 
