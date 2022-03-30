@@ -177,7 +177,7 @@
       ],
       "filter_params": true,
       "scope": [
-        "rep_sample"
+        "gen_or_rep_sample"
       ],
       "format": [
         "pdf",
@@ -369,11 +369,44 @@
       "title": "Allele Support",
       "description": "Summarise support for each allele from selected sources",
       "thumbnail": "",
-      "params": [],
       "scope": [
         "gen_or_rep_sample"
       ],
-      "filter_params": false,
+      "params": [
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": [
+            "Exclude",
+            "Include"
+          ]
+        },
+        {
+          "id": "novel_alleles",
+          "type": "select",
+          "label": "Novel Alleles",
+          "options": [
+            "Include",
+            "Exclude"
+          ]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        }
+      ],
+      "filter_params": true,
       "format": [
         "xls"
       ]
