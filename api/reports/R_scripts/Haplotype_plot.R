@@ -7,6 +7,9 @@ library('plotly')
 library(optparse)
 library('rabhit')
 
+pdf(NULL)  # stop spurious Rplots.pdf being produced
+
+
 ########################
 
 option_list = list(

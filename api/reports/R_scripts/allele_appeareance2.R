@@ -9,6 +9,9 @@ library(stringr)
 library("vdjbasevis")
 library(reshape2)
 
+pdf(NULL)  # stop spurious Rplots.pdf being produced
+
+
 option_list = list(
   make_option(c("-i", "--input_file"), type="character", default=NULL,
               help="excel file name", metavar="character"),
