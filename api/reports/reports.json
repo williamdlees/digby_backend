@@ -261,7 +261,7 @@
       ],
       "filter_params": true,
       "scope": [
-        "rep_sample"
+        "gen_or_rep_sample"
       ],
       "format": [
         "html"

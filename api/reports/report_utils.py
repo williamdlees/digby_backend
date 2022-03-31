@@ -108,15 +108,34 @@ def collate_samples(rep_samples):
     chain = None
 
     for rep_sample in rep_samples:
+        locus = rep_sample['pcr_target_locus']
         if rep_sample['dataset'] not in samples_by_dataset:
             samples_by_dataset[rep_sample['dataset']] = []
             if chain is None:
-                chain = rep_sample['pcr_target_locus']
-            elif chain != rep_sample['pcr_target_locus']:
+                chain = locus
+            elif chain != locus:
                 raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
         samples_by_dataset[rep_sample['dataset']].append(rep_sample['sample_name'])
 
     return chain, samples_by_dataset
+
+
+def collate_gen_samples(gen_samples):
+    samples_by_dataset = {}
+    chain = None
+
+    for gen_sample in gen_samples:
+        locus = gen_sample['dataset']
+        if gen_sample['dataset'] not in samples_by_dataset:
+            samples_by_dataset[gen_sample['dataset']] = []
+            if chain is None:
+                chain = locus
+            elif chain != locus:
+                raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
+        samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
+
+    return chain, samples_by_dataset
+
 
 # split a list into chunks of length n
 
