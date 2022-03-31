@@ -43,7 +43,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, genotype.replace('samples/', ''))
 
                 if not os.path.isfile(sample_path):
-                    raise BadRequest('Genotype file for sample %s/%s is missing.' % (dataset, name))
+                    continue
 
                 genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
 

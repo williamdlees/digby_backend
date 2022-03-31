@@ -11,6 +11,9 @@ library('plotly')
 library(optparse)
 library("vdjbasevis")
 
+pdf(NULL)  # stop spurious Rplots.pdf being produced
+
+
 ########################
 
 option_list = list(

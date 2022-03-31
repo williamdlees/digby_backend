@@ -1,6 +1,9 @@
 library(optparse)
 library(vdjbasevis)
 
+pdf(NULL)  # stop spurious Rplots.pdf being produced
+
+
 ########## VDJbase server ##############
 
 option_list = list(

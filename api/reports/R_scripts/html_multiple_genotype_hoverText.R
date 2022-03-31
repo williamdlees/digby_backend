@@ -5,6 +5,9 @@ library(vdjbasevis)
 library(stringr)
 library(plotly)
 
+pdf(NULL)  # stop spurious Rplots.pdf being produced
+
+
 ########## VDJbase server ##############
 
 #pdf(NULL)     # This prevents blank Rscript.pdf files being written
