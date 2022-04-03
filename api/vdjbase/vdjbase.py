@@ -451,7 +451,7 @@ class SamplesApi(Resource):
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
                 sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
-                r['genotypes']['tigger'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
+                r['genotypes']['tigger'] = sp + r['genotype'].replace('samples', '') if r['genotype_stats'] else ''
                 r['genotypes']['ogrdbstats'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
                 r['genotypes']['ogrdbplot'] = sp + r['genotype_report'].replace('samples', '') if r['genotype_report'] else ''
                 del r['genotype_stats']
