@@ -22,7 +22,7 @@ def object_as_dict(obj):
     return {c.key: getattr(obj, c.key)
             for c in inspect(obj).mapper.column_attrs}
 
-GENOMIC_SAMPLE_PATH = 'study_data/Genomic/samples'
+GENOMIC_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/samples')
 
 ns = api.namespace('genomic', description='Genomic data and annotations')
 

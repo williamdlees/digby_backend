@@ -75,7 +75,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         params['f_kdiff'] = 0
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
-    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=locus_order)
+    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), [], locus_order=locus_order)
     output_path = make_output_file('html' if html else 'pdf')
     cmd_line = ["-i", haplo_path,
                 "-o", output_path,

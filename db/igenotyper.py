@@ -7,6 +7,7 @@ import shutil
 import csv
 
 from receptor_utils.novel_allele_name import name_novel
+from receptor_utils.simple_bio_seq import write_csv
 from sqlalchemy import and_
 
 from db.genomic_db import RefSeq, Feature, Sequence, Subject, SubjectSequence, Study
@@ -28,13 +29,20 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
     print(f"Importing subject {subject.identifier}")
 
-    if not os.path.isfile(os.path.join(dataset_dir, 'samples')):
-        shutil.copy(annotation_file, os.path.join(dataset_dir, 'samples'))
-
     if annotation_file not in annotation_records:
         annotation_records[annotation_file] = read_csv(annotation_file)
 
     rows = [x for x in annotation_records[annotation_file] if x['sample_name'] == subject.name_in_study]
+
+    # If the annotation file contains records for multiple subjects, split into multiple files
+
+    if len(rows) < len(annotation_records[annotation_file]):
+        subj_af_name, subj_af_ext = os.path.splitext(os.path.basename(annotation_file))
+        subj_af_name = f"{subj_af_name}_{subject.identifier}{subj_af_ext}"
+        write_csv(os.path.join(dataset_dir, 'samples', subj_af_name), rows)
+        subject.annotation_path = subject.annotation_path.replace(os.path.basename(annotation_file), subj_af_name)
+    elif not os.path.isfile(os.path.join(dataset_dir, 'samples')):
+        shutil.copy(annotation_file, os.path.join(dataset_dir, 'samples'))
 
     sense = '+'     # by + sense we mean 5' to 3'
     feature_id = 1

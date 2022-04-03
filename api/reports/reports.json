@@ -54,12 +54,15 @@
       ],
       "filter_params": true,
       "scope": [
-        "rep_sample"
+        "gen_or_rep_sample"
       ],
       "format": [
         "pdf",
         "html"
-      ]
+      ],
+      "limits": {
+        "max_samples": 20
+      }
     },
     "rep_genotype_heatmap": {
       "title": "Genotype Heatmap",

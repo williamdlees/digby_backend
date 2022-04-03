@@ -22,8 +22,11 @@ def update_genomic_ref(session, ref_file):
         # determine gene/allele
         if '*' in name:
             gene_name = name.split('*')[0]
-        elif '.' in name and len(name.split('.')) == 3:     # cirelli format
-            gene_name = name.split('.')[0] + '.' + name.split('.')[1]
+        elif 'LJI.Rh_' in name:               # cirelli format
+            if name[-2:-1] == '.' and name[-1].isalpha():
+                gene_name = name[:-2]
+            else:
+                gene_name = name
         else:
             gene_name = name
 
@@ -37,7 +40,8 @@ def update_genomic_ref(session, ref_file):
             if '-' in gene_name[4:]:
                 family = gene_name[4:].split('-')[0]
 
-            gene_type = gene_name[:4]
+
+            gene_type = gene_name.replace('LJI.Rh_', '')[:4]
 
             gene_obj = save_gene(session, gene_name, gene_type, family, 0, 0, False)
             gene_id = gene_obj.id

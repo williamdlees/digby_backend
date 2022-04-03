@@ -70,7 +70,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     attachment_filename = '%s_gene_frequency.pdf' % species
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
-    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), locus_order=locus_order)
+    gene_order_file = get_multiple_order_file(species, samples_by_dataset.keys(), [], locus_order=locus_order)
 
     cmd_line = ["-i", input_path,
                 "-o", output_path,

@@ -17,7 +17,6 @@ from sqlalchemy import func
 import pandas as pd
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from api.genomic.genomic import GENOMIC_SAMPLE_PATH
 
 
 def zipdir(path, ziph, arc_root):

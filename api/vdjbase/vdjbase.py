@@ -451,7 +451,7 @@ class SamplesApi(Resource):
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
                 sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
-                r['genotypes']['tigger'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
+                r['genotypes']['tigger'] = sp + r['genotype'].replace('samples', '') if r['genotype_stats'] else ''
                 r['genotypes']['ogrdbstats'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
                 r['genotypes']['ogrdbplot'] = sp + r['genotype_report'].replace('samples', '') if r['genotype_report'] else ''
                 del r['genotype_stats']
@@ -885,15 +885,20 @@ def filter_per_sample(per_sample, sample_list):
     return sample_list
 
 
-def get_order_file(species, dataset, locus_order=True):
+def get_order_file(species, dataset, locus_order=True, genomic=False):
     file_name = os.path.join(app.config['OUTPUT_PATH'], '%s_%s_%s_order.tsv' % (species, dataset, 'locus' if locus_order else 'alpha'))
 
-    #if not os.path.isfile(file_name):
-    session = vdjbase_dbs[species][dataset].session
-    if locus_order:
-        gene_order = session.query(Gene.name).order_by(Gene.locus_order).all()
+    if genomic:
+        session = genomic_dbs[species][dataset].session
+        gene = GenomicGene
     else:
-        gene_order = session.query(Gene.name).order_by(Gene.alpha_order).all()
+        session = vdjbase_dbs[species][dataset].session
+        gene = Gene
+
+    if locus_order:
+        gene_order = session.query(gene.name).order_by(gene.locus_order).all()
+    else:
+        gene_order = session.query(gene.name).order_by(gene.alpha_order).all()
     gene_order = [x[0] for x in gene_order]
 
     with open(file_name, 'w') as fo:
@@ -903,25 +908,15 @@ def get_order_file(species, dataset, locus_order=True):
 
 
 # interleave content from multiple files, or return one of them if they are all the same
-def get_multiple_order_file(species, datasets, locus_order=True):
+def get_multiple_order_file(species, rep_datasets, gen_datasets, locus_order=True):
     gene_order = []
     added = False
 
-    for dataset in datasets:
-        with open(get_order_file(species, dataset, locus_order), 'r') as fi:
-            if len(gene_order) == 0:
-                gene_order = fi.read().split('\n')
-            else:
-                this_order = fi.read().split('\n')
-                prev = ''
+    for dataset in rep_datasets:
+        added, gene_order = merge_order(added, dataset, gene_order, locus_order, species, False)
 
-                for gene in this_order:
-                    if gene not in gene_order:
-                        if prev in gene_order:
-                            gene_order.insert(gene_order.index(prev), gene)
-                        else:
-                            gene_order.append(gene)
-                        added = True
+    for dataset in gen_datasets:
+        added, gene_order = merge_order(added, dataset, gene_order, locus_order, species, True)
 
     if added:
         file_name = make_output_file('tsv')
@@ -929,10 +924,30 @@ def get_multiple_order_file(species, datasets, locus_order=True):
         with open(file_name, 'w') as fo:
             fo.write('\n'.join(gene_order))
     else:
-        print(list(datasets))
-        file_name = get_order_file(species, list(datasets)[0], locus_order)
+        if rep_datasets:
+            file_name = get_order_file(species, list(rep_datasets)[0], locus_order, False)
+        else:
+            file_name = get_order_file(species, list(gen_datasets)[0], locus_order, True)
 
     return file_name
+
+
+def merge_order(added, dataset, gene_order, locus_order, species, genomic):
+    with open(get_order_file(species, dataset, locus_order, genomic), 'r') as fi:
+        if len(gene_order) == 0:
+            gene_order = fi.read().split('\n')
+        else:
+            this_order = fi.read().split('\n')
+            prev = ''
+
+            for gene in this_order:
+                if gene not in gene_order:
+                    if prev in gene_order:
+                        gene_order.insert(gene_order.index(prev), gene)
+                    else:
+                        gene_order.append(gene)
+                    added = True
+    return added, gene_order
 
 
 
