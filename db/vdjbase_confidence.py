@@ -494,6 +494,9 @@ def check_ogrdbstats_for_novels(novels, ds_dir):
 
     for novel in novels:
         for sample in novel.samples:
+            if not sample.sample.genotype_stats:
+                print(f"ERROR - No genotype stats for sample {sample.sample.sample_name}")
+                continue
             if sample.sample.genotype_stats not in ogrdbstats_to_check:
                 ogrdbstats_to_check[sample.sample.genotype_stats] = []
             ogrdbstats_to_check[sample.sample.genotype_stats].append(novel)
