@@ -89,11 +89,11 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             if patient_name not in rep_counts[gene][1]:
                 rep_counts[gene][1].append(patient_name)
 
-        gen_samples_by_dataset = {}
-        for gen_sample in genomic_samples:
-            if gen_sample['dataset'] not in gen_samples_by_dataset:
-                gen_samples_by_dataset[gen_sample['dataset']] = []
-            gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
+    gen_samples_by_dataset = {}
+    for gen_sample in genomic_samples:
+        if gen_sample['dataset'] not in gen_samples_by_dataset:
+            gen_samples_by_dataset[gen_sample['dataset']] = []
+        gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
 
     for dataset in gen_samples_by_dataset.keys():
         session = genomic_dbs[species][dataset].session
