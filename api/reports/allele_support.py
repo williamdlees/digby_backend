@@ -41,7 +41,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             if ref.name not in sequences:
                 sequences[ref.name.upper()] = ref.seq.replace('.', '').lower()
 
-        genes = session.query(Gene).filter(Gene.pseudo_gene==0).all()
+        genes = session.query(Gene).all()
 
         for gene in genes:
             if gene.name not in gene_order:
@@ -107,7 +107,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             if ref.name not in sequences:
                 sequences[ref.name.upper()] = ref.sequence.replace('.', '').lower()
 
-        genes = session.query(GenomicGene).filter(GenomicGene.pseudo_gene==0).all()
+        genes = session.query(GenomicGene).all()
 
         for gene in genes:
             if gene.name not in gene_order:
