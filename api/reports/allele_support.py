@@ -28,6 +28,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     imgt_refs = {}
     gene_order = {}
     sequences = {}
+    all_wanted_genes = []
 
     for dataset in rep_samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
@@ -59,6 +60,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         for sample_chunk in chunk_list(rep_samples_by_dataset[dataset], SAMPLE_CHUNKS):
             sample_list = session.query(Sample.sample_name).filter(Sample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            all_wanted_genes.extend(wanted_genes)
             sample_list = [s[0] for s in sample_list]
 
             app_query = session.query(AllelesSample.patient_id, Gene.name, Allele.name, Sample.sample_name, Patient.patient_name)\
@@ -125,6 +127,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
             sample_list = session.query(GenomicSubject.identifier).filter(GenomicSubject.identifier.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
+            all_wanted_genes.extend(wanted_genes)
             sample_list = [s[0] for s in sample_list]
 
             app_query = session.query(GenomicSubject.id,
@@ -165,11 +168,12 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
 
     imgt_counts = {}
+    all_wanted_genes = list(set(all_wanted_genes))
 
     for ref in imgt_refs.keys():
         ref = ref.upper()
         gene, allele = ref.split('*')
-        if gene in wanted_genes:
+        if gene in all_wanted_genes:
             if gene not in imgt_counts:
                 imgt_counts[gene] = [{}, [1]]
             if allele not in imgt_counts[gene][0] and allele != 'DEL':
