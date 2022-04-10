@@ -7,7 +7,6 @@ from api.reports.report_utils import make_output_file, collate_samples, find_pri
 
 from api.reports.report_utils import trans_df
 from app import app, vdjbase_dbs, genomic_dbs
-from db.vdjbase_model import Gene
 from db.genomic_db import Subject as GenomicSubject, Gene as GenomicGene, Sequence as GenomicSequence, SubjectSequence as GenomicSubjectSequence
 
 from db.vdjbase_airr_model import Sample
@@ -189,7 +188,9 @@ def process_igenotyper_genotype(sample_path, subject, study, wanted_genes):
         if gene not in genes:
             genes[gene] = []
 
-        genes[gene].append(rec['vdjbase_allele'].split('*')[1])
+        g = rec['vdjbase_allele'].split('*')[1]
+        if g not in genes[gene]:
+            genes[gene].append(g)
 
     geno_list = fake_genotype(subject, genes)
     return pd.DataFrame(geno_list)

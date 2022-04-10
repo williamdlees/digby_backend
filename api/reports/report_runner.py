@@ -3,8 +3,8 @@
 import requests
 import time
 
-reports_url = "http://localhost:5000"
-#reports_url = "https://vdjbase.org/admin/"
+#reports_url = "http://localhost:5000"
+reports_url = "https://vdjbase.org/admin/"
 
 
 report_requests = [

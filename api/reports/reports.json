@@ -30,7 +30,7 @@
     },
     "rep_genotype": {
       "title": "Genotype List",
-      "description": "Heatmap-style report of the inferred genotypes for up to 20 samples",
+      "description": "Report of the inferred genotypes for up to 20 samples",
       "thumbnail": "genotype_list.png",
       "params": [
         {
@@ -54,7 +54,8 @@
       ],
       "filter_params": true,
       "scope": [
-        "gen_or_rep_sample"
+        "rep_sample",
+        "gen_sample"
       ],
       "format": [
         "pdf",
@@ -95,7 +96,8 @@
       ],
       "filter_params": true,
       "scope": [
-        "rep_sample"
+        "rep_sample",
+        "gen_sample"
       ],
       "format": [
         "pdf",
@@ -180,7 +182,8 @@
       ],
       "filter_params": true,
       "scope": [
-        "gen_or_rep_sample"
+        "rep_sample",
+        "gen_sample"
       ],
       "format": [
         "pdf",
@@ -264,7 +267,8 @@
       ],
       "filter_params": true,
       "scope": [
-        "gen_or_rep_sample"
+        "rep_sample",
+        "gen_sample"
       ],
       "format": [
         "html"
@@ -373,7 +377,8 @@
       "description": "Summarise support for each allele from selected sources",
       "thumbnail": "",
       "scope": [
-        "gen_or_rep_sample"
+        "rep_sample",
+        "gen_sample"
       ],
       "params": [
         {

@@ -927,6 +927,7 @@ def get_multiple_order_file(species, rep_datasets, gen_datasets, locus_order=Tru
         if rep_datasets:
             file_name = get_order_file(species, list(rep_datasets)[0], locus_order, False)
         else:
+            print(list(gen_datasets))
             file_name = get_order_file(species, list(gen_datasets)[0], locus_order, True)
 
     return file_name
