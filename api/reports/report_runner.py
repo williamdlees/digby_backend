@@ -3,8 +3,8 @@
 import requests
 import time
 
-#reports_url = "http://localhost:5000"
-reports_url = "https://vdjbase.org/admin/"
+reports_url = "http://localhost:5000"
+#reports_url = "https://vdjbase.org/admin/"
 
 
 report_requests = [
@@ -17,6 +17,7 @@ report_requests = [
     ("haplotype report, human IGH, 6 samples, pdf, kdiff >= 1", "/api/reports/reports/run/haplo_heatmap?format=pdf&species=Human&genomic_datasets=&genomic_filters=%5B%5D&rep_datasets=IGH&rep_filters=%5B%7B%22field%22:%22haplotypes%22,%22op%22:%22in%22,%22value%22:%5B%22J6-02_04%22%5D%7D%5D&params=%7B%22per_sample%22:%22Each%20sample%22,%22haplo_gene%22:%22IGHD2-21-01_02%22,%22f_kdiff%22:1,%22sort_order%22:%22Alphabetic%22,%22f_pseudo_genes%22:%22%22,%22f_gene_types%22:%22%22,%22f_genes%22:%22%22%7D"),
     ("allele appearance, human IGH, all samples, pdf", "/api/reports/reports/run/allele_appearance?format=pdf&species=Human&genomic_datasets=&genomic_filters=%5B%5D&rep_datasets=IGH&rep_filters=%5B%5D&params=%7B%22ambiguous_alleles%22:%22Exclude%22,%22novel_alleles%22:%22Include%22,%22sort_order%22:%22Alphabetic%22,%22f_pseudo_genes%22:%22%22,%22f_gene_types%22:%22%22,%22f_genes%22:%22%22%7D"),
     ("allele usage, human IGH, all samples", "/api/reports/reports/run/allele_usage?format=html&species=Human&genomic_datasets=&genomic_filters=%5B%5D&rep_datasets=IGH&rep_filters=%5B%5D&params=%7B%22ambiguous_alleles%22:%22Exclude%22,%22novel_alleles%22:%22Include%22,%22sort_order%22:%22Alphabetic%22,%22f_kdiff%22:%22%22,%22f_pseudo_genes%22:%22%22,%22f_gene_types%22:%22%22,%22f_genes%22:%22%22%7D"),
+    ("allele support, human IGH, genomic and AIRR-seq", "/api/reports/reports/run/allele_support?format=xls&species=Human&genomic_datasets=IGH&genomic_filters=%5B%5D&rep_datasets=IGH&rep_filters=%5B%5D&params=%7B%22ambiguous_alleles%22:%22Exclude%22,%22novel_alleles%22:%22Include%22,%22sort_order%22:%22Alphabetic%22,%22f_kdiff%22:%22%22,%22f_pseudo_genes%22:%22%22,%22f_gene_types%22:%22%22,%22f_genes%22:%22%22%7D"),
 
     ("allele appearance, human TRB, all samples, pdf", "/api/reports/reports/run/allele_appearance?format=pdf&species=Human&genomic_datasets=&genomic_filters=%5B%5D&rep_datasets=TRB&rep_filters=%5B%5D&params=%7B%22ambiguous_alleles%22:%22Exclude%22,%22novel_alleles%22:%22Include%22,%22sort_order%22:%22Alphabetic%22,%22f_pseudo_genes%22:%22%22,%22f_gene_types%22:%22%22,%22f_genes%22:%22%22%7D"),
     ("allele appearance, human TRB, inc pseudo, all samples","/api/reports/reports/run/allele_appearance?format=xls&species=Human&genomic_datasets=&genomic_filters=%5B%5D&rep_datasets=TRB&rep_filters=%5B%5D&params=%7B%22ambiguous_alleles%22:%22Exclude%22,%22novel_alleles%22:%22Include%22,%22sort_order%22:%22Alphabetic%22,%22f_pseudo_genes%22:true,%22f_gene_types%22:%22%22,%22f_genes%22:%22%22%7D"),
