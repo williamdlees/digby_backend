@@ -8,6 +8,7 @@ from werkzeug.exceptions import BadRequest
 import csv
 import tempfile
 from db.vdjbase_model import Allele
+import itertools
 
 from app import app
 
@@ -199,3 +200,36 @@ def translate_primer_alleles(gene, alleles, primer_trans):
 
 def translate_primer_genes(gene, gene_subs):
     return gene_subs[gene] if gene in gene_subs else gene
+
+
+def chunks(l, n):
+    " Yield successive n-sized chunks from l."
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def splitlines(report, maxlength, label_cols):
+    """
+    Split the report (which is assumed to consist of lines of equal length) into a longer report in which each
+    line is maxlength or less. label_cols specifies the width of the label field, which is repeated at the start
+    of each line.
+    """
+
+    # https://stackoverflow.com/questions/3992735/python-generator-that-groups-another-iterable-into-groups-of-n
+
+    def grouper(n, iterable):
+        iterable = iter(iterable)
+        return iter(lambda: list(itertools.islice(iterable, n)), [])
+
+    inlines = report.split("\n")
+    labels = [line[:label_cols] for line in inlines]
+    data = [line[label_cols:] for line in inlines]
+    outlines = []
+
+    for chunk in grouper(maxlength-label_cols, zip(*data)):
+        a = ["".join(line) for line in zip(*chunk)]
+        outlines.extend(["".join(line) for line in zip(labels, a)])
+        outlines.extend(" ")
+
+    return "\n".join(["".join(line) for line in outlines])
+

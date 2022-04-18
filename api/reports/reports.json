@@ -28,42 +28,44 @@
         "html"
       ]
     },
-    "rep_genotype": {
-      "title": "Genotype List",
-      "description": "Report of the inferred genotypes for up to 20 samples",
-      "thumbnail": "genotype_list.png",
-      "params": [
-        {
-          "id": "per_sample",
-          "type": "select",
-          "label": "Show graphs for:",
-          "options": [
-            "Each sample",
-            "Individual (representative sample for each subject)"
-          ]
-        },
-        {
-          "id": "sort_order",
-          "type": "select",
-          "label": "Gene Sort Order",
-          "options": [
-            "Alphabetic",
-            "Locus"
-          ]
-        }
-      ],
-      "filter_params": true,
+    "sequence_search": {
+      "title": "Search for Sequence Matches",
+      "description": "Lists matches and near-matches to the specified sequence",
+      "thumbnail": "sequence_search.png",
       "scope": [
         "rep_sample",
         "gen_sample"
       ],
-      "format": [
-        "pdf",
-        "html"
+      "params": [
+        {
+          "id": "sequence",
+          "type": "multiTextBox",
+          "label": "Sequence"
+        },
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": [
+            "Exclude",
+            "Include"
+          ]
+        },
+        {
+          "id": "novel_alleles",
+          "type": "select",
+          "label": "Novel Alleles",
+          "options": [
+            "Include",
+            "Exclude"
+          ]
+        }
       ],
-      "limits": {
-        "max_samples": 20
-      }
+      "filter_params": true,
+      "format": [
+        "xls",
+        "html"
+      ]
     },
     "rep_genotype_heatmap": {
       "title": "Genotype Heatmap",
@@ -103,6 +105,43 @@
         "pdf",
         "html"
       ]
+    },
+    "rep_genotype": {
+      "title": "Genotype List",
+      "description": "Report of the inferred genotypes for up to 20 samples",
+      "thumbnail": "genotype_list.png",
+      "params": [
+        {
+          "id": "per_sample",
+          "type": "select",
+          "label": "Show graphs for:",
+          "options": [
+            "Each sample",
+            "Individual (representative sample for each subject)"
+          ]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": [
+            "Alphabetic",
+            "Locus"
+          ]
+        }
+      ],
+      "filter_params": true,
+      "scope": [
+        "rep_sample",
+        "gen_sample"
+      ],
+      "format": [
+        "pdf",
+        "html"
+      ],
+      "limits": {
+        "max_samples": 20
+      }
     },
     "haplo_heatmap": {
       "title": "Haplotype Heatmap",
@@ -405,6 +444,6 @@
       "format": [
         "xls"
       ]
-    }  
+    }
   }
 }

@@ -91,7 +91,7 @@ class ReportsApi(Resource):
                                 combined_filter_params[param['id']] = param
                             elif 'options' in param:
                                 combined_options = list(set(combined_filter_params[param['id']]['options'] + param['options']))
-                                combined_filter_params[param['id']]['options'] = combined_options.sorted()
+                                combined_filter_params[param['id']]['options'] = sorted(combined_options)
                         except Exception as e:
                             print('error in query for reports list: invalid parameters')
 
@@ -177,7 +177,7 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # IN THE IMPORT BELOW, CHOOSE THE REPORT YOU WISH TO DEBUG
-            #from api.reports.rep_genotype import run
+            #from api.reports.sequence_search import run
             #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
             #raise BadRequest("we're debugging!")
 
