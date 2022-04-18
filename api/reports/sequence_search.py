@@ -19,6 +19,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     if format not in ["html", "xls"]:
         raise BadRequest('Invalid format requested')
 
+    if 'sequence' not in params or len(params['sequence']) <= 5:
+        raise BadRequest('Please specifiy a longer sequence to search for')
+
     r_chain, rep_samples_by_dataset = collate_samples(rep_samples)
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
 
