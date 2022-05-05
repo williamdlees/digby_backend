@@ -353,7 +353,14 @@ def commit_database(meta_records, vdjbase_name, session):
             if db_row and len(db_row) > 1:
                 breakpoint()
 
-            db_row = session.query(table).filter_by(**meta_records[table_name]).one_or_none()
+            # something of a corner case, but we have two projects that are missing some samples in the iReceptor+ metadata.
+            # Make sure we only create one project record per study, regardless of metadata differences
+
+            if table == Study:
+                db_row = session.query(table).filter(Study.study_name == meta_records[table_name]['study_name']).one_or_none()
+            else:
+                db_row = session.query(table).filter_by(**meta_records[table_name]).one_or_none()
+
             if db_row is None:
                 db_row = table(**meta_records[table_name])
                 session.add(db_row)
