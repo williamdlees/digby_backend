@@ -150,7 +150,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         for app in appearances:
             _, patient_name, platform, probes, allele, gene = app
-            allele = allele.split('*', 1)[1].upper()
+
+            if '*' in allele:
+                allele = allele.split('*', 1)[1].upper()
+            elif '.a' in allele:
+                allele = 'A'
+            else:
+                allele = ''
             if gene not in gen_counts:
                 gen_counts[gene] = [{}, [], {}, {}]
             if allele not in gen_counts[gene][0]:
@@ -172,7 +178,16 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for ref in imgt_refs.keys():
         ref = ref.upper()
-        gene, allele = ref.split('*')
+
+        if '*' in ref:
+            gene, allele = ref.split('*')
+        elif '.a' in ref:
+            gene = ref.replace('.a', '')
+            allele = 'A'
+        else:
+            gene = ref
+            allele = ''
+
         if gene in all_wanted_genes:
             if gene not in imgt_counts:
                 imgt_counts[gene] = [{}, [1]]
@@ -242,6 +257,14 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             return best
 
         for allele in ref_alleles:
+            if allele == 'A':
+                ref_name = gene + '.A'
+            elif allele == '':
+                ref_name = gene
+            else:
+                ref_name = f'{gene}*{allele}'
+            ref_name = ref_name.upper()
+
             row = {
                 'Allele': f'{gene}*{allele}',
                 'IMGT': allele_count(gene, allele, imgt_counts),
@@ -249,7 +272,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 'Genomic': allele_count(gene, allele, gen_counts),
                 'Best platform': best_platform(gene, allele, gen_counts),
                 'Best probes': best_probes(gene, allele, gen_counts),
-                'Sequence': sequences[f'{gene}*{allele}'.upper()]
+                'Sequence': sequences[ref_name]
             }
             results.append(row)
 
