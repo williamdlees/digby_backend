@@ -97,6 +97,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
             if params['novel_alleles'] == 'Exclude':
                 app_query = app_query.filter(GenomicSequence.novel == 0)
+
+            if not params['f_pseudo_genes']:
+                app_query = app_query.filter(GenomicSequence.functional == 'Functional')
+
             appearances.extend(app_query.all())
 
         for app in appearances:

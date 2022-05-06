@@ -100,7 +100,15 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     for dataset in gen_samples_by_dataset.keys():
         session = genomic_dbs[species][dataset].session
 
-        refs = session.query(GenomicSequence).all()
+        query = session.query(GenomicSequence)
+
+        if params['novel_alleles'] == 'Exclude':
+            query = query.filter(GenomicSequence.novel == 0)
+
+        if not params['f_pseudo_genes']:
+            query = query.filter(GenomicSequence.functional == 'Functional')
+
+        refs = query.all()
 
         for ref in refs:
             if ref.novel == 0 and ref.name not in imgt_refs:
@@ -146,17 +154,15 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             if params['novel_alleles'] == 'Exclude':
                 app_query = app_query.filter(GenomicSequence.novel == 0)
 
+            if not params['f_pseudo_genes']:
+                app_query = app_query.filter(GenomicSequence.functional == 'Functional')
+
             appearances.extend(app_query.all())
 
         for app in appearances:
             _, patient_name, platform, probes, allele, gene = app
+            allele = allele.split('*', 1)[1].upper()
 
-            if '*' in allele:
-                allele = allele.split('*', 1)[1].upper()
-            elif '.a' in allele:
-                allele = 'A'
-            else:
-                allele = ''
             if gene not in gen_counts:
                 gen_counts[gene] = [{}, [], {}, {}]
             if allele not in gen_counts[gene][0]:
@@ -179,14 +185,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     for ref in imgt_refs.keys():
         ref = ref.upper()
 
-        if '*' in ref:
-            gene, allele = ref.split('*')
-        elif '.a' in ref:
-            gene = ref.replace('.a', '')
-            allele = 'A'
-        else:
-            gene = ref
-            allele = ''
+        gene, allele = ref.split('*')
 
         if gene in all_wanted_genes:
             if gene not in imgt_counts:
@@ -257,13 +256,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             return best
 
         for allele in ref_alleles:
-            if allele == 'A':
-                ref_name = gene + '.A'
-            elif allele == '':
-                ref_name = gene
-            else:
-                ref_name = f'{gene}*{allele}'
-            ref_name = ref_name.upper()
 
             row = {
                 'Allele': f'{gene}*{allele}',
@@ -272,7 +264,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 'Genomic': allele_count(gene, allele, gen_counts),
                 'Best platform': best_platform(gene, allele, gen_counts),
                 'Best probes': best_probes(gene, allele, gen_counts),
-                'Sequence': sequences[ref_name]
+                'Sequence': sequences[f'{gene}*{allele}'.upper()]
             }
             results.append(row)
 

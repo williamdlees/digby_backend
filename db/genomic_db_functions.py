@@ -133,8 +133,8 @@ def find_or_assign_allele(session, gene_sequence, v_gene, functional):
         return s
 
     ref_set = get_ref_set(session)
-    name, gapped_seq, notes = novel_allele_name.name_novel(gene_sequence, ref_set, v_gene)
-    name, root_name = rationalise_name(gene_sequence, name)
+    orig_name, gapped_seq, notes = novel_allele_name.name_novel(gene_sequence, ref_set, v_gene)
+    name, root_name = rationalise_name(gene_sequence, orig_name)
     gene = session.query(Gene)\
         .join(Sequence, Gene.id == Sequence.gene_id)\
         .filter(Sequence.name == root_name)\
@@ -191,10 +191,17 @@ def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence
 def rationalise_name(gene_sequence, name):
     prefix, name = name.split('IG')
     prefix = prefix + 'IG'
-    name_components = name.split('_')
-    root_name = prefix + name_components[0]
+    gene, allele = name.split('*')
+    allele_components = allele.split('_')
+
+    root_name = prefix + gene + '*' + allele_components[0]
+
+    if len(allele_components) > 1 and allele_components[1][0] == 'S':
+        root_name += '_' + allele_components[1]
+        allele_components = allele_components[1:]
+
     # Avoid infeasibly long names
-    if len(name_components) > 6:
+    if len(allele_components) > 6:
         hash = sha256(gene_sequence.encode('utf-8')).hexdigest()[-5:]
         name = root_name + '_' + hash
     else:

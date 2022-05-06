@@ -93,6 +93,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             if params['novel_alleles'] == 'Exclude':
                 query = query.filter(GenomicSequence.novel == 0)
 
+            if not params['f_pseudo_genes']:
+                query = query.filter(GenomicSequence.functional == 'Functional')
+
             for sequence in query.all():
                 if sequence not in sequence_recs:
                     sequence_recs.append(sequence)

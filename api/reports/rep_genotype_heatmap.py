@@ -95,7 +95,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 if annotation_method == 'IGenotyper':
                     genotype = process_igenotyper_genotype(sample_path, subject_name, study_name, wanted_genes)
                 elif annotation_method == 'VDJbase':
-                    genotype = process_vdjbase_genotype(subject_name, wanted_genes, session)
+                    genotype = process_vdjbase_genotype(subject_name, wanted_genes, session, not params['f_pseudo_genes'])
 
                 genotypes.append(genotype)
 

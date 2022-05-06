@@ -133,6 +133,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             if params['novel_alleles'] == 'Exclude':
                 query = query.filter(GenomicSequence.novel == 0)
 
+            if not params['f_pseudo_genes']:
+                query = query.filter(GenomicSequence.functional == 'Functional')
+
             allele_recs.extend(query.all())
 
         # Collect up ids for each gene. Note this assumes a sorted list of genes (the order_by above)

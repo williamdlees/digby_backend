@@ -93,7 +93,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 if annotation_method == 'IGenotyper':
                     genotype = process_igenotyper_genotype(sample_path, subject_name, study_name, wanted_genes)
                 elif annotation_method == 'VDJbase':
-                    genotype = process_vdjbase_genotype(subject_name, wanted_genes, session)
+                    genotype = process_vdjbase_genotype(subject_name, wanted_genes, session, not params['f_pseudo_genes'])
 
                 genotypes.append(genotype)
 
@@ -177,7 +177,7 @@ def fake_gene(alleles, gene_name, subject):
     }
     return rec
 
-
+# why do we have this? Why not use process_vdjbase_genotype?
 def process_igenotyper_genotype(sample_path, subject, study, wanted_genes):
     genotype = read_csv(sample_path)
     genes = {}
@@ -196,17 +196,20 @@ def process_igenotyper_genotype(sample_path, subject, study, wanted_genes):
     return pd.DataFrame(geno_list)
 
 
-def process_vdjbase_genotype(subject_name, wanted_genes, session):
+def process_vdjbase_genotype(subject_name, wanted_genes, session, functional):
     alleles = session.query(GenomicSequence.name, GenomicGene.name)\
         .join(GenomicGene)\
         .join(GenomicSubjectSequence)\
         .join(GenomicSubject)\
         .filter(GenomicSubject.identifier == subject_name)\
         .filter(GenomicGene.name.in_(wanted_genes))\
-        .filter(GenomicSequence.functional == 'Functional')\
         .filter(GenomicSubjectSequence.sequence_id == GenomicSequence.id)\
-        .filter(GenomicSubjectSequence.subject_id == GenomicSubject.id)\
-        .all()
+        .filter(GenomicSubjectSequence.subject_id == GenomicSubject.id)
+
+    if functional:
+        alleles = alleles.filter(GenomicSequence.functional == 'Functional')
+
+    alleles = alleles.all()
 
     genes = {}
     for allele, gene in alleles:
