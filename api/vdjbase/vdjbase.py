@@ -5,7 +5,7 @@ from flask_restx import Resource, reqparse, fields, marshal, inputs
 
 from api.reports.report_utils import make_output_file
 from api.restx import api
-from sqlalchemy import inspect, func, cast, literal, String, select, union_all
+from sqlalchemy import inspect, func, cast, literal, String, select, union_all, or_
 from math import ceil
 import json
 from sqlalchemy_filters import apply_filters
@@ -100,7 +100,7 @@ class NovelsSpApi(Resource):
             .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
             .filter(Allele.novel == True)\
             .filter(Allele.is_single_allele == True)\
-            .filter(SeqProtocol.read_length == 'Full')\
+            .filter(or_(SeqProtocol.complete_sequences.ilike('full'), SeqProtocol.complete_sequences.ilike('complete')))\
             .all()
 
         results = {}
