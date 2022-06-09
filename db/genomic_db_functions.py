@@ -22,7 +22,7 @@ gff_feature_type = {
     'V-HEPTAMER': 'UTR',
     'V-NONAMER': 'UTR',
     "D-3-HEPTAMER": 'UTR',
-    "D-£-NONAMER": 'UTR',
+    "D-3-NONAMER": 'UTR',
     "D-5-HEPTAMER": 'UTR',
     "D-5-NONAMER": 'UTR',
 }
@@ -226,7 +226,7 @@ def update_subject_sequence_link(session, h, subject, sequence):
     else:
         SubjectSequence(subject=subject, sequence=sequence, haplotype='h%1d' % h, haplo_count=1)
         sequence.appearances += 1
-    session.commit()
+    session.flush()
 
 
 def find_allele_type(allele_name):

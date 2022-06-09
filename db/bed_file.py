@@ -50,8 +50,12 @@ def read_bed_files(bed_files, sense, ref_seq_len):
 
                     if rec['gene'] not in features[ref_file]:
                         features[ref_file][rec['gene']] = {}
+
                     if rec['feature'] not in features[ref_file][rec['gene']]:
-                        features[ref_file][rec['gene']][rec['feature']] = {}
-                    features[ref_file][rec['gene']][rec['feature']] = rec
+                        features[ref_file][rec['gene']][rec['feature']] = rec
+                    else:
+                        features[ref_file][rec['gene']]['3_' + rec['feature']] = features[ref_file][rec['gene']][rec['feature']]
+                        del features[ref_file][rec['gene']][rec['feature']]
+                        features[ref_file][rec['gene']]['5_' + rec['feature']] = rec
 
     return features
