@@ -132,6 +132,7 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
 
     if not feature_rec:
         feature_id = session.query(Feature).count()
+
         start = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['start']
 
         if feature != 'L-PART2':
@@ -153,7 +154,7 @@ def add_gene_level_subfeature(feature, imgt_feature_name, name_prefix, feature_i
 
         name = f"IGHVLpart2{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
         add_feature_to_ref(name, 'gene', 'L_PART-2', feature['ref_seq'], 'CDS', feature['start'], feature['start']+11, '+',
-                           f"Name={feature['gene']}_L_PART1;ID={feature_id}", parent_id, ref)
+                           f"Name={feature['gene']}_L_PART2;ID={feature_id}", parent_id, ref)
     else:
         name = f"{name_prefix}{feature['gene'][3:]}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
         add_feature_to_ref(name, 'gene', imgt_feature_name, feature['ref_seq'], 'CDS', feature['start'], feature['end'], '+',
@@ -177,7 +178,7 @@ def add_gene_level_features(session, ref, reference_features):
                     add_gene_level_subfeature(feature, 'V-SPACER', 'IGHVSpacer', feature_id, parent_id, ref)
                 elif feature_type == 'heptamer':
                     add_gene_level_subfeature(feature, 'V-HEPTAMER', 'IGHVHepta', feature_id, parent_id, ref)
-                    # TODO - split bed exon_2 into L_PART1, V-REGION
+                    # TODO - split bed exon_2 into L_PART2, V-REGION
                 elif feature_type == 'exon_2':
                     add_gene_level_subfeature(feature, 'exon_2', 'IGHVRegion', feature_id, parent_id, ref)
                 elif feature_type == 'gencode_intron':
