@@ -131,39 +131,51 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                     continue
 
             # parse allele, handling old ambiguous style (01_02) and new bp style
-            ambig_alleles = []
-            allele_snps = []
-            ext_snps = []
-            base_allele = allele
+            def parse_allele(allele):
+                ambig_alleles = []
+                allele_snps = []
+                ext_snps = []
+                base_allele = allele
 
-            if '_' in allele:
+                if '_' in allele:
+                    base_allele = allele.split('_')[0]
+                    rep = allele.split("_")[1:]
 
-                base_allele = allele.split('_')[0]
-                rep = allele.split("_")[1:]
+                    for r in rep:
+                        if re.search(allele_pattern, r):
+                            ambig_alleles.append(r)
+                        elif re.search(gene_pattern, r):
+                            ambig_alleles.append(r)
+                        elif re.search(mut_pattern, r):
+                            allele_snps.append(r)
+                        elif re.search(ext_mut_pattern, r):
+                            ext_snps.append(r)
+                        else:
+                            base_allele += '_' + r     # this is a piece that isn't part of the tigger naming scheme and must therefore
+                                                            # be part of the base allele name
+                return base_allele, ambig_alleles, allele_snps, ext_snps
 
-                for r in rep:
-                    if re.search(allele_pattern, r):
-                        ambig_alleles.append(r)
-                    elif re.search(mut_pattern, r):
-                        allele_snps.append(r)
-                    elif re.search(ext_mut_pattern, r):
-                        ext_snps.append(r)
-                    else:
-                        base_allele += '_' + r     # this is a piece that isn't part of the tigger naming scheme and must therefore
-                                                        # be part of the base allele name
+
+            base_allele, ambig_alleles, allele_snps, ext_snps = parse_allele(allele)
 
             base_allele_name = gene + "*" + base_allele
             pipeline_name = gene + "*" + allele
 
+            transformed = False
+
             if base_allele_name in pipeline_names:
                 pipeline_name = base_allele_name
                 base_allele_name = pipeline_names[base_allele_name]
+                transformed = True
+
             elif 'bp' in base_allele_name:        # will only happen if one of the 'bp' alleles has not been put in ambiguous_allele_names.csv
                 # fudge for time being
                 pipeline_name = base_allele_name
                 base_allele_name = base_allele_name.replace('bp', '')
                 pipeline_names[pipeline_name] = base_allele_name
+                transformed = True
                 print('%s is not listed in ambiguous_allele_names.csv: assuming it corresponds to %s' % (pipeline_name, base_allele_name))
+
             elif 'ap' in base_allele_name:        # will only happen if one of the 'bp' alleles has not been put in ambiguous_allele_names.csv
                 # fudge for time being
                 pipeline_name = base_allele_name
@@ -180,14 +192,23 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                         base_allele_name = pipeline_names[base_allele_name]
                     else:
                         pipeline_names[pipeline_name] = base_allele_name
+
+                transformed = True
                 print('%s is not listed in ambiguous_allele_names.csv: assuming it corresponds to %s' % (pipeline_name, base_allele_name))
+
+            if transformed:
+                # If the base allele might be ambguous, parse it out. But we don't expect SNPs in a pipeline name lookup,
+                # they stay as they were in the original pipeline name
+                if '_' in base_allele_name:
+                    base_allele, ambig_alleles, _, _ = parse_allele(base_allele_name.split('*')[1])
+                    base_allele_name = base_allele_name.split('*')[0] + "*" + base_allele
 
             this_allele_name = base_allele_name
 
             if len(ambig_alleles) > 0:
                 this_allele_name += '_' + '_'.join(ambig_alleles)
-                if len(pipeline_name) > 0:
-                    pipeline_name += '_' + '_'.join(ambig_alleles)
+                #if len(pipeline_name) > 0:
+                #    pipeline_name += '_' + '_'.join(ambig_alleles)
 
             if len(allele_snps) > 0:
                 this_allele_name += '_' + '_'.join(allele_snps)
@@ -198,6 +219,9 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                 this_allele_name += '_' + '_'.join(ext_snps)
                 if len(pipeline_name) > 0:
                     pipeline_name += '_' + '_'.join(ext_snps)
+
+            #if '_' in base_allele_name:
+            #    breakpoint()
 
             add2sample(this_allele_name, base_allele_name, sample_id, haplo, patient_id, kdiff, pipeline_name, allele_snps, session)
 
@@ -255,11 +279,18 @@ def add2sample (allele_name, base_allele_name, sample_id, haplo, pid, kdiff, pip
     if asc == 0:
         session.add(alleles_sample)
 
+
 # allele_name is the name of the allele as it will appear in VDJbase.
 # base_allele_name is the name without snps. It can include ambiguous alleles.
 # pipeline_name is the name of the allele as found in the genotype file
 def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, session):
+    xx = f"allele_name: {allele_name}, base_allele_name: {base_allele_name}"
+
     ambiguous_alleles = [allele_name.split("*")[1].split("_")[0]]
+
+    #if underscore_means_novel and '_' in base_allele_name:
+    #    ambiguous_alleles.extend(base_allele_name.split('_')[1:])
+    #    base_allele_name = base_allele_name.split('_')[0]
 
     # check that we can find the first allele mentioned in allele_name. This may have a format
     # that's a little more complex than a simple number, for example IGHV4-61*01_S9382, but will
@@ -305,47 +336,51 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
     # (and ignore) if any incorrectly-formatted terms are encountered.
 
     final_allele_name = base_allele_name
-    if allele_name != base_allele_name:
-        rep = allele_name.replace(base_allele_name + '_', '').lower().split('_')
+
+    #if underscore_means_novel and '_' in allele_name:
+    #    final_allele_name = final_allele_name.split('_')[0]#
+
+    if allele_name != base_allele_name: # or (underscore_means_novel and '_' in allele_name):
+        rep = allele_name.replace(final_allele_name + '_', '').lower().split('_')
         is_novel_allele = False
         for r in rep:
             if re.search(allele_pattern, r) or re.search(gene_pattern, r):
+                allele_seq_1 = seq
                 if r not in ambiguous_alleles:
-                    final_allele_name += "_" + r
-                    allele_seq_1 = seq
+                    ambiguous_alleles.append(r)
 
-                    if '.' not in r:
-                        base_name = allele_name.split("*")[0]
-                        a_name = r
+                if '.' not in r:
+                    base_name = allele_name.split("*")[0]
+                    a_name = r
+                else:
+                    base_name = allele_name.split('-')[0] + '-' + r.split('.')[0]
+                    a_name = r.split('.')[1]
+
+                allele2_name = base_name + "*" + a_name
+                allele2 = find_allele_or_similar(allele2_name, session)
+
+                if allele2 is None:
+                    allele2 = find_allele_or_similar(base_name + "D*" + a_name, session)
+
+                if allele2 is None:
+                    raise DbCreationError('Error processing allele %s: base allele %s not in reference set' % (allele_name, allele2_name))
+
+                allele_seq_2 = allele2.seq
+                seq = ""
+                length_diff = len(allele_seq_1) - len(allele_seq_2)
+
+                if length_diff > 0:
+                    allele_seq_1 += "n"*length_diff
+                elif length_diff < 0:
+                    allele_seq_2 += "n" * (length_diff * -1)
+
+                for nuc1, nuc2 in zip(allele_seq_1, allele_seq_2):
+                    if nuc1 == nuc2:
+                        seq += nuc1
                     else:
-                        base_name = allele_name.split('-')[0] + '-' + r.split('.')[0]
-                        a_name = r.split('.')[1]
+                        seq += "n"
 
-                    allele2_name = base_name + "*" + a_name
-                    allele2 = find_allele_or_similar(allele2_name, session)
-
-                    if allele2 is None:
-                        allele2 = find_allele_or_similar(base_name + "D*" + a_name, session)
-
-                    if allele2 is None:
-                        raise DbCreationError('Error processing allele %s: base allele %s not in reference set' % (allele_name, allele2_name))
-
-                    allele_seq_2 = allele2.seq
-                    seq = ""
-                    length_diff = len(allele_seq_1) - len(allele_seq_2)
-
-                    if length_diff > 0:
-                        allele_seq_1 += "n"*length_diff
-                    elif length_diff < 0:
-                        allele_seq_2 += "n" * (length_diff * -1)
-
-                    for nuc1, nuc2 in zip(allele_seq_1, allele_seq_2):
-                        if nuc1 == nuc2:
-                            seq += nuc1
-                        else:
-                            seq += "n"
-
-                ambiguous_alleles.append(r)
+                final_allele_name += '_' + r
 
             elif re.search(mut_pattern, r):
                 final_allele_name += "_" + r
@@ -390,14 +425,15 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
 
         if not allele:
             allele_table = Allele.__table__
+            print(f"adding similar allele {temp}")
             stmt = allele_table.update().where(allele_table.c.seq == seq).values(similar=sim, name = temp)
             session.execute(stmt)
             session.commit()
             allele = session.query(Allele).filter(Allele.seq == seq).one_or_none()
 
     else:
-        if pipeline_name == '':
-            breakpoint()
+        ambig = 'ambiguous' if len(ambiguous_alleles) > 1 else ''
+        print(f"adding {ambig} allele {final_allele_name}")
 
         allele = Allele(
             name=final_allele_name,

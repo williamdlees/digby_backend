@@ -94,7 +94,7 @@ def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, 
             # get everything we can from yml
             build_yml_metadata(sample_name, table_fields, project_data, meta_records, True)
             commit_database(meta_records, sample_name, session)     # fall back to YML exclusively
-            print(f"No MiAIRR data found for sample {sample_name}")
+            # print(f"No MiAIRR data found for sample {sample_name}")
             continue
 
         #if 'P8' in project_name:
