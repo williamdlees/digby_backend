@@ -64,7 +64,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
             update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, seq)
             feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, subject.ref_seq)
 
-            if feature and seq.sequence != feature.feature_seq:
+            if feature and seq.sequence.replace('.', '') != feature.feature_seq.replace('.', ''):
                 print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in subject {subject.identifier}')
 
             if gene_type == 'V':
@@ -72,7 +72,16 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                     feature_id = session.query(Feature).count()
                     start = reference_features[subject.ref_seq.name][seq.gene.name]['exon_2']['start'] + 11
                     end = reference_features[subject.ref_seq.name][seq.gene.name]['exon_2']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', seq.sequence, 'CDS', start, end, '+',
+
+                    # if there are gaps in the alignment against the reference assembly, carry these into the feature
+
+                    if '.' in row['V-REGION']:
+                        feature_seq = row['V-REGION']
+                        seq.sequence = row['V-REGION']
+                    else:
+                        feature_seq = seq.sequence
+
+                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, 'CDS', start, end, '+',
                                                  f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)

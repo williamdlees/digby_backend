@@ -68,8 +68,6 @@ def create_dataset(species, dataset):
         for study in study_data['Studies'].values():
             process_study(dataset, dataset_dir, reference_features, session, species, study)
 
-        build_gff(session, dataset_dir)
-
     except ImportException as e:
         print(e)
         return
