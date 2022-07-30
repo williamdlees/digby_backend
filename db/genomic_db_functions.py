@@ -41,8 +41,8 @@ def save_genomic_ref_seq(session, name, ref_sequence, reference, chromosome, sta
     return ref_seq
 
 
-def add_feature_to_ref(name, feature_level, feature_type, feature_seq, feature, start, end, strand, attribute, parent_id, ref):
-    gene = Feature(name=name, feature_level=feature_level, feature_type=feature_type, feature_seq=feature_seq, feature=feature,
+def add_feature_to_ref(name, feature_level, feature_type, feature_seq, cigar, feature, start, end, strand, attribute, parent_id, ref):
+    gene = Feature(name=name, feature_level=feature_level, feature_type=feature_type, feature_seq=feature_seq, feature_cigar=cigar, feature=feature,
                    start=start, end=end, strand=strand, attribute=attribute, parent_id=parent_id)
     ref.features.append(gene)
     return gene

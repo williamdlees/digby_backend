@@ -143,7 +143,7 @@ genomic_sequence_filters = {
     'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
     'appearances': {'model': 'Sequence', 'field': Sequence.appearances, 'fieldname': 'appearances', 'sort': 'numeric'},
 
-    'gene': {'model': 'Gene', 'field': Gene.name, 'sort': 'gene'},
+    'gene_name': {'model': 'Gene', 'field': Gene.name.label('gene_name'), 'sort': 'gene', 'fieldname': 'gene_name`'},
 
     'subject_id': {'model': None, 'fieldname': 'subject_id'},
     'dataset': {'model': None, 'fieldname': 'dataset'},
@@ -333,7 +333,10 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             if col != 'name' and 'field' in genomic_sequence_filters[col] and genomic_sequence_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sequence_filters[col]['field'])
 
-        seq_query = db.session.query(*attribute_query)
+            seq_query = db.session.query(*attribute_query)
+
+        if 'gene_name' in required_cols:
+            seq_query = seq_query.join(Gene, Sequence.gene_id == Gene.id)
 
         filter_spec = []
         sample_count_filters = []
@@ -448,10 +451,8 @@ genomic_subject_filters = {
     'annotation_method': {'model': 'Subject', 'field': Subject.annotation_method},
     'annotation_format': {'model': 'Subject', 'field': Subject.annotation_format},
     'annotation_reference': {'model': 'Subject', 'field': Subject.annotation_reference},
-    'capture_probes': {'model': 'Subject', 'field': Subject.capture_probes},
-    'ethnicity': {'model': 'Subject', 'field': Subject.ethnicity},
-    'IGHV4_59_coverage': {'model': 'Subject', 'field': Subject.IGHV4_59_coverage},
-    'IGHV4_59_coverage_var': {'model': 'Subject', 'field': Subject.IGHV4_59_coverage_var},
+    'self_ethnicity': {'model': 'Subject', 'field': Subject.self_ethnicity},
+    'grouped_ethnicity': {'model': 'Subject', 'field': Subject.grouped_ethnicity},
     'IGH_coverage': {'model': 'Subject', 'field': Subject.IGH_coverage},
     'sequencing_platform': {'model': 'Subject', 'field': Subject.sequencing_platform},
 

@@ -61,9 +61,9 @@ def process_digger_record(session, species, assembly, dataset_dir, subject, anno
                 def add_feature(name, feature_type, feature_seq, feature, start, end, strand, attribute, parent_id, ref):
                     start = int(start)
                     end = int(end)
-                    add_feature_to_ref(name, 'gene', feature_type, feature_seq, 'gene', start, end, strand, attribute, parent_id, ref)
-                    add_feature_to_ref(name, 'gene', feature_type, feature_seq, 'mRNA', start, end, strand, attribute, parent_id, ref)
-                    return add_feature_to_ref(name, 'allele', feature_type, feature_seq, feature, start, end, strand, attribute, parent_id, ref)
+                    add_feature_to_ref(name, 'gene', feature_type, feature_seq, '', 'gene', start, end, strand, attribute, parent_id, ref)
+                    add_feature_to_ref(name, 'gene', feature_type, feature_seq, '', 'mRNA', start, end, strand, attribute, parent_id, ref)
+                    return add_feature_to_ref(name, 'allele', feature_type, feature_seq, '', feature, start, end, strand, attribute, parent_id, ref)
 
                 if 'IGHV' in name:
                     region_feature = add_feature(name, 'V-REGION', row['seq'], 'CDS', row['start'], row['end'], row['sense'], 'Name=%s_V_REGION;ID=%s' % (name, feature_id), feature_id, ref_seq)

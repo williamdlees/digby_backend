@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 create_dataset(args.species, args.dataset_name)
 
-# or comment out the above lines to build the gffs without rebuilding the database
+# or comment out the above line to build the gffs without rebuilding the database
 
 dataset_dir = os.getcwd()
 db_file = os.path.join(dataset_dir, 'db.sqlite3')

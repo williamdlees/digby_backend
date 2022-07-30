@@ -151,11 +151,10 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                                            subject['Reference_assembly'], study_obj)
 
         optional_subject_items = [
-            ('Capture_probes', 'capture_probes'),
-            ('Ethnicity', 'ethnicity'),
-            ('IGHV4-59_coverage', 'IGHV4_59_coverage'),
-            ('IGHV4-59_coverage_var', 'IGHV4_59_coverage_var'),
+            ('Self-reported Ethnicity', 'self_ethnicity'),
+            ('Grouped Ethnicity', 'grouped_ethnicity'),
             ('IGH_coverage', 'IGH_coverage'),
+            ('Name_in_study', 'name_in_study'),
             ('Sequencing_platform', 'sequencing_platform'),
         ]
 
