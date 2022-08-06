@@ -1,28 +1,27 @@
-import re
 from hashlib import sha256
 
-from receptor_utils import simple_bio_seq as simple
 import os.path
 import shutil
 import csv
 
-from receptor_utils.novel_allele_name import name_novel
 from receptor_utils.simple_bio_seq import write_csv
-from sqlalchemy import and_
 
-from db.genomic_db import RefSeq, Feature, Sequence, Subject, SubjectSequence, Study
-from db.genomic_db_functions import rationalise_name, save_novel_allele, find_gene_allele_by_seq, add_feature_to_ref, find_feature_by_name, \
-    find_feature_by_sequence, find_sequence_by_sequence, save_genomic_sequence, link_sequence_to_feature, update_subject_sequence_link, find_allele_by_name
+from db.genomic_db import Feature
+from db.genomic_db_functions import save_novel_allele, add_feature_to_ref, find_feature_by_name, \
+    find_sequence_by_sequence, save_genomic_sequence, link_sequence_to_feature, update_subject_sequence_link, find_allele_by_name
 
 
 class GeneParsingException(Exception):
     pass
 
+
 annotation_records = {}
+
 
 def read_csv(filename):
     with open(filename, 'r') as fi:
         return list(csv.DictReader(fi))
+
 
 def process_igenotyper_record(session, species, dataset_dir, subject, annotation_file, reference_features):
     global annotation_records
@@ -48,6 +47,9 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
     feature_id = 1
 
     for row in rows:
+        if not row['vdjbase_allele']:
+            continue        # probably an incomplete/fragmentary row
+
         gene_type = row['genotyper_gene'][3]
 
         if gene_type in ['V', 'D', 'J']:
@@ -70,10 +72,15 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
             if gene_type == 'V':
                 if not feature:
                     feature_id = session.query(Feature).count()
+
+                    if 'exon_2' not in reference_features[subject.ref_seq.name][seq.gene.name]:
+                        breakpoint()
+
                     start = reference_features[subject.ref_seq.name][seq.gene.name]['exon_2']['start'] + 11
                     end = reference_features[subject.ref_seq.name][seq.gene.name]['exon_2']['end']
 
                     # if there are gaps in the alignment against the reference assembly, carry these into the feature
+                    # TODO - this shouldn't be needed any longer now: gaps are maintained in the CIGAR, not as dots
 
                     if '.' in row['V-REGION']:
                         feature_seq = row['V-REGION']
@@ -81,7 +88,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                     else:
                         feature_seq = seq.sequence
 
-                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, row['V-REGION-CIGAR'], 'CDS', start, end, '+',
+                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, row['V-REGION_CIGAR'], 'CDS', start, end, '+',
                                                  f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
@@ -97,7 +104,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                     feature_id = session.query(Feature).count()
                     start = reference_features[subject.ref_seq.name][seq.gene.name]['exon_1']['start']
                     end = reference_features[subject.ref_seq.name][seq.gene.name]['exon_1']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION-CIGAR'], 'CDS', start, end, '+',
+                    feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION_CIGAR'], 'CDS', start, end, '+',
                                                  f"Name={seq.name}_D-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
@@ -113,7 +120,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                     feature_id = session.query(Feature).count()
                     start = reference_features[subject.ref_seq.name][seq.gene.name]['exon_1']['start']
                     end = reference_features[subject.ref_seq.name][seq.gene.name]['exon_1']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION-CIGAR'], 'CDS', start, end, '+',
+                    feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION_CIGAR'], 'CDS', start, end, '+',
                                                  f"Name={seq.name}_J-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
@@ -124,7 +131,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
     session.commit()
 
 
-
+# Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
 def add_feature(feature, bed_name, reference_features, row, seq, session, subject):
     if not row[feature]:
         return
@@ -149,12 +156,13 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
         else:
             end = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['start'] + 11
 
-        feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence, '', 'UTR', start, end, '+',
+        feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence,  row[feature + '_CIGAR'], 'UTR', start, end, '+',
                                      f"Name={feature_seq.name};ID={feature_id}", feature_id, subject.ref_seq)
 
     link_sequence_to_feature(feature_seq, feature_rec)
 
 
+# Helper function for add_gene_level_features
 def add_gene_level_subfeature(feature, imgt_feature_name, name_prefix, feature_id, parent_id, ref):
     if imgt_feature_name == 'exon_2':
         name = f"IGHVRegion{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
@@ -170,7 +178,7 @@ def add_gene_level_subfeature(feature, imgt_feature_name, name_prefix, feature_i
                            f"Name={feature['gene']}_{imgt_feature_name};ID={feature_id}", parent_id, ref)
 
 
-
+# Add features for each gene defined in the bed files. These are used to annotate the reference track
 def add_gene_level_features(session, ref, reference_features):
     feature_id = 1
     for gene, features in reference_features[ref.name].items():

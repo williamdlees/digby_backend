@@ -49,6 +49,8 @@ def build_gff(session, dataset_dir):
                         else:
                             legend += f" ({sequence.appearances}, {sequence.functional[0]})"
 
+                        # IGenotyper records will always have a cigar, but we may need this code for other formats
+                        # Likewise the handling of gaps is kept here in case it is needed
                         if feature.feature_cigar:
                             cigar_string = feature.feature_cigar
                         else:
