@@ -31,7 +31,6 @@ class RefSeq(Base):
 class SubjectSequence(Base):
     __tablename__ = 'subject_sequence'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    haplotype = Column(Text(20))
     haplo_count = Column(Integer)
     subject_id = Column(Integer, ForeignKey('subject.id'), nullable=False)
     sequence_id = Column(Integer, ForeignKey('sequence.id'), nullable=False)

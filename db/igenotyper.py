@@ -23,6 +23,9 @@ def read_csv(filename):
         return list(csv.DictReader(fi))
 
 
+# TODO - Simplify the schema by merging Feature and Sequence. See ../../notes on genomic schema.txt
+
+
 def process_igenotyper_record(session, species, dataset_dir, subject, annotation_file, reference_features):
     global annotation_records
 
@@ -128,6 +131,8 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 add_feature('J-SPACER', 'spacer', reference_features, row, seq, session, subject)
                 add_feature('J-HEPTAMER', 'heptamer', reference_features, row, seq, session, subject)
 
+        add_feature('gene_sequence', 'gene', reference_features, row, seq, session, subject)
+
     session.commit()
 
 
@@ -139,8 +144,11 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
     feature_seq = find_sequence_by_sequence(session, feature, seq.gene.name, row[feature])
 
     if not feature_seq:
-        feature_name = f"{seq.gene.name}*{sha256(row[feature].encode('utf-8')).hexdigest()[-4:]}"
-        feature_seq = save_genomic_sequence(session, feature_name, seq.gene.name, feature, True, False, '', row[feature], '')
+        if feature == 'gene_sequence':
+            feature_name = f"{row['vdjbase_allele']}_{sha256(row[feature].encode('utf-8')).hexdigest()[-4:]}"
+        else:
+            feature_name = f"{seq.gene.name}*{sha256(row[feature].encode('utf-8')).hexdigest()[-4:]}"
+        feature_seq = save_genomic_sequence(session, feature_name, seq.gene.name, feature, False, False, '', row[feature], '')
 
     update_subject_sequence_link(session, int(row['haplotype'].replace('h=', '')), subject, feature_seq)
 
@@ -160,22 +168,6 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
                                      f"Name={feature_seq.name};ID={feature_id}", feature_id, subject.ref_seq)
 
     link_sequence_to_feature(feature_seq, feature_rec)
-
-
-# Helper function for add_gene_level_features
-def add_gene_level_subfeature(feature, imgt_feature_name, name_prefix, feature_id, parent_id, ref):
-    if imgt_feature_name == 'exon_2':
-        name = f"IGHVRegion{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-        add_feature_to_ref(name, 'gene', 'V-REGION', feature['ref_seq'], '', 'CDS', feature['start']+11, feature['end'], '+',
-                           f"Name={feature['gene']}_V-REGION;ID={feature_id}", parent_id, ref)
-
-        name = f"IGHVLpart2{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-        add_feature_to_ref(name, 'gene', 'L_PART-2', feature['ref_seq'], '', 'CDS', feature['start'], feature['start']+11, '+',
-                           f"Name={feature['gene']}_L_PART2;ID={feature_id}", parent_id, ref)
-    else:
-        name = f"{name_prefix}{feature['gene'][3:]}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-        add_feature_to_ref(name, 'gene', imgt_feature_name, feature['ref_seq'], '', 'CDS', feature['start'], feature['end'], '+',
-                           f"Name={feature['gene']}_{imgt_feature_name};ID={feature_id}", parent_id, ref)
 
 
 # Add features for each gene defined in the bed files. These are used to annotate the reference track
@@ -238,6 +230,22 @@ def add_gene_level_features(session, ref, reference_features):
                     add_gene_level_subfeature(feature, 'J-REGION', 'IGHJRegion', feature_id, parent_id, ref)
 
             feature_id += 1
+
+
+# Helper function for add_gene_level_features
+def add_gene_level_subfeature(feature, imgt_feature_name, name_prefix, feature_id, parent_id, ref):
+    if imgt_feature_name == 'exon_2':
+        name = f"IGHVRegion{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
+        add_feature_to_ref(name, 'gene', 'V-REGION', feature['ref_seq'], '', 'CDS', feature['start']+11, feature['end'], '+',
+                           f"Name={feature['gene']}_V-REGION;ID={feature_id}", parent_id, ref)
+
+        name = f"IGHVLpart2{feature['gene'].replace('IGHV', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
+        add_feature_to_ref(name, 'gene', 'L_PART-2', feature['ref_seq'], '', 'CDS', feature['start'], feature['start']+11, '+',
+                           f"Name={feature['gene']}_L_PART2;ID={feature_id}", parent_id, ref)
+    else:
+        name = f"{name_prefix}{feature['gene'][3:]}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
+        add_feature_to_ref(name, 'gene', imgt_feature_name, feature['ref_seq'], '', 'CDS', feature['start'], feature['end'], '+',
+                           f"Name={feature['gene']}_{imgt_feature_name};ID={feature_id}", parent_id, ref)
 
 
 
