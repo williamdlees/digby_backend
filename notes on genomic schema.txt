@@ -1,0 +1,44 @@
+Once upon a time, Feature was supposed to be something like NONAMER, SPACER
+Instances (i.e. particular sequences observed in an individual) were supposed to be recorded in Sequence
+However, that has become overtaken by events and now seems unnecessarily compex. The 'gene' or 'allele' feature type differentiates these two now.
+
+
+Reference genes (listed in the bed files) are added as features only. The work is done by igenotyper/add_gene_level_features. This function is not used elsewhere.
+
+Process for processing a V-gene row in igentoryper's inferred'genes.csv:
+
+prcess_igenotyper_record():
+ - look for a Sequence with the allele name (find_allele_by_name)
+  - if not found, create one with the V-REGION sequence and name (save_novel_allele)
+ - link the Sequence to the Subject, and store haplotype info (update_subject_sequence_link)
+ 
+ - look for a Feature with the allele name (find_feature_by_name)
+  - if not found, create one. n.b, CIGAR is stored with the Feature but not with the Sequence (add_feature_to_ref)
+  - there is some processing of V-REGION sequence here that does not happen with the other types: remove gaps. Probably redundant.
+ 
+ - link the Sequence to the Feature (link_sequence_to_feature) 
+
+ - add 'non-coding' features (add_feature):
+  - look for a Sequence that matches the sequence and gene (find_sequence_by_sequence)
+  - if not found, create one with a name consisting of the gene name and a hash of the sequence.
+  - link the Sequence to the Subject, and store haplotype info (update_subject_sequence_link)
+
+ - look for a Feature with the allele name + hash (find_feature_by_name)
+  - if not found, create one. n.b, CIGAR is stored with the Feature but not with the Sequence (add_feature_to_ref)
+  - there is some special processing for the co-ordinates of L-PART2 to separate from the V-REGION
+  - link the Sequence to the Feature (link_sequence_to_feature) 
+  
+  
+Result:
+
+ - Every record creates, for each component of the gene, both a Feature and a Sequence
+ - The records are pretty similar and overlapping, but only Features contain the CIGAR and only Sequences are linked to Subjects
+ - REGIONs are named after the corresponding allele. 
+ - Other gene components are named after the gene, with a sequence hash
+ - Given that all occurrences of an allele have the same sequence, every nucleotide sequence in the igenotyper output ends up with one Sequence and one Feature recod, which are linked 
+ 
+A primne candidate for simplification! Eliminate Sequence, and link Feature to Subject. Just need to find where Sequence is used and check there are no problems.  Need to check it will work with macaque genomics. 
+  
+  
+ 
+ 
