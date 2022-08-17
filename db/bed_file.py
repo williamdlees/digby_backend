@@ -8,19 +8,14 @@ def read_bed_file(infile):
         'start',
         'end',
         'gene',
-        'feature',
-        'ref_seq',
     ]
 
     with open(infile, 'r') as fi:
         reader = csv.DictReader(fi, delimiter='\t', fieldnames=r_headers)
         recs = {}
         for row in reader:
-            if row['feature'] is None and row['ref_seq'] is None:
-                row['feature'] = infile.split('.')[0]
-                if row['feature'] == 'genes':
-                    row['feature'] = 'gene'
-                row['ref_seq'] = ''
+            row['feature'] = infile.split('.')[0]
+            row['ref_seq'] = ''
             if row['ref_name'] not in recs:
                 recs[row['ref_name']] = []
             recs[row['ref_name']].append(row)
@@ -47,6 +42,8 @@ def read_bed_files(bed_files, sense, ref_seq_len):
 
                     if sense == '-':
                         rec['start'], rec['end'] = ref_seq_len - rec['end'] + 1, ref_seq_len - rec['start']
+                    else:
+                        rec['start'] += 1   # for 1-based numbering
 
                     if rec['gene'] not in features[ref_file]:
                         features[ref_file][rec['gene']] = {}
