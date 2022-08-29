@@ -68,13 +68,7 @@ def update_genomic_ref(session, ref_file):
 
 
 def find_type(name):
-    region_types = {'IGHV': 'V-REGION', 'IGHD': 'D-REGION', 'IGHJ': 'J-REGION'}
-
-    for k,t in region_types.items():
-        if k in name:
-            return t
-
-    return ''
+    return name[3] + '-REGION'
 
 
 def read_gene_order(session, dataset_dir):

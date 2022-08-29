@@ -333,7 +333,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             if col != 'name' and 'field' in genomic_sequence_filters[col] and genomic_sequence_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sequence_filters[col]['field'])
 
-            seq_query = db.session.query(*attribute_query)
+        seq_query = db.session.query(*attribute_query)
 
         if 'gene_name' in required_cols:
             seq_query = seq_query.join(Gene, Sequence.gene_id == Gene.id)
