@@ -189,8 +189,13 @@ def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence
 
 
 def rationalise_name(gene_sequence, name):
-    prefix, name = name.split('IG')
-    prefix = prefix + 'IG'
+    if name[:2] != 'IG' and name[:2] != 'TR':
+        print(f"Unrecognised name format: {name}")
+        quit()
+
+    pp = name[:2]
+    prefix, name = name.split(pp)
+    prefix = prefix + pp
     gene, allele = name.split('*')
     allele_components = allele.split('_')
 

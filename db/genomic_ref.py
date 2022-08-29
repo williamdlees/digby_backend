@@ -23,10 +23,13 @@ def update_genomic_ref(session, ref_file):
         if '*' in name:
             gene_name = name.split('*')[0]
         elif 'LJI.Rh_' in name:               # cirelli format
-            if name[-2:-1] == '.' and name[-1].isalpha():
-                gene_name = name[:-2]
-            else:
-                gene_name = name
+            name = name.replace('LJI.Rh_', '')
+            if name[-2] == '.':
+                name = name[:-2] + '*' + name[-1]
+            name = name.replace('.', '-')
+            if '*' not in name:
+                name += '*01'
+            gene_name = name.split('*')[0]
         else:
             gene_name = name
 

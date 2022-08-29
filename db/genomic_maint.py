@@ -40,7 +40,8 @@ def create_dataset(species, dataset):
             raise ImportException(f'Directory {dataset_dir} does not exist.')
 
         study_data = read_yml_file(dataset_dir)
-        session = create_database(dataset_dir)
+        engine = create_database(dataset_dir)
+        session = engine.session
         save_genomic_dataset_details(session, species, dataset)
 
         read_gene_order(session, dataset_dir)
@@ -72,6 +73,8 @@ def create_dataset(species, dataset):
         print(e)
         return
 
+    session.commit()        # final commit in case something is left hanging
+
 
 def read_yml_file(dataset_dir):
     yml_files = []
@@ -96,8 +99,7 @@ def create_database(dataset_dir):
     Base.metadata.create_all(engine)
     db_connection = engine.connect()
     engine.session = Session(bind=db_connection)
-    session = engine.session
-    return session
+    return engine
 
 
 def process_reference_assembly(session, ref, species):

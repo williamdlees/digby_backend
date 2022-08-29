@@ -116,6 +116,11 @@ def phased_feature_alignment(dataset_dir, name_prefix, ref_seq, session):
         fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
         features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type == 'gene_sequence')).order_by(Feature.start, Feature.name).all()
+
+        if len(features) == 0:
+            print('gene_sequence features not found. falling back to REGIONS')
+            features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type.like('%REGION'))).order_by(Feature.start, Feature.name).all()
+
         for feature in features:
             if feature.feature_level == 'allele':
                 for sequence in feature.sequences:
