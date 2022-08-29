@@ -5,10 +5,10 @@ from werkzeug.exceptions import BadRequest
 from api.genomic.genomic import GENOMIC_SAMPLE_PATH
 from api.reports.rep_genotype import fake_gene, process_igenotyper_genotype, process_vdjbase_genotype
 from api.reports.report_utils import trans_df, collate_samples, chunk_list, collate_gen_samples
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
-from app import app, vdjbase_dbs, genomic_dbs
-from db.genomic_db import Subject as GenomicSubject, Gene as GenomicGene, Sequence as GenomicSequence, SubjectSequence as GenomicSubjectSequence
+from app import vdjbase_dbs, genomic_dbs
+from db.genomic_db import Subject as GenomicSubject
 
 from db.vdjbase_airr_model import Sample
 import os

@@ -1,12 +1,10 @@
 # Crude comparison of two repseq datasets
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file
 from app import app, vdjbase_dbs
-from db.vdjbase_model import Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern, \
-    AlleleConfidenceReport
-from db.vdjbase_airr_model import Sample
+from db.vdjbase_model import Allele, AlleleConfidenceReport
 
 HEATMAP_HAPLOTYPE_SCRIPT = "haplotype_heatmap.R"
 

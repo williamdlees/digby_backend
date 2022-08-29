@@ -2,14 +2,13 @@
 from collections import defaultdict
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list
-from app import app, vdjbase_dbs
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, AllelesPattern, GenesDistribution
-from db.vdjbase_airr_model import Patient, Sample
+from app import vdjbase_dbs
+from db.vdjbase_model import Gene, GenesDistribution
+from db.vdjbase_airr_model import Sample
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, get_multiple_order_file
-from sqlalchemy import func
+from api.vdjbase.vdjbase import apply_rep_filter_params, get_multiple_order_file
 import pandas as pd
 
 GENE_FREQUENCY_PLOT = 'Gene_Usage.R'

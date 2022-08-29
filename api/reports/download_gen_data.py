@@ -4,17 +4,14 @@ from werkzeug.exceptions import BadRequest
 
 from api.genomic.genomic import genomic_sequence_filters, find_genomic_subjects, genomic_subject_filters, \
     find_genomic_sequences
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file
-from app import app, vdjbase_dbs
+from app import app
 from db.genomic_db import Subject
 import csv
 import zipfile
 import os
-from api.vdjbase.vdjbase import apply_rep_filter_params, find_vdjbase_sequences, \
-    sequence_filters, find_vdjbase_samples
-from sqlalchemy import func
-import pandas as pd
+
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 

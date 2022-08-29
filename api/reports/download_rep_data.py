@@ -1,18 +1,16 @@
 # Download data for rep-seq samples
 from Bio import SeqIO
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file, chunk_list
-from app import app, vdjbase_dbs
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport
+from app import vdjbase_dbs
 from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample
 import csv
 import zipfile
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, find_vdjbase_sequences, \
-    sequence_filters, find_vdjbase_samples
-from sqlalchemy import func
-import pandas as pd
+from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, find_vdjbase_sequences, \
+    sequence_filters
+
 from api.vdjbase.vdjbase import sample_info_filters
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord

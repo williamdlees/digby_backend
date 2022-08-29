@@ -1,12 +1,12 @@
 # Haplotype heatmap for VDJbase samples
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, collate_samples, find_primer_translations, translate_primer_alleles, translate_primer_genes, \
     collate_gen_samples
 
 from api.reports.report_utils import trans_df
-from app import app, vdjbase_dbs, genomic_dbs
+from app import vdjbase_dbs, genomic_dbs
 from db.genomic_db import Subject as GenomicSubject, Gene as GenomicGene, Sequence as GenomicSequence, SubjectSequence as GenomicSubjectSequence
 
 from db.vdjbase_airr_model import Sample

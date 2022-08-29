@@ -1,16 +1,15 @@
 # Allele support report
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file, chunk_list
-from app import app, vdjbase_dbs, genomic_dbs
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele
+from app import vdjbase_dbs, genomic_dbs
+from db.vdjbase_model import AllelesSample, Gene, Allele
 from db.vdjbase_airr_model import Sample, Patient
 from db.genomic_db import Sequence as GenomicSequence, Subject as GenomicSubject, SubjectSequence as GenomicSubjectSequence, Gene as GenomicGene
 from receptor_utils.simple_bio_seq import write_csv
-import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
-import xlwt
+from api.vdjbase.vdjbase import apply_rep_filter_params
+
 
 APPEARANCE_SCRIPT = 'allele_appeareance2.R'
 SAMPLE_CHUNKS = 400

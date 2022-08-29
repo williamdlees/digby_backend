@@ -1,17 +1,16 @@
 # Allele usage plot for AIRR-seq samples
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import SYSDATA, run_rscript, send_report
+from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list, collate_gen_samples
 
-from app import app, vdjbase_dbs, genomic_dbs
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, AllelesPattern
+from app import vdjbase_dbs, genomic_dbs
+from db.vdjbase_model import AllelesSample, Gene, Allele, AllelesPattern
 from db.genomic_db import Sequence as GenomicSequence, Subject as GenomicSubject, SubjectSequence as GenomicSubjectSequence, Gene as GenomicGene
 
 from db.vdjbase_airr_model import Patient, Sample
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
-from sqlalchemy import func
+from api.vdjbase.vdjbase import apply_rep_filter_params
 import pandas as pd
 
 ALLELE_USAGE_SCRIPT = 'Alleles_Usage.R'

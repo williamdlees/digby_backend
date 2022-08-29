@@ -4,12 +4,12 @@ from werkzeug.exceptions import BadRequest
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list, collate_gen_samples, splitlines, chunks
 from api.reports.reports import send_report
 
-from app import app, vdjbase_dbs, genomic_dbs
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, AllelesSample, Gene, Allele, AllelesPattern
+from app import vdjbase_dbs, genomic_dbs
+from db.vdjbase_model import AllelesSample, Gene, Allele
 from db.genomic_db import Sequence as GenomicSequence, Subject as GenomicSubject, SubjectSequence as GenomicSubjectSequence, Gene as GenomicGene
 
 from db.vdjbase_airr_model import Patient, Sample
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params
+from api.vdjbase.vdjbase import apply_rep_filter_params
 from Bio import pairwise2
 from receptor_utils import simple_bio_seq as simple
 
@@ -20,7 +20,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Invalid format requested')
 
     if 'sequence' not in params or len(params['sequence']) <= 5:
-        raise BadRequest('Please specifiy a longer sequence to search for')
+        raise BadRequest('Please specify a longer sequence to search for')
 
     r_chain, rep_samples_by_dataset = collate_samples(rep_samples)
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
