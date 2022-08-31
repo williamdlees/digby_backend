@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 from db.vdjbase_airr_model import Sample
 from db.vdjbase_exceptions import DbCreationError
-from db.vdjbase_formats import GENE_COLUMN, GENOTYPE_KDIFF_COLUMN, GENOTYPED_ALLELES_COLUMN, FREQ_BY_CLONE, INT_SEP
+from db.vdjbase_formats import GENE_COLUMN, GENOTYPE_KDIFF_COLUMN, GENOTYPED_ALLELES_COLUMN, FREQ_BY_CLONE, FREQ_BY_SEQ, INT_SEP, COUNTS_COLUMN, ALLELES_COLUMN
 from db.vdjbase_model import Allele, AllelesSample, Gene, SNP, HaplotypesFile, SamplesHaplotype
 from db.vdjbase_projects import compound_genes
 
@@ -111,24 +111,43 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
         gene = row[GENE_COLUMN]
         kdiff = row[GENOTYPE_KDIFF_COLUMN]
 
-        for index, allele in enumerate(row[GENOTYPED_ALLELES_COLUMN].split(",")):
-            if (allele == "Unk") | ("NR" in allele):
+        # allele counts come from un-genotyped column
+        allele_counts = {}
+        ac = str(row[COUNTS_COLUMN]).split(',')
+        total_count = sum([int(x) if x.isnumeric() else 0 for x in ac])
+        for index, allele in enumerate(str(row[ALLELES_COLUMN]).split(",")):
+            if not((allele == "Unk") or ("NR" in allele) or ("del" in allele.lower())) and index < len(ac):
+                allele_counts[allele] = ac[index]
+
+        for index, allele in enumerate(str(row[GENOTYPED_ALLELES_COLUMN]).split(",")):
+            if (allele == "Unk") or ("NR" in allele):
                 continue
             elif len(str(allele)) == 1:
                 allele = "0" + str(allele)
             elif ("del" in allele.lower()):
                 allele = "Del"
 
-
             # check if the allele exists in the genotype according to the clone size
+            freq_by_clone = 0
+            freq_by_seq = 0
+            count = 0
             if allele != "Del":
                 # check for bug found in TRB genotypes
                 if len(str(row[FREQ_BY_CLONE]).split(INT_SEP)) <= index:
                     print('Error: FREQ_BY_CLONE for gene %s does not have enough values' % gene)
                     continue
-                clone_size = int(float(str(row[FREQ_BY_CLONE]).split(INT_SEP)[index]))
-                if not clone_size:
+                freq_by_clone = int(float(str(row[FREQ_BY_CLONE]).split(INT_SEP)[index]))
+                #if not freq_by_clone:
+                #    continue
+
+                if len(str(row[FREQ_BY_SEQ]).split(INT_SEP)) <= index:
+                    print('Error: FREQ_BY_SEQ for gene %s does not have enough values' % gene)
                     continue
+                freq_by_seq = int(float(str(row[FREQ_BY_SEQ]).split(INT_SEP)[index]))
+                #if not freq_by_seq:
+                #    continue
+
+                count = int(allele_counts[allele] if allele in allele_counts else 0)
 
             # parse allele, handling old ambiguous style (01_02) and new bp style
             def parse_allele(allele):
@@ -223,7 +242,7 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
             #if '_' in base_allele_name:
             #    breakpoint()
 
-            add2sample(this_allele_name, base_allele_name, sample_id, haplo, patient_id, kdiff, pipeline_name, allele_snps, session)
+            add2sample(this_allele_name, base_allele_name, sample_id, haplo, patient_id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count, total_count, session)
 
 
 # Each unique sequence is only present on one single row in Allele. If multiple allele names
@@ -247,7 +266,7 @@ def find_allele_or_similar(allele_name, session):
 # If the allele is not present in Allele already, add it there
 # if the allele has a 'pipeline name', translate it to the 01_02 form
 
-def add2sample (allele_name, base_allele_name, sample_id, haplo, pid, kdiff, pipeline_name, allele_snps, session):
+def add2sample (allele_name, base_allele_name, sample_id, haplo, pid, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count, total_count, session):
     kdiff = float(kdiff)
     if math.isnan(kdiff):
         kdiff = 0.0
@@ -255,6 +274,10 @@ def add2sample (allele_name, base_allele_name, sample_id, haplo, pid, kdiff, pip
     alleles_sample = AllelesSample(
         hap=haplo,
         kdiff=kdiff,
+        freq_by_clone=freq_by_clone,
+        freq_by_seq=freq_by_seq,
+        count=count,
+        total_count=total_count,
         sample_id=sample_id,
         patient_id=pid,
     )

@@ -1,9 +1,9 @@
-# Haplotype heatmap for VDJbase samples
+# Haplotype heatmap for AIRR-seq and Genomic samples
 
 from werkzeug.exceptions import BadRequest
 
-from api.genomic.genomic import GENOMIC_SAMPLE_PATH
-from api.reports.rep_genotype import fake_gene, process_igenotyper_genotype, process_vdjbase_genotype
+
+from api.reports.rep_genotype import fake_gene, process_igenotyper_genotype, process_genomic_genotype, process_repseq_genotype
 from api.reports.report_utils import trans_df, collate_samples, chunk_list, collate_gen_samples
 from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
@@ -25,7 +25,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     html = (format == 'html')
     chain, rep_samples_by_dataset = collate_samples(rep_samples)
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
-    genotypes = []
+    genotypes = {}
     all_wanted_genes = set()
 
     if not chain:
@@ -33,7 +33,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in rep_samples_by_dataset.keys():
         session = vdjbase_dbs[species][dataset].session
-        primer_trans, gene_subs = find_primer_translations(session)
 
         sample_list = []
         for sample_chunk in chunk_list(rep_samples_by_dataset[dataset], SAMPLE_CHUNKS):
@@ -44,30 +43,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         if len(wanted_genes) > 0:
             all_wanted_genes |= set(wanted_genes)
             for (name, genotype, patient_id) in sample_list:
-                sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, genotype.replace('samples/', ''))
-
-                if not os.path.isfile(sample_path):
-                    continue
-
-                genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
-
-                genotype = trans_df(genotype)
-
-                # translate pipeline allele names to VDJbase allele names
-                for col in ['alleles', 'GENOTYPED_ALLELES']:
-                    genotype[col] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(genotype['gene'], genotype[col])]
-
-                genotype['gene'] = [translate_primer_genes(x, gene_subs) for x in genotype['gene']]
-                genotype = genotype[genotype.gene.isin(wanted_genes)]
-
-                subject_name = name if len(rep_samples_by_dataset) == 1 else dataset + '_' + name
-
-                if 'subject' not in genotype.columns.values:
-                    genotype.insert(0, 'subject', subject_name)
-                else:
-                    genotype.subject = subject_name
-
-                genotypes.append(genotype)
+                session = vdjbase_dbs[species][dataset].session
+                genotype = process_repseq_genotype(name, all_wanted_genes, session, False)
+                genotypes[name] = genotype
 
     for dataset in gen_samples_by_dataset.keys():
         session = genomic_dbs[species][dataset].session
@@ -76,7 +54,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         if not subjects:
             continue
 
-        annotation_method = subjects[0].annotation_method
         sample_list = [(subject.identifier, subject.annotation_path, subject.identifier) for subject in subjects]
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
         all_wanted_genes |= set(wanted_genes)
@@ -87,40 +64,30 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         if len(wanted_genes) > 0:
             for (subject_name, name_in_study, study_name, annotation_path) in sample_list:
-                sample_path = os.path.join(GENOMIC_SAMPLE_PATH, annotation_path.replace('samples/', ''))
-
-                if not os.path.isfile(sample_path):
-                    continue        # this protects against missing genotype files, usually caused by the pipeline omitting samples listed in the yaml file
-
-                if annotation_method == 'IGenotyper':
-                    genotype = process_igenotyper_genotype(sample_path, subject_name, study_name, wanted_genes)
-                elif annotation_method == 'VDJbase':
-                    genotype = process_vdjbase_genotype(subject_name, wanted_genes, session, not params['f_pseudo_genes'])
-
-                genotypes.append(genotype)
+                genotype = process_genomic_genotype(subject_name, all_wanted_genes, session, not params['f_pseudo_genes'])
+                genotypes[subject_name] = genotype
 
     if len(genotypes) == 0:
         raise BadRequest('No records matching the filter criteria were found.')
 
     # add fakes to each genotype for missing genes
 
-    for i in range(len(genotypes)):
-        genotype = genotypes[i]
-        subject_name = genotype.iloc[0]['subject']
-        contained_genes = genotype['gene'].tolist()
+    for subject_name, genotype in genotypes.items():
+        contained_genes = genotype['gene'].tolist() if len(genotype) > 0 else []
+
         fakes = []
         for gene in all_wanted_genes:
             if gene not in contained_genes:
-                fakes.append(fake_gene(['Deletion'], gene, subject_name))
-        genotypes[i] = pd.concat([genotype, pd.DataFrame(fakes)], ignore_index=True)
+                fakes.append(fake_gene({'alleles': [], 'count': [], 'fc': [], 'fs': [], 'total_count': 0, 'kdiff': 0}, gene, subject_name))
+
+        genotypes[subject_name] = pd.concat([genotype, pd.DataFrame(fakes)], ignore_index=True)
 
     # sort rows in each genotype by gene
-    for i in range(len(genotypes)):
-        genotype = genotypes[i]
+    for genotype in genotypes.values():
         genotype.sort_values(by=['gene'], inplace=True)
 
     geno_path = make_output_file('tsv')
-    genotypes = pd.concat(genotypes)
+    genotypes = pd.concat(genotypes.values())
     genotypes.to_csv(geno_path, sep='\t')
 
     if format == 'pdf':

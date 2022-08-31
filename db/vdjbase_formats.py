@@ -7,17 +7,18 @@ if new_format:
     COUNTS_COLUMN = "counts"
     TOTAL_COLUMN = "total"
     GENOTYPE_KDIFF_COLUMN = "k_diff"
+    ALLELES_COLUMN = "alleles"
     INT_SEP = ";"
 else:
     GENE_COLUMN = "GENE"
     COUNTS_COLUMN = "COUNTS"
     TOTAL_COLUMN = "TOTAL"
     GENOTYPE_KDIFF_COLUMN = "K_DIFF"
+    ALLELES_COLUMN = "ALLELES"
     INT_SEP = ","
 
 
 # unvarying between formats
-ALLELES_COLUMN = "ALLELES"
 GENOTYPED_ALLELES_COLUMN = "GENOTYPED_ALLELES"
 
 FREQ_BY_SEQ = "Freq_by_Seq"

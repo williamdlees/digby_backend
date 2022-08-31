@@ -1,58 +1,50 @@
-# Genotype report for a single RepSeq sample
+# Genotype report for a single sample
 
-from werkzeug.exceptions import BadRequest
-from api.reports.reports import run_rscript, send_report
-from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
-from app import vdjbase_dbs
-from db.vdjbase_airr_model import Sample
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, get_order_file
-from api.reports.report_utils import check_tab_file
-import pandas as pd
+from werkzeug.exceptions import BadRequest
+from api.reports.rep_genotype import process_repseq_genotype, process_genomic_genotype
+from api.reports.reports import run_rscript, send_report
+from api.reports.report_utils import make_output_file
+from app import vdjbase_dbs, genomic_dbs
+from api.vdjbase.vdjbase import get_order_file
 
 
 MULTIPLE_GENOTYPE_SCRIPT = "html_multiple_genotype_hoverText.R"
 
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
-    if len(rep_samples) != 1:
-        raise BadRequest('This report processes a single repertoire-derived genotype')
+    if len(rep_samples) + len(genomic_samples) != 1:
+        raise BadRequest('This report processes a single genotype')
 
     if format not in ['pdf', 'html']:
         raise BadRequest('Invalid format requested')
 
-    rep_sample = rep_samples[0]
     html = (format == 'html')
 
-    session = vdjbase_dbs[species][rep_sample['dataset']].session
-    primer_trans, gene_subs = find_primer_translations(session)
-    print(rep_sample)
-    p = session.query(Sample.genotype).filter(Sample.sample_name == rep_sample['sample_name']).one_or_none()
-    p = p[0].replace('samples/', '')
-    sample_path = os.path.join(VDJBASE_SAMPLE_PATH, species, rep_sample['dataset'], p)
+    if len(rep_samples) > 0:
+        sample = rep_samples[0]
+        session = vdjbase_dbs[species][sample['dataset']].session
+        genotype = process_repseq_genotype(sample['sample_name'], [], session, False)
+    else:
+        sample = genomic_samples[0]
+        sample['sample_name'] = sample['identifier']        # kludge naming issues
+        sample['pcr_target_locus'] = sample['dataset']
+        session = genomic_dbs[species][sample['dataset']].session
+        genotype = process_genomic_genotype(sample['sample_name'], [], session, False)
 
-    if not os.path.isfile(sample_path):
-        raise BadRequest('Genotype file for sample %s/%s is missing' % (rep_sample['dataset'], rep_sample['sample_name']))
+    if len(genotype) == 0:
+        raise BadRequest('Genotype data for sample %s/%s is not available' % (sample['dataset'], sample['sample_name']))
 
-    sample_path = check_tab_file(sample_path)
-
-    # translate pipeline allele names to VDJbase allele names
-    genotype = pd.read_csv(sample_path, sep='\t', dtype=str)
-
-    for col in ['alleles', 'GENOTYPED_ALLELES']:
-        genotype[col] = [translate_primer_alleles(x, y, primer_trans) for x, y in zip(genotype['gene'], genotype[col])]
-
-    genotype['gene'] = [translate_primer_genes(x, gene_subs) for x in genotype['gene']]
     sample_path = make_output_file('tsv')
     genotype.to_csv(sample_path, sep='\t', index=False)
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
-    gene_order_file = get_order_file(species, rep_sample['dataset'], locus_order=locus_order)
+    gene_order_file = get_order_file(species, sample['dataset'], locus_order=locus_order)
 
-    report_path = personal_genotype(rep_sample['sample_name'], sample_path, rep_sample['pcr_target_locus'], gene_order_file, html)
+    report_path = personal_genotype(sample['sample_name'], sample_path, sample['pcr_target_locus'], gene_order_file, html)
 
     if format == 'pdf':
-        attachment_filename = '%s_%s_%s_genotype.pdf' % (species, rep_sample['dataset'], rep_sample['sample_name'])
+        attachment_filename = '%s_%s_%s_genotype.pdf' % (species, sample['dataset'], sample['sample_name'])
     else:
         attachment_filename = None
 
