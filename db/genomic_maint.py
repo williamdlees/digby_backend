@@ -155,9 +155,16 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
         optional_subject_items = [
             ('Self-reported Ethnicity', 'self_ethnicity'),
             ('Grouped Ethnicity', 'grouped_ethnicity'),
-            ('IGH_coverage', 'IGH_coverage'),
+            ('Population', 'population'),
+            ('Pop', 'population_abbr'),
+            ('Superpopulation', 'super_population'),
+            ('Locus_coverage', 'locus_coverage'),
             ('Name_in_study', 'name_in_study'),
+            ('Mother_in_study', 'mother_in_study'),
+            ('Father_in_study', 'father_in_study'),
             ('Sequencing_platform', 'sequencing_platform'),
+            ('Assembly_method', 'name_in_study'),
+            ('DNA_source', 'name_in_study'),
         ]
 
         for yml_attr, sql_attr in optional_subject_items:
