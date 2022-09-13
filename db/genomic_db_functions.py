@@ -63,8 +63,8 @@ def save_genomic_sequence(session, name, gene, allele_type, novel, deleted, func
     return sequence
 
 
-def save_genomic_subject(session, identifier, name_in_study, age, sex, annotation_path, annotation_method, annotation_format, annotation_reference, reference_assembly, study):
-    subject = Subject(identifier=identifier, name_in_study=name_in_study, age=age, sex=sex, annotation_path=annotation_path, annotation_method=annotation_method,
+def save_genomic_subject(session, identifier, name_in_study, annotation_path, annotation_method, annotation_format, annotation_reference, reference_assembly, study):
+    subject = Subject(identifier=identifier, name_in_study=name_in_study, annotation_path=annotation_path, annotation_method=annotation_method,
                       annotation_format=annotation_format, annotation_reference=annotation_reference)
     if reference_assembly:
         ref = session.query(RefSeq).filter(RefSeq.name == reference_assembly).one_or_none()
@@ -83,8 +83,8 @@ def save_genomic_assembly(identifier, reference, sequence_file, sequence, chromo
     return assembly
 
 
-def save_genomic_study(session, name, date, institute, description, researcher, reference, contact):
-    study = Study(name=name, date=date, institute=institute, description=description, researcher=researcher, reference=reference, contact=contact)
+def save_genomic_study(session, name, study_id, date, institute, description, researcher, reference, contact):
+    study = Study(name=name, study_id=study_id, date=date, institute=institute, description=description, researcher=researcher, reference=reference, contact=contact)
     session.add(study)
     return study
 

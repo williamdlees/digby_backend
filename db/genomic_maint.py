@@ -135,6 +135,7 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
 
     study_obj = save_genomic_study(session,
                                    study['Study'],
+                                   study['Id'],
                                    study_date,
                                    study['Institute'],
                                    study['Study_description'],
@@ -142,13 +143,13 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                                    study['Reference'], study['Contact'])
     session.commit()
     for name, subject in study['Subjects'].items():
-        needed_subject_items = {'Name_in_study', 'Age', 'Sex', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference',
+        needed_subject_items = {'Name_in_study', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference',
                                 'Reference_assembly'}
         if needed_subject_items - set(subject.keys()):
             raise ImportException(f'Error - subject attributes missing: {",".join(list(needed_subject_items - set(subject.keys())))}')
 
         report_link = '/'.join([species.replace(' ', '_'), dataset.replace(' ', '_'), subject['Annotation_file']])
-        subject_obj = save_genomic_subject(session, name, subject['Name_in_study'], subject['Age'], subject['Sex'], report_link,
+        subject_obj = save_genomic_subject(session, name, subject['Name_in_study'], report_link,
                                            subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'],
                                            subject['Reference_assembly'], study_obj)
 
@@ -163,8 +164,8 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
             ('Mother_in_study', 'mother_in_study'),
             ('Father_in_study', 'father_in_study'),
             ('Sequencing_platform', 'sequencing_platform'),
-            ('Assembly_method', 'name_in_study'),
-            ('DNA_source', 'name_in_study'),
+            ('Assembly_method', 'assembly_method'),
+            ('DNA_source', 'DNA_source'),
         ]
 
         for yml_attr, sql_attr in optional_subject_items:

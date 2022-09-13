@@ -139,8 +139,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
             app_query = session.query(GenomicSubject.id,
                                       GenomicSubject.identifier,
-                                      GenomicSubject.sequencing_platform,
-                                      GenomicSubject.capture_probes,
                                       GenomicSequence.name,
                                       GenomicGene.name) \
                 .filter(GenomicSubject.id == GenomicSubjectSequence.subject_id) \
@@ -159,7 +157,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             appearances.extend(app_query.all())
 
         for app in appearances:
-            _, patient_name, platform, probes, allele, gene = app
+            _, patient_name, allele, gene = app
             allele = allele.split('*', 1)[1].upper()
 
             if gene not in gen_counts:
@@ -172,11 +170,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 gen_counts[gene][0][allele].append(patient_name)
             if patient_name not in gen_counts[gene][1]:
                 gen_counts[gene][1].append(patient_name)
-            if platform and platform not in gen_counts[gene][2][allele]:
-                gen_counts[gene][2][allele].append(platform)
-            if probes and probes not in gen_counts[gene][3][allele]:
-                gen_counts[gene][3][allele].append(probes)
-
 
     imgt_counts = {}
     all_wanted_genes = list(set(all_wanted_genes))
@@ -226,33 +219,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 return 0
             return len(counts[gene][0][allele])
 
-        def best_platform(gene, allele, counts):
-            platforms = ['RS', 'SEQUEL', 'SEQUELII']
-            if gene not in counts:
-                return ''
-            if allele not in counts[gene][2]:
-                return ''
-
-            best = ''
-            for platform in platforms:
-                if platform in counts[gene][2][allele]:
-                    best = platform
-
-            return best
-
-        def best_probes(gene, allele, counts):
-            probes = ['V2', 'V3']
-            if gene not in counts:
-                return ''
-            if allele not in counts[gene][3]:
-                return ''
-
-            best = ''
-            for probe in probes:
-                if probe in counts[gene][3][allele]:
-                    best = probe
-
-            return best
 
         for allele in ref_alleles:
 
@@ -261,8 +227,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 'IMGT': allele_count(gene, allele, imgt_counts),
                 'AIRR-Seq': allele_count(gene, allele, rep_counts),
                 'Genomic': allele_count(gene, allele, gen_counts),
-                'Best platform': best_platform(gene, allele, gen_counts),
-                'Best probes': best_probes(gene, allele, gen_counts),
                 'Sequence': sequences[f'{gene}*{allele}'.upper()]
             }
             results.append(row)

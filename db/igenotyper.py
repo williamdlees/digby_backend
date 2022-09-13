@@ -34,7 +34,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
     if annotation_file not in annotation_records:
         annotation_records[annotation_file] = read_csv(annotation_file)
 
-    rows = [x for x in annotation_records[annotation_file] if x['sample_name'] == subject.name_in_study]
+    rows = [x for x in annotation_records[annotation_file] if str(x['subject']) == str(subject.name_in_study) and x['project'] == subject.study.study_id]
 
     # If the annotation file contains records for multiple subjects, split into multiple files
 
