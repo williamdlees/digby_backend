@@ -754,24 +754,48 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
         res = query.all()
 
         required_names = []
+        appears = {}
 
         if sample_id_filter is not None:
             required_ids = []
             if dset in sample_id_filter['value']:
                 for id in sample_id_filter['value'][dset]:
                     required_ids.append(id)
-            alleles_with_samples = session.query(Allele.name) \
+
+            alleles_with_samples = session.query(Allele) \
                 .join(AllelesSample) \
                 .join(Sample) \
                 .filter(Sample.sample_name.in_(required_ids)).all()
 
             for a in alleles_with_samples:
-                required_names.append(a[0])
-            # query = query.filter(Allele.name.in_(required_names))
+                appearances = session.query(AllelesSample.patient_id) \
+                    .filter(AllelesSample.hap == 'geno') \
+                    .filter(AllelesSample.allele_id == a.id) \
+                    .join(Sample) \
+                    .filter(Sample.sample_name.in_(required_ids)) \
+                    .filter(AllelesSample.hap == 'geno') \
+                    .distinct().count()
+
+                if a.similar is not None and a.similar != '':
+                    sims = a.similar.split(', ')
+                    for sim in sims:
+                        sim = sim.replace('|', '')
+                        appearances += session.query(AllelesSample.patient_id) \
+                            .join(Allele) \
+                            .filter(AllelesSample.hap == 'geno') \
+                            .filter(Allele.name.ilike(sim)) \
+                            .distinct().count()
+
+                required_names.append(a.name)
+                appears[a.name] = appearances
 
         for r in res:
             if len(required_names) == 0 or r.name in required_names:
                 s = r._asdict()
+
+                if len(required_names) > 0:
+                    s['appears'] = appears[r.name]
+
                 for k, v in s.items():
                     if k == 'similar' and v is not None:
                         s[k] = v.replace('|', '')

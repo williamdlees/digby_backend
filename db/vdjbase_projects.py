@@ -112,8 +112,26 @@ def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, 
 
         commit_database(meta_records, sample_name, session)
 
+# apply some controls to fields that often seem to go awry
+def fixup_fields(meta_records):
+    if 'sex' in meta_records['Patient'] and meta_records['Patient']['sex']:
+        disc = meta_records['Patient']['sex'].upper()[0]
+        if disc == 'F':
+            meta_records['Patient']['sex'] = 'female'
+        elif disc == 'M':
+            meta_records['Patient']['sex'] = 'male'
+        else:
+            meta_records['Patient']['sex'] = 'not collected'
 
+    if 'tissue_label' in meta_records['TissuePro'] and meta_records['TissuePro']['tissue_label']:
+        meta_records['TissuePro']['tissue_label'] = meta_records['TissuePro']['tissue_label'].lower()
 
+    if 'complete_sequences' in meta_records['SeqProtocol']:
+        val = meta_records['SeqProtocol']['complete_sequences'].lower()
+        if 'full' in val or ('complete' in val and 'incomplete' not in val):
+            meta_records['SeqProtocol']['complete_sequences'] = 'Full'
+        elif 'partial' in val or 'biomed' in val or 'short' in val:
+            meta_records['SeqProtocol']['complete_sequences'] = 'Partial'
 
 
     # Commit data for one sample, creating other associated rows as needed
@@ -174,18 +192,6 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
 
             if value and table_attribute:
                 meta_records[table][table_attribute] = value
-
-    if 'sex' in meta_records['Patient'] and meta_records['Patient']['sex']:
-        disc = meta_records['Patient']['sex'].upper()[0]
-        if disc == 'F':
-            meta_records['Patient']['sex'] = 'female'
-        elif disc == 'M':
-            meta_records['Patient']['sex'] = 'male'
-        else:
-            meta_records['Patient']['sex'] = 'not collected'
-
-    if 'tissue_label' in meta_records['TissuePro'] and meta_records['TissuePro']['tissue_label']:
-        meta_records['TissuePro']['tissue_label'] = meta_records['TissuePro']['tissue_label'].lower()
 
 
 # Read airr metadata, using info from the correspondence file. Add to meta_records
@@ -316,6 +322,8 @@ def find_repertoire(miairr_file, rep_id):
 
 # Commit the records for a single repertoire
 def commit_database(meta_records, vdjbase_name, session):
+    fixup_fields(meta_records)
+
     row_ids = {}
     (p_n, i_n, s_n) = vdjbase_name.split('_')
     meta_records['Study']['study_name'] = p_n

@@ -373,18 +373,26 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             if f['op'] in OPERATORS:
                 seq_query = seq_query.having(OPERATORS[f['op']](func.count(Subject.name), f['value']))
 
+        appears = {}
+
         if subject_id_filter is not None:
             filtered_subject_ids = []
 
+            names_to_ids = {}
+            for name, id in db.session.query(Subject.identifier, Subject.id).all():
+                names_to_ids[name] = id
+
             for names in subject_id_filter['value'].items():
                 if names[0] == dataset:
-                    subject_ids = db.session.query(Subject.id.distinct()) \
-                        .filter(Subject.identifier.in_(names[1])).all()
-                    subject_ids = [x[0] for x in subject_ids]
-                    filtered_subject_ids.extend(subject_ids)
+                    for n in names[1]:
+                        filtered_subject_ids.append(names_to_ids[n])
 
             if not filtered_subject_ids:
                 continue
+
+            ids_to_names = {}
+            for id, name in  db.session.query(Sequence.id, Sequence.name).all():
+                ids_to_names[id] = name
 
             sequence_id_query = db.session.query(Sequence.id.distinct()) \
                 .join(SubjectSequence, Sequence.id == SubjectSequence.sequence_id) \
@@ -394,10 +402,32 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             filtered_sequence_ids = [x[0] for x in filtered_sequence_ids]
             seq_query = seq_query.filter(Sequence.id.in_(filtered_sequence_ids))
 
+            subseqs = db.session.query(SubjectSequence.sequence_id, SubjectSequence.subject_id)\
+                .filter(SubjectSequence.subject_id.in_(filtered_subject_ids))\
+                .filter(SubjectSequence.sequence_id.in_(filtered_sequence_ids))\
+                .all()
+
+            appearances = {}
+
+            for sequence_id, subject_id in subseqs:
+                if sequence_id not in appearances:
+                    appearances[sequence_id] = []
+                appearances[sequence_id].append(subject_id)
+
+            for k, v in appearances.items():
+                appears[ids_to_names[k]] = len(set(v))
+
         seqs = seq_query.all()
 
         for r in seqs:
             s = r._asdict()
+
+            if len(appears):
+                if s['name'] in appears:
+                    s['appearances'] = appears[s['name']]
+                else:
+                    s['appearances'] = 0
+
             for k, v in s.items():
                 if isinstance(v, datetime):
                     s[k] = v.date().isoformat()

@@ -32,8 +32,8 @@ class SubjectSequence(Base):
     __tablename__ = 'subject_sequence'
     id = Column(Integer, primary_key=True, autoincrement=True)
     haplo_count = Column(Integer)
-    subject_id = Column(Integer, ForeignKey('subject.id'), nullable=False)
-    sequence_id = Column(Integer, ForeignKey('sequence.id'), nullable=False)
+    subject_id = Column(Integer, ForeignKey('subject.id'), nullable=False, index=True)
+    sequence_id = Column(Integer, ForeignKey('sequence.id'), nullable=False, index=True)
     subject = relationship('Subject', backref='sequence_associations', cascade="all")
     sequence = relationship('Sequence', backref='subject_associations', cascade="all")
     haplotype = Column(String(50))
