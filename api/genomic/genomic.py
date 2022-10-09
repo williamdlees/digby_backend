@@ -192,7 +192,7 @@ class SequencesAPI(Resource):
 
         required_cols = json.loads(args['cols'])
         genomic_datasets = genomic_datasets.split(',')
-        ret = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']))
+        ret = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter'] if args['filter'] else []))
 
         gene_order = {}
         set_index = 0
@@ -307,7 +307,7 @@ class SequencesAPI(Resource):
             'uniques': uniques,
             'total_items': total_size,
             'page_size': args['page_size'],
-            'pages': ceil((total_size*1.0)/args['page_size'])
+            'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }
 
 
@@ -493,8 +493,10 @@ genomic_subject_filters = {
     'assembly_method': {'model': 'Subject', 'field': Subject.assembly_method},
     'DNA_source': {'model': 'Subject', 'field': Subject.DNA_source},
 
-    'study_name': {'model': 'Study', 'field': Study.name.label('study_name'), 'fieldname': 'name'},
-    'study_date': {'model': 'Study', 'field': Study.date.label('study_date'), 'fieldname': 'date'},
+    'study_name': {'model': 'Study', 'field': Study.study_name.label('study_name'), 'fieldname': 'study_name'},
+    'study_title': {'model': 'Study', 'field': Study.title.label('study_title'), 'fieldname': 'study_title'},
+    'study_id': {'model': 'Study', 'field': Study.study_id.label('study_id'), 'fieldname': 'study_id'},
+    'study_date': {'model': 'Study', 'field': Study.date.label('study_date'), 'fieldname': 'study_date'},
     'study_description': {'model': 'Study', 'field': Study.description.label('study_description'), 'fieldname': 'description'},
     'institute': {'model': 'Study', 'field': Study.institute},
     'researcher': {'model': 'Study', 'field': Study.researcher},
@@ -536,7 +538,7 @@ class SubjectsAPI(Resource):
             if col != 'id' and genomic_subject_filters[col]['field'] is not None:
                 attribute_query.append(genomic_subject_filters[col]['field'])
 
-        filter = json.loads(args['filter'])
+        filter = json.loads(args['filter']) if args['filter'] else []
         datasets = genomic_datasets.split(',')
         ret = find_genomic_subjects(attribute_query, species, datasets, filter)
 
@@ -617,7 +619,7 @@ class SubjectsAPI(Resource):
             'uniques': uniques,
             'total_items': total_size,
             'page_size': args['page_size'],
-            'pages': ceil((total_size*1.0)/args['page_size'])
+            'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }
 
 

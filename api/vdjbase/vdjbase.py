@@ -347,7 +347,7 @@ class SamplesApi(Resource):
 
         attribute_query.append(Sample.id)
 
-        filter = json.loads(args['filter'])
+        filter = json.loads(args['filter']) if args['filter'] else []
         ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), filter)
 
         total_size = len(ret)
@@ -493,7 +493,7 @@ class SamplesApi(Resource):
             'uniques': uniques,
             'total_items': total_size,
             'page_size': args['page_size'],
-            'pages': ceil((total_size*1.0)/args['page_size'])
+            'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }
 
 def find_vdjbase_samples(attribute_query, species, datasets, filter):
@@ -602,7 +602,7 @@ class SequencesApi(Resource):
             required_cols.append('igsnper_plot_path')
 
         datasets = dataset.split(',')
-        ret = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter']))
+        ret = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter'] if args['filter'] else []))
         total_size = len(ret)
 
         uniques = {}
@@ -692,7 +692,7 @@ class SequencesApi(Resource):
             'uniques': uniques,
             'total_items': total_size,
             'page_size': args['page_size'],
-            'pages': ceil((total_size*1.0)/args['page_size'])
+            'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }
 
 

@@ -66,8 +66,8 @@ def create_dataset(species, dataset):
                 add_gene_level_features(session, ref, reference_features)
 
         session.commit()
-        for study in study_data['Studies'].values():
-            process_study(dataset, dataset_dir, reference_features, session, species, study)
+        for study_name, study in study_data['Studies'].items():
+            process_study(dataset, dataset_dir, reference_features, session, species, study, study_name)
 
     except ImportException as e:
         print(e)
@@ -124,8 +124,8 @@ def process_reference_assembly(session, ref, species):
     return reference_features
 
 
-def process_study(dataset, dataset_dir, reference_features, session, species, study):
-    needed_study_items = {'Study', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
+def process_study(dataset, dataset_dir, reference_features, session, species, study, study_name):
+    needed_study_items = {'Study', 'Id', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
     if needed_study_items - set(list(study.keys())):
         raise ImportException(f'Error - study attributes missing: {",".join(list(needed_study_items - set(study.keys())))}')
 
@@ -134,13 +134,15 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
         study_date = date.fromisoformat(study_date)
 
     study_obj = save_genomic_study(session,
+                                   study_name,
                                    study['Study'],
                                    study['Id'],
                                    study_date,
                                    study['Institute'],
                                    study['Study_description'],
                                    study['Researcher'],
-                                   study['Reference'], study['Contact'])
+                                   study['Reference'],
+                                   study['Contact'])
     session.commit()
     for name, subject in study['Subjects'].items():
         needed_subject_items = {'Name_in_study', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference',

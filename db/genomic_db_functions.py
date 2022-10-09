@@ -83,8 +83,8 @@ def save_genomic_assembly(identifier, reference, sequence_file, sequence, chromo
     return assembly
 
 
-def save_genomic_study(session, name, study_id, date, institute, description, researcher, reference, contact):
-    study = Study(name=name, study_id=study_id, date=date, institute=institute, description=description, researcher=researcher, reference=reference, contact=contact)
+def save_genomic_study(session, name, title, study_id, date, institute, description, researcher, reference, contact):
+    study = Study(study_name=name, title=title, study_id=study_id, date=date, institute=institute, description=description, researcher=researcher, reference=reference, contact=contact)
     session.add(study)
     return study
 

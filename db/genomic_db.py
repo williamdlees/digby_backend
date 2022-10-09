@@ -130,8 +130,9 @@ class Assembly(Base):
 class Study(Base):
     __tablename__ = 'study'
     id = Column(Integer, primary_key=True)
+    study_name = Column(String(50), nullable=False)
     study_id = Column(String(50), nullable=False)
-    name = Column(String(50), nullable=False)
+    title = Column(String(50), nullable=False)
     date = Column(DateTime())
     institute = Column(String(500))
     description = Column(String(500))
