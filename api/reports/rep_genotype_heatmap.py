@@ -3,16 +3,16 @@
 from werkzeug.exceptions import BadRequest
 
 
-from api.reports.rep_genotype import fake_gene, process_igenotyper_genotype, process_genomic_genotype, process_repseq_genotype
-from api.reports.report_utils import trans_df, collate_samples, chunk_list, collate_gen_samples
+from api.reports.rep_genotype import fake_gene, process_genomic_genotype, process_repseq_genotype
+from api.reports.report_utils import collate_samples, chunk_list, collate_gen_samples
 from api.reports.reports import run_rscript, send_report
-from api.reports.report_utils import make_output_file, find_primer_translations, translate_primer_alleles, translate_primer_genes
+from api.reports.report_utils import make_output_file
 from app import vdjbase_dbs, genomic_dbs
 from db.genomic_db import Subject as GenomicSubject
 
 from db.vdjbase_airr_model import Sample
 import os
-from api.vdjbase.vdjbase import VDJBASE_SAMPLE_PATH, apply_rep_filter_params, get_multiple_order_file
+from api.vdjbase.vdjbase import apply_rep_filter_params, get_multiple_order_file
 import pandas as pd
 
 

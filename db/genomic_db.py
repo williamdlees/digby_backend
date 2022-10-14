@@ -98,6 +98,7 @@ class Subject(Base):
     annotation_method = Column(String(100))
     annotation_format = Column(String(100))
     annotation_reference = Column(String(100))
+    reference_set_version = Column(String(100))
     self_ethnicity = Column(String(100))
     grouped_ethnicity = Column(String(100))
     population = Column(String(100))

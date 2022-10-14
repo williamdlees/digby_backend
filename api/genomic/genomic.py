@@ -2,9 +2,11 @@
 import os
 
 from flask import request
-from flask_restx import Resource, reqparse, inputs
+from flask_restx import Resource, reqparse
+
+from api.reports.genotypes import process_genomic_genotype
 from api.restx import api
-from sqlalchemy import inspect, or_, func, distinct
+from sqlalchemy import inspect, func, distinct
 from math import ceil
 from werkzeug.exceptions import BadRequest
 
@@ -17,10 +19,12 @@ from decimal import Decimal
 from app import app, genomic_dbs
 from api.vdjbase.vdjbase import get_vdjbase_species
 
+
 # Return SqlAlchemy row as a dict, using correct column names
 def object_as_dict(obj):
     return {c.key: getattr(obj, c.key)
             for c in inspect(obj).mapper.column_attrs}
+
 
 GENOMIC_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/samples')
 
@@ -192,7 +196,7 @@ class SequencesAPI(Resource):
 
         required_cols = json.loads(args['cols'])
         genomic_datasets = genomic_datasets.split(',')
-        ret = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter'] if args['filter'] else []))
+        ret = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']) if args['filter'] else [])
 
         gene_order = {}
         set_index = 0
@@ -516,7 +520,7 @@ class SubjectsAPI(Resource):
         """ Returns a list of subjects in the selected datasets  """
         args = filter_arguments.parse_args(request)
 
-        required_cols = json.loads(args['cols'])
+        required_cols = json.loads(args['cols']) if 'cols' in args and args['cols'] else list(genomic_subject_filters.keys())
 
         for col in required_cols:
             if col not in genomic_subject_filters.keys():
@@ -526,6 +530,8 @@ class SubjectsAPI(Resource):
             required_cols = ['study_name'] + required_cols
         if 'dataset' not in required_cols:
             required_cols.append('dataset')
+        if 'identifier' not in required_cols:
+            required_cols.append('identifier')
         if 'annotation_path' in required_cols:
             if 'annotation_method' not in required_cols:
                 required_cols.append('annotation_method')
@@ -744,3 +750,69 @@ class AssemblyAPI(Resource):
         return [{'assembly': row[0]} for row in results]
 
 
+@ns.route('/genotype/<string:species>/<string:subject_name>')
+class SamplesApi(Resource):
+    @digby_protected()
+    def get(self, species, subject_name):
+        """ Returns the inferred genotype (in MiAIRR format) of the specified subject """
+
+        if species not in genomic_dbs:
+            return None, 404
+
+        genotypes = []
+
+        for dataset in genomic_dbs[species].keys():
+            if '_description' not in dataset:
+                genotype = self.single_genotype(species, dataset, subject_name)
+                if genotype:
+                    genotypes.append(genotype)
+
+        if not genotypes:
+            return None, 404
+
+        ret = {
+            'GenotypeSet': {
+                'receptor_genotype_id': 'Genomic_genotype_set_' + subject_name,
+                'genotype_class_list': genotypes
+            }
+
+        }
+
+        return ret
+
+    def single_genotype(self, species, dataset, subject_name):
+        print(dataset)
+        session = genomic_dbs[species][dataset].session
+        sample = session.query(Subject).filter(Subject.identifier == subject_name).one_or_none()
+
+        if not sample:
+            return None
+
+        reference_set_version = sample.reference_set_version
+        genotype = process_genomic_genotype(subject_name, [], session, False)
+        documented = []
+        undocumented = []
+        deleted = []
+        for row in genotype.itertuples():
+            gene_type = row.gene[3]
+
+            for allele in row.GENOTYPED_ALLELES.split(','):
+                allele_name = row.gene + '*' + allele
+                res = session.query(Sequence.sequence, Sequence.novel).filter(Sequence.name == allele_name).one_or_none()
+                if res:
+                    seq, novel = res
+
+                    if novel:
+                        undocumented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'sequence': seq, 'phasing': 0})
+                    else:
+                        documented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
+        ret = {
+            'receptor_genotype_id': 'Tigger_genotype_' + subject_name + '_' + dataset,
+            'locus': dataset,
+            'documented_alleles': documented,
+            'undocumented_alleles': undocumented,
+            'deleted_genes': deleted,
+            'inference_process': 'genomic_sequencing',
+            'genotyping_tool': sample.annotation_method,
+        }
+        return ret

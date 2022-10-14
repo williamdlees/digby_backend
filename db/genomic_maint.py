@@ -1,8 +1,5 @@
 # Create database and associated files for a single genomic dataset
-import importlib
-import shutil
 from datetime import date
-from hashlib import sha256
 
 from receptor_utils import simple_bio_seq as simple
 from sqlalchemy import create_engine
@@ -13,15 +10,12 @@ import os
 import yaml
 
 from db.genomic_ref import update_genomic_ref, read_gene_order
-from db.build_gff import build_gff
 from db.digger_assembly import process_digger_record
 from db.genomic_db import Base, RefSeq
-from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_assembly, save_genomic_dataset_details, save_genomic_ref_seq, \
-    add_feature_to_ref
-#from db.imgt_assembly import process_imgt_assembly
+from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_assembly, save_genomic_dataset_details, save_genomic_ref_seq
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
-from db.genomic_db import Sequence
+
 
 Session = sessionmaker()
 
@@ -52,6 +46,12 @@ def create_dataset(species, dataset):
         else:
             raise ImportException('Error - no reference sets were provided for the dataset.')
 
+        reference_set_version = ''
+        if 'Reference_set_version' in study_data:
+            reference_set_version = study_data['Reference_set_version']
+        else:
+            raise ImportException('Error - no reference set version was provided for the dataset.')
+
         reference_features = None
         if 'Reference_assemblies' in study_data:
             for ref in study_data['Reference_assemblies'].values():
@@ -67,7 +67,7 @@ def create_dataset(species, dataset):
 
         session.commit()
         for study_name, study in study_data['Studies'].items():
-            process_study(dataset, dataset_dir, reference_features, session, species, study, study_name)
+            process_study(dataset, dataset_dir, reference_features, session, species, study, study_name, reference_set_version)
 
     except ImportException as e:
         print(e)
@@ -124,7 +124,7 @@ def process_reference_assembly(session, ref, species):
     return reference_features
 
 
-def process_study(dataset, dataset_dir, reference_features, session, species, study, study_name):
+def process_study(dataset, dataset_dir, reference_features, session, species, study, study_name, reference_set_version):
     needed_study_items = {'Study', 'Id', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
     if needed_study_items - set(list(study.keys())):
         raise ImportException(f'Error - study attributes missing: {",".join(list(needed_study_items - set(study.keys())))}')
@@ -142,7 +142,8 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                                    study['Study_description'],
                                    study['Researcher'],
                                    study['Reference'],
-                                   study['Contact'])
+                                   study['Contact'],
+                                   )
     session.commit()
     for name, subject in study['Subjects'].items():
         needed_subject_items = {'Name_in_study', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference',
@@ -153,7 +154,7 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
         report_link = '/'.join([species.replace(' ', '_'), dataset.replace(' ', '_'), subject['Annotation_file']])
         subject_obj = save_genomic_subject(session, name, subject['Name_in_study'], report_link,
                                            subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'],
-                                           subject['Reference_assembly'], study_obj)
+                                           subject['Reference_assembly'], study_obj, reference_set_version)
 
         optional_subject_items = [
             ('Self-reported Ethnicity', 'self_ethnicity'),

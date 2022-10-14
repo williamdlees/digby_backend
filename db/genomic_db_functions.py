@@ -63,9 +63,9 @@ def save_genomic_sequence(session, name, gene, allele_type, novel, deleted, func
     return sequence
 
 
-def save_genomic_subject(session, identifier, name_in_study, annotation_path, annotation_method, annotation_format, annotation_reference, reference_assembly, study):
+def save_genomic_subject(session, identifier, name_in_study, annotation_path, annotation_method, annotation_format, annotation_reference, reference_assembly, study, reference_set_version):
     subject = Subject(identifier=identifier, name_in_study=name_in_study, annotation_path=annotation_path, annotation_method=annotation_method,
-                      annotation_format=annotation_format, annotation_reference=annotation_reference)
+                      annotation_format=annotation_format, annotation_reference=annotation_reference, reference_set_version=reference_set_version)
     if reference_assembly:
         ref = session.query(RefSeq).filter(RefSeq.name == reference_assembly).one_or_none()
         if not ref:

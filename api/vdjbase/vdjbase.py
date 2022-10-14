@@ -1,11 +1,11 @@
 # Services related to vdjbase repseq-based data sets
 
 from flask import request
-from flask_restx import Resource, reqparse, fields, marshal, inputs
+from flask_restx import Resource, reqparse
 
 from api.reports.report_utils import make_output_file
 from api.restx import api
-from sqlalchemy import inspect, func, cast, literal, String, select, union_all, or_
+from sqlalchemy import inspect, func, or_
 from math import ceil
 import json
 from sqlalchemy_filters import apply_filters
@@ -22,6 +22,8 @@ from db.vdjbase_api_query_filters import sample_info_filters, sequence_filters
 from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
 from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
 from db.genomic_db import Gene as GenomicGene
+
+from api.reports.genotypes import process_repseq_genotype
 
 VDJBASE_SAMPLE_PATH = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
 
@@ -602,7 +604,7 @@ class SequencesApi(Resource):
             required_cols.append('igsnper_plot_path')
 
         datasets = dataset.split(',')
-        ret = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter'] if args['filter'] else []))
+        ret = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter']) if args['filter'] else [])
         total_size = len(ret)
 
         uniques = {}
@@ -658,7 +660,7 @@ class SequencesApi(Resource):
                 elif 'sort' in sequence_filters[f] and sequence_filters[f]['sort'] == 'numeric':
                     uniques[f].sort(key=num_sort_key)
                 else:
-                    uniques[f] = [x[1] for x in uniques[f].sorted(key=lambda x: (x is None or x == '', x))]
+                    uniques[f] = list(set([x for x in sorted(uniques[f], key=lambda x: (x is None or x == '', x))]))
             except:
                 pass
 
@@ -667,10 +669,10 @@ class SequencesApi(Resource):
         if len(sort_specs) > 0:
             for spec in sort_specs:
                 if spec['field'] in sequence_filters.keys():
-                    if spec['field'] in ('name'):
-                        ret = sorted(ret, key=lambda x : allele_sort_key(x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                    if 'sort' in sequence_filters[f] and sequence_filters[f]['sort'] == 'numeric':
+                        ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
                     else:
-                        ret = sorted(ret, key=lambda x : ((x[spec['field']] is None or x[spec['field']] == ''),  x[spec['field']]), reverse=(spec['order'] == 'desc'))
+                        ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''), x[f]), reverse=(spec['order'] == 'desc'))
         else:
             ret = sorted(ret, key=lambda x : allele_sort_key(x['name']))
 
@@ -811,6 +813,84 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                 ret.append(s)
 
     return ret
+
+
+@ns.route('/genotype/<string:species>/<string:sample_name>')
+class SamplesApi(Resource):
+    @digby_protected()
+    def get(self, species, sample_name):
+        """ Returns the inferred genotype (in MiAIRR format) of the specified sample """
+
+        if species not in vdjbase_dbs:
+            return None, 404
+
+        genotypes = []
+
+        for dataset in vdjbase_dbs[species].keys():
+            if '_description' not in dataset:
+                genotype = self.single_genotype(species, dataset, sample_name)
+                if genotype:
+                    genotypes.append(genotype)
+
+        if not genotypes:
+            return None, 404
+
+        ret = {
+            'GenotypeSet': {
+                'receptor_genotype_id': 'Tigger_genotype_set_' + sample_name,
+                'genotype_class_list': genotypes
+            }
+
+        }
+
+        return ret
+
+    def single_genotype(self, species, dataset, sample_name):
+        print(dataset)
+        session = vdjbase_dbs[species][dataset].session
+        sample = session.query(Sample).filter(Sample.sample_name == sample_name).one_or_none()
+
+        if not sample:
+            return None
+
+        genotype = process_repseq_genotype(sample_name, [], session, False)
+        germline_set = {
+            'V': sample.geno_detection.aligner_reference_v,
+            'D': sample.geno_detection.aligner_reference_v,
+            'J': sample.geno_detection.aligner_reference_v,
+        }
+        documented = []
+        undocumented = []
+        deleted = []
+        for row in genotype.itertuples():
+            gene_type = row.gene[3]
+
+            if gene_type not in germline_set.keys():
+                continue
+
+            if row.alleles == 'Del':
+                deleted.append({'label': row.gene, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
+            for allele in row.GENOTYPED_ALLELES.split(','):
+                allele_name = row.gene + '*' + allele
+                res = session.query(Allele.seq, Allele.novel).filter(Allele.name == allele_name).one_or_none()
+                if res:
+                    seq, novel = res
+
+                    if novel:
+                        undocumented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'sequence': seq, 'phasing': 0})
+                    else:
+                        documented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
+        ret = {
+            'receptor_genotype_id': 'Tigger_genotype_' + sample_name + '_' + dataset,
+            'locus': dataset,
+            'documented_alleles': documented,
+            'undocumented_alleles': undocumented,
+            'deleted_genes': deleted,
+            'inference_process': 'repertoire_sequencing',
+            'genotyping_tool': sample.geno_detection.geno_tool,
+            'genotyping_tool_version': sample.geno_detection.geno_ver,
+        }
+        return ret
 
 
 def find_rep_filter_params(species, datasets):

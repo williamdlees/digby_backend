@@ -2,7 +2,7 @@
 
 import os
 from werkzeug.exceptions import BadRequest
-from api.reports.rep_genotype import process_repseq_genotype, process_genomic_genotype
+from api.reports.genotypes import process_repseq_genotype, process_genomic_genotype
 from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import vdjbase_dbs, genomic_dbs
