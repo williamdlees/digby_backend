@@ -55,7 +55,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         # now that we have the filtered samples, build a richer list for genomic processing
         filtered_samples = [s[0] for s in sample_list]
-        sample_list = [(subject.identifier, subject.name_in_study, subject.study.name, subject.annotation_path) for subject in subjects if subject.identifier in filtered_samples]
+        sample_list = [(subject.identifier, subject.name_in_study, subject.study.study_name, subject.annotation_path) for subject in subjects if subject.identifier in filtered_samples]
 
         if len(wanted_genes) > 0:
             for (subject_name, name_in_study, study_name, annotation_path) in sample_list:
