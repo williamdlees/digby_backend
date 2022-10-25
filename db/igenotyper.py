@@ -36,6 +36,9 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
     rows = [x for x in annotation_records[annotation_file] if str(x['subject']) == str(subject.name_in_study) and x['project'] == subject.study.study_id]
 
+    if not rows:
+        print(f'ERROR: {annotation_file} contains no data for subject {subject.name_in_study} project {subject.study.study_id}')
+
     # If the annotation file contains records for multiple subjects, split into multiple files
 
     if len(rows) < len(annotation_records[annotation_file]):
