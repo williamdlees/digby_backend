@@ -537,6 +537,10 @@ def check_novels_in_ogrdbstats(filename, expected):
             else:
                 missing_novels.append('|'.join(list(names)))
 
+    # if freq_by_clone and freq_by_seq are zero, the allele has made it into the genotype but
+    # there is no unambiguous support for it, so ogrdbstats won't report it. Let's live with
+    # the inconsistency for the time being: hopefully will be cleared up by the ref book
+
     if len(missing_novels) or len(novels_as_non):
         print('Error in ogrdbstats %s:\nmissing novels %s, novels listed as non-novel: %s' % (filename, ','.join(missing_novels), ','.join(novels_as_non)))
 

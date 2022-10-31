@@ -78,7 +78,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         fakes = []
         for gene in all_wanted_genes:
             if gene not in contained_genes:
-                fakes.append(fake_gene({'alleles': [], 'count': [], 'fc': [], 'fs': [], 'total_count': 0, 'kdiff': 0}, gene, subject_name))
+                fakes.append(fake_gene({'alleles': ['Unk'], 'count': [], 'fc': [], 'fs': [], 'total_count': 0, 'kdiff': 0}, gene, subject_name))
 
         genotypes[subject_name] = pd.concat([genotype, pd.DataFrame(fakes)], ignore_index=True)
 

@@ -109,6 +109,7 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
 
     for index, row in genotype.iterrows():
         gene = row[GENE_COLUMN]
+
         kdiff = row[GENOTYPE_KDIFF_COLUMN]
 
         # allele counts come from un-genotyped column
@@ -136,6 +137,11 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                 if len(str(row[FREQ_BY_CLONE]).split(INT_SEP)) <= index:
                     print('Error: FREQ_BY_CLONE for gene %s does not have enough values' % gene)
                     continue
+
+                # if freq_by_clone and freq_by_seq are zero, the allele has made it into the genotype but
+                # there is no unambiguous support for it, so ogrdbstats won't report it. Let's live with
+                # the inconsistency for the time being: hopefully will be cleared up by the ref book
+
                 freq_by_clone = int(float(str(row[FREQ_BY_CLONE]).split(INT_SEP)[index]))
                 #if not freq_by_clone:
                 #    continue
@@ -231,12 +237,12 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
 
             if len(allele_snps) > 0:
                 this_allele_name += '_' + '_'.join(allele_snps)
-                if len(pipeline_name) > 0:
+                if len(pipeline_name) > 0 and '_'.join(allele_snps) not in pipeline_name:
                     pipeline_name += '_' + '_'.join(allele_snps)
 
             if len(ext_snps) > 0:
                 this_allele_name += '_' + '_'.join(ext_snps)
-                if len(pipeline_name) > 0:
+                if len(pipeline_name) > 0 and '_'.join(ext_snps) not in pipeline_name:
                     pipeline_name += '_' + '_'.join(ext_snps)
 
             #if '_' in base_allele_name:
