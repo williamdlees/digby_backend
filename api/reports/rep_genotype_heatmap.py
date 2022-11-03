@@ -27,6 +27,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
     genotypes = {}
     all_wanted_genes = set()
+    fully_haplotyped = 'Only' in params['geno_hap']
 
     if not chain:
         chain = g_chain
@@ -64,7 +65,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         if len(wanted_genes) > 0:
             for (subject_name, name_in_study, study_name, annotation_path) in sample_list:
-                genotype = process_genomic_genotype(subject_name, all_wanted_genes, session, not params['f_pseudo_genes'])
+                genotype = process_genomic_genotype(subject_name, all_wanted_genes, session, not params['f_pseudo_genes'], fully_haplotyped)
                 genotypes[subject_name] = genotype
 
     if len(genotypes) == 0:

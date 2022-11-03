@@ -94,6 +94,15 @@
             "Locus",
             "Alphabetic"
           ]
+        },
+        {
+          "id": "geno_hap",
+          "type": "select",
+          "label": "Show genomic alleles",
+          "options": [
+            "Only if fully haplotyped",
+            "Fully and partially haplotyped"
+          ]
         }
       ],
       "filter_params": true,
@@ -127,6 +136,15 @@
           "options": [
             "Locus",
             "Alphabetic"
+          ]
+        },
+        {
+          "id": "geno_hap",
+          "type": "select",
+          "label": "Show genomic alleles",
+          "options": [
+            "Only if fully haplotyped",
+            "Fully and partially haplotyped"
           ]
         }
       ],

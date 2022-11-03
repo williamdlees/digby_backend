@@ -36,8 +36,8 @@ def fake_gene(gene_details, gene_name, subject):
     return rec
 
 
-def process_genomic_genotype(subject_name, wanted_genes, session, functional):
-    allele_query = session.query(GenomicSubject.identifier, GenomicSequence.name, GenomicGene.name)\
+def process_genomic_genotype(subject_name, wanted_genes, session, functional, fully_haplotyped):
+    allele_query = session.query(GenomicSubject.identifier, GenomicSequence.name, GenomicGene.name, GenomicSubjectSequence.haplotype)\
         .filter(GenomicSubject.identifier == subject_name) \
         .join(GenomicSubjectSequence, GenomicSubjectSequence.subject_id == GenomicSubject.id) \
         .join(GenomicSequence, GenomicSubjectSequence.sequence_id == GenomicSequence.id) \
@@ -53,9 +53,9 @@ def process_genomic_genotype(subject_name, wanted_genes, session, functional):
     alleles = allele_query.all()
 
     genes = {}
-    for _, allele, gene in alleles:
+    for _, allele, gene, haplotype in alleles:
         if gene not in genes:
-            genes[gene] = {'alleles': [], 'count': [], 'fc': [], 'fs': []}
+            genes[gene] = {'alleles': [], 'count': [], 'fc': [], 'fs': [], 'haplotypes': []}
 
         if '*' in allele:
             allele_name = allele.split('*')[1]
@@ -71,6 +71,7 @@ def process_genomic_genotype(subject_name, wanted_genes, session, functional):
 
         if allele_name not in genes[gene]['alleles']:
             genes[gene]['alleles'].append(allele_name)
+            genes[gene]['haplotypes'].extend(haplotype.split(','))
             genes[gene]['count'].append('1')
             genes[gene]['fc'].append('1')
             genes[gene]['fs'].append('1')
@@ -78,6 +79,13 @@ def process_genomic_genotype(subject_name, wanted_genes, session, functional):
             genes[gene]['total_count'] = 1
         else:
             print(f"Allele {allele_name} seen multiply in genotype")
+
+    if fully_haplotyped:
+        dropped = []
+        for gene_name in list(genes.keys()):
+            if 'h0' in genes[gene_name]['haplotypes'] or len(genes[gene_name]['haplotypes']) < 2:
+                dropped.append(genes[gene_name])
+                del genes[gene_name]
 
     geno_list = fake_genotype(subject_name, genes)
     return pd.DataFrame(geno_list)

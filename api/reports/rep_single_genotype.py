@@ -30,7 +30,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         sample['sample_name'] = sample['identifier']        # kludge naming issues
         sample['pcr_target_locus'] = sample['dataset']
         session = genomic_dbs[species][sample['dataset']].session
-        genotype = process_genomic_genotype(sample['sample_name'], [], session, False)
+        genotype = process_genomic_genotype(sample['sample_name'], [], session, False, False)
 
     if len(genotype) == 0:
         raise BadRequest('Genotype data for sample %s/%s is not available' % (sample['dataset'], sample['sample_name']))
