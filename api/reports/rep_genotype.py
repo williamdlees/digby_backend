@@ -40,7 +40,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             all_wanted_genes |= set(wanted_genes)
             for (name, genotype, patient_id) in sample_list:
                 session = vdjbase_dbs[species][dataset].session
-                genotype = process_repseq_genotype(name, all_wanted_genes, session, fully_haplotyped)
+                genotype = process_repseq_genotype(name, all_wanted_genes, session, False)
                 genotypes[name] = genotype
 
     for dataset in gen_samples_by_dataset.keys():
@@ -60,7 +60,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         if len(wanted_genes) > 0:
             for (subject_name, name_in_study, study_name, annotation_path) in sample_list:
-                genotype = process_genomic_genotype(subject_name, wanted_genes, session, not params['f_pseudo_genes'], False)
+                genotype = process_genomic_genotype(subject_name, wanted_genes, session, not params['f_pseudo_genes'], fully_haplotyped)
                 genotypes[subject_name] = genotype
 
     if len(genotypes) == 0:
