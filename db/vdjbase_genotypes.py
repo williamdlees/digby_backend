@@ -15,6 +15,9 @@ from db.vdjbase_formats import GENE_COLUMN, GENOTYPE_KDIFF_COLUMN, GENOTYPED_ALL
 from db.vdjbase_model import Allele, AllelesSample, Gene, SNP, HaplotypesFile, SamplesHaplotype
 from db.vdjbase_projects import compound_genes
 
+# transaction log of alleles created
+new_alleles = {}
+
 
 def process_genotypes(ds_dir, species, dataset, session):
     result = ['Processing genotype files']
@@ -87,6 +90,15 @@ def process_genotypes(ds_dir, species, dataset, session):
         session.delete(sample)
     session.commit()
 
+    # dump transaction log
+
+    with open('allele_transaction_log.csv', 'w') as fo:
+        fo.write('allele_name,pipeline_names,similar_names\n')
+        for new_allele_name in sorted(new_alleles.keys()):
+            rec = new_alleles[new_allele_name]
+            fo.write(f"{rec['allele_name']}, {';'.join(sorted(rec['pipeline_names']))}, {';'.join(sorted(rec['similar']))}\n")
+
+
     return result
 
 
@@ -153,7 +165,7 @@ def sample_genotype(inputfile, sample_id, patient_id, pipeline_names, allele_nam
                 #if not freq_by_seq:
                 #    continue
 
-                count = int(allele_counts[allele] if allele in allele_counts else 0)
+                count = int(allele_counts[allele]) if allele in allele_counts else 0
 
             # parse allele, handling old ambiguous style (01_02) and new bp style
             def parse_allele(allele):
@@ -292,11 +304,22 @@ def add2sample (allele_name, base_allele_name, sample_id, haplo, pid, kdiff, pip
     if allele is None:
         allele = new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, session)
 
+    if allele_name not in new_alleles:      # i.e. it was in the reference set
+        new_alleles[allele_name] = {
+            'allele_name': allele_name,
+            'pipeline_names': [pipeline_name],
+            'similar': []
+        }
+
     if len(pipeline_name) > 0:
         if len(allele.pipeline_name) == 0:
             allele.pipeline_name = pipeline_name
+            if pipeline_name not in new_alleles[allele_name]['pipeline_names']:
+                new_alleles[allele_name]['pipeline_names'].append(pipeline_name)
         elif pipeline_name not in allele.pipeline_name:
             allele.pipeline_name = allele.pipeline_name + ', ' + pipeline_name
+            if pipeline_name not in new_alleles[allele_name]['pipeline_names']:
+                new_alleles[allele_name]['pipeline_names'].append(pipeline_name)
 
     alleles_sample.allele_id = allele.id
 
@@ -307,6 +330,7 @@ def add2sample (allele_name, base_allele_name, sample_id, haplo, pid, kdiff, pip
 
     if asc == 0:
         session.add(alleles_sample)
+
 
 
 # allele_name is the name of the allele as it will appear in VDJbase.
@@ -455,7 +479,17 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
         if not allele:
             allele_table = Allele.__table__
             print(f"adding similar allele {temp}")
-            stmt = allele_table.update().where(allele_table.c.seq == seq).values(similar=sim, name = temp)
+
+            if temp not in new_alleles:         # has changed its name through being gene_ambiguous
+                new_alleles[temp] = {
+                    'allele_name': temp,
+                    'pipeline_names': [pipeline_name],
+                    'similar': [x for x in sim.split('|') if len(x) > 0]
+                }
+            else:
+                new_alleles[temp]['similar'].append(final_allele_name)
+
+            stmt = allele_table.update().where(allele_table.c.seq == seq).values(similar=sim, name=temp)
             session.execute(stmt)
             session.commit()
             allele = session.query(Allele).filter(Allele.seq == seq).one_or_none()
@@ -480,6 +514,13 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
         )
 
         session.add(allele)
+
+        new_alleles[final_allele_name] = {
+            'allele_name': final_allele_name,
+            'pipeline_names': [pipeline_name],
+            'similar': []
+        }
+
         session.flush()
         session.refresh(allele)
 
