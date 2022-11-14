@@ -74,11 +74,32 @@ def main():
     if not diffs:
         print('Pipeline names in all alleles listed in both databases agree')
 
-    samples1 = db1.session.query(Sample).all()
-    samples2 = db1.session.query(Sample).all()
+    # Just query the attributes we need, because the database schemas might differ
 
-    sample1_names = set([sample.sample_name for sample in samples1])
-    sample2_names = set([sample.sample_name for sample in samples2])
+    sample_query1 = db1.session.query(Sample.sample_name, Allele.name)\
+        .filter(Sample.id == AllelesSample.sample_id)\
+        .filter(Allele.id == AllelesSample.allele_id)\
+        .all()
+
+    samples1 = {}
+    for sample, allele in sample_query1:
+        if sample not in samples1:
+            samples1[sample] = []
+        samples1[sample].append(allele)
+
+    sample_query2 = db1.session.query(Sample.sample_name, Allele.name)\
+        .filter(Sample.id == AllelesSample.sample_id)\
+        .filter(Allele.id == AllelesSample.allele_id)\
+        .all()
+
+    samples2 = {}
+    for sample, allele in sample_query2:
+        if sample not in samples2:
+            samples2[sample] = []
+        samples2[sample].append(allele)
+
+    sample1_names = set(samples1.keys())
+    sample2_names = set(samples1.keys())
 
     if len(sample1_names - sample2_names):
         print(f"{len(sample1_names - sample2_names)} samples in db1 are not in db2: {', '.join(sorted(list(sample1_names - sample2_names)))}")
@@ -89,24 +110,16 @@ def main():
     if len(sample1_names ^ sample2_names) == 0:
         print('The list of sample names in db1 is the same as that in db2.\n')
 
-    sample_alleles1 = {
-        sample.sample_name: set([x.allele.name for x in sample.alleles]) for sample in samples1
-    }
-
-    sample_alleles2 = {
-        sample.sample_name: set([x.allele.name for x in sample.alleles]) for sample in samples2
-    }
-
     joint_sample_names = list(sample1_names & sample2_names)
 
     diffs = False
     for sample_name in joint_sample_names:
-        if len(sample_alleles1[sample_name] - sample_alleles2[sample_name]):
-            print(f"{len(sample_alleles1[sample_name] - sample_alleles2[sample_name])} alleles in db1 sample {sample_name} are not listed in db2: {', '.join(sorted(list(sample_alleles1[sample_name] - sample_alleles2[sample_name])))}")
+        if len(set(samples1[sample_name]) - set(samples2[sample_name])):
+            print(f"{len(set(samples1[sample_name]) - set(samples2[sample_name]))} alleles in db1 sample {sample_name} are not listed in db2: {', '.join(sorted(list(set(samples1[sample_name]) - set(samples2[sample_name]))))}")
             diffs = True
 
-        if len(sample_alleles2[sample_name] - sample_alleles1[sample_name]):
-            print(f"{len(sample_alleles2[sample_name] - sample_alleles1[sample_name])} alleles in db1 sample {sample_name} are not listed in db2: {', '.join(sorted(list(sample_alleles2[sample_name] - sample_alleles1[sample_name])))}")
+        if len(set(samples2[sample_name]) - set(samples1[sample_name])):
+            print(f"{len(set(samples2[sample_name]) - set(samples1[sample_name]))} alleles in db1 sample {sample_name} are not listed in db2: {', '.join(sorted(list(set(samples2[sample_name]) - set(samples1[sample_name]))))}")
             diffs = True
 
     if not diffs:
