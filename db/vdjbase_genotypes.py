@@ -233,13 +233,11 @@ def process_asc_genotype(sample, processed_gene_types, pipeline_names, session):
                 allele = "Del"
 
             count = allele_counts[allele] if allele in allele_counts else 0
-            freq_by_clone = absolute_fraction[allele] if allele in allele_counts else 0.0
-            freq_by_seq = 0
+            freq_by_clone = count
+            freq_by_seq = count
 
             # check for multiple (ambiguous) allele names in the call and convert format to VDJbase if found
             # a bit of a weird split, as / can be in the name, as well as the separators between names
-            if '3-23' in allele:
-                breakpoint()
 
             cell_type = allele[:2]
             allele_calls = allele.split('/' + cell_type)
@@ -256,7 +254,8 @@ def process_asc_genotype(sample, processed_gene_types, pipeline_names, session):
             add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
                        total_count, session)
 
-    return processed_gene_types.extend(my_processed_types)
+    processed_gene_types.extend(my_processed_types)
+    return processed_gene_types
 
 
 # Convert an ASC genotype style name (e.g. IGHV3-23D*01/IGHV3-23*01) to a VDJbase-style name (IGHV3-23*01_3.23D_01)

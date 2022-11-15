@@ -55,7 +55,6 @@ def create_single_database(job, species, dataset, upload_path, in_situ=False):
     success = True
 
     try:
-
         job.update_state(state='PENDING', meta={'value': 'Importing reference alleles'})
         result.extend(import_reference_alleles(os.path.join(ds_dir, 'reference'), session, species))
         job.update_state(state='PENDING', meta={'value': 'Importing studies'})

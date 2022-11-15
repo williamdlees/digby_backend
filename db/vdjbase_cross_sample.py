@@ -8,7 +8,7 @@ import os, math
 
 from sqlalchemy import func
 from db.vdjbase_model import Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern
-from db.vdjbase_airr_model import Sample
+from db.vdjbase_airr_model import Sample, Patient
 import re
 from db.vdjbase_formats import *
 from sqlalchemy.sql import func
@@ -48,46 +48,31 @@ def calculate_gene_frequencies(ds_dir, session):
     genes = session.query(Gene)
     gene_ids_by_name = dict(zip([gene.name for gene in genes], [gene.id for gene in genes]))
 
-    samples = session.query(Sample)
+    freqs = session.query(Sample.id, Patient.id, func.sum(AllelesSample.freq_by_seq), func.sum(AllelesSample.freq_by_clone), Gene.name) \
+        .filter(Patient.id == Sample.patient_id) \
+        .filter(AllelesSample.sample_id == Sample.id) \
+        .filter(AllelesSample.allele_id == Allele.id) \
+        .filter(Allele.gene_id == Gene.id) \
+        .group_by(*(Sample.id, Gene.id)) \
+        .all()
 
-    for sample in samples:
-        if sample.genotype is None or not os.path.isfile(os.path.join(ds_dir, sample.genotype)):
-            print('skipping genotype processing for sample %s - no file' % sample.sample_name)
-            continue
-
-        genotype = pd.read_csv(os.path.join(ds_dir, sample.genotype), sep='\t')
-
-        frequencies_by_clone = {}
+    for sample_id in list(set([x[0] for x in freqs])):
         frequencies_by_seq = {}
-
-        # counting the appearance of the genes and the total of each family
+        frequencies_by_clone = {}
         family_total_seq = {}
         family_total_clone = {}
-        for gene, count_seq, count_clone in zip(genotype[GENE_COLUMN], genotype[FREQ_BY_SEQ], genotype[FREQ_BY_CLONE]):
-            family = gene[:4]
+
+        for _, patient_id, count_seq, count_clone, gene_name in [x for x in freqs if x[0] == sample_id]:
+            family = gene_name[:4]
             if family not in family_total_seq.keys():
                 family_total_seq[family] = 0
                 family_total_clone[family] = 0
 
-            if isinstance(count_seq, float):
-                if math.isnan(count_seq):
-                    count_seq = 0
-                count_seq = str(count_seq)
+            frequencies_by_seq[gene_name] = count_seq
+            frequencies_by_clone[gene_name] = count_clone
+            family_total_seq[family] += count_seq
+            family_total_clone[family] += count_clone
 
-            if isinstance(count_clone, float):
-                if math.isnan(count_clone):
-                    count_clone = 0
-                count_clone = str(count_clone)
-
-            frequencies_by_seq[gene] = 0
-            for x in str(count_seq).split(INT_SEP):
-                frequencies_by_seq[gene] += int(float(x))
-            family_total_seq[family] += frequencies_by_seq[gene]
-
-            frequencies_by_clone[gene] = 0
-            for x in str(count_clone).split(INT_SEP):
-                frequencies_by_clone[gene] += int(float(x))
-            family_total_clone[family] += frequencies_by_clone[gene]
 
         # calculate the frequency of each gene acording to the family
         for gene in frequencies_by_seq.keys():
@@ -116,8 +101,8 @@ def calculate_gene_frequencies(ds_dir, session):
             gd = GenesDistribution(
                 frequency=frequencies_by_clone[gene],
                 gene_id=gene_id,
-                patient_id=sample.patient_id,
-                sample_id=sample.id,
+                patient_id=patient_id,
+                sample_id=sample_id,
                 count_by_clones=True,
             )
             session.add(gd)
@@ -125,8 +110,8 @@ def calculate_gene_frequencies(ds_dir, session):
             gd = GenesDistribution(
                 frequency=frequencies_by_seq[gene],
                 gene_id=gene_id,
-                patient_id=sample.patient_id,
-                sample_id=sample.id,
+                patient_id=patient_id,
+                sample_id=sample_id,
                 count_by_clones=False,
             )
             session.add(gd)
