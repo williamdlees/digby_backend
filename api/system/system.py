@@ -93,7 +93,10 @@ def digby_protected():
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
-            verify_jwt_in_request(optional=True)
+            try:
+                verify_jwt_in_request(optional=True)
+            except:
+                return "Unauthorized", 403
             current_identity = get_jwt_identity()
             if current_identity or (app.config['JWT_USER'] == '' and app.config['JWT_PASSWORD'] == ''):
                 return fn(*args, **kwargs)
