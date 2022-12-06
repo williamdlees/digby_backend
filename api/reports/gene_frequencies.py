@@ -58,9 +58,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
 
     labels = ['GENE', 'FREQ']
+
     genes_frequencies_df = pd.DataFrame(columns=labels)
-    for gene, usages in genes_frequencies.items():
-        genes_frequencies_df = genes_frequencies_df.append({'GENE': gene, 'FREQ':",".join([str(x) for x in usages])}, ignore_index=True)
+    #genes_frequencies_df = pd.concat([genes_frequencies_df, pd.DataFrame([{'GENE': gene, 'FREQ': ",".join([str(x) for x in usages])} for gene, usages in genes_frequencies.items()])], axis=0, ignore_index=True)
+    genes_frequencies_df = pd.DataFrame([{'GENE': gene, 'FREQ': ",".join([str(x) for x in usages])} for gene, usages in genes_frequencies.items()])
 
     input_path = make_output_file('tab')
     genes_frequencies_df.to_csv(input_path, sep='\t', index=False)
