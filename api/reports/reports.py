@@ -38,9 +38,9 @@ def load_report_defs():
 
 
 report_list_arguments = reqparse.RequestParser()
-report_list_arguments.add_argument('species', type=str)
-report_list_arguments.add_argument('genomic_datasets', type=str)
-report_list_arguments.add_argument('rep_datasets', type=str)
+report_list_arguments.add_argument('species', type=str, location='args')
+report_list_arguments.add_argument('genomic_datasets', type=str, location='args')
+report_list_arguments.add_argument('rep_datasets', type=str, location='args')
 
 
 @ns.route('/reports/list')
@@ -113,13 +113,13 @@ class ReportsApi(Resource):
 
 
 report_arguments = reqparse.RequestParser()
-report_arguments.add_argument('format', type=str)           # pdf or html
-report_arguments.add_argument('species', type=str)
-report_arguments.add_argument('genomic_datasets', type=str)
-report_arguments.add_argument('genomic_filters', type=str)
-report_arguments.add_argument('rep_datasets', type=str)
-report_arguments.add_argument('rep_filters', type=str)
-report_arguments.add_argument('params', type=str)
+report_arguments.add_argument('format', type=str, location='args')           # pdf or html
+report_arguments.add_argument('species', type=str, location='args')
+report_arguments.add_argument('genomic_datasets', type=str, location='args')
+report_arguments.add_argument('genomic_filters', type=str, location='args')
+report_arguments.add_argument('rep_datasets', type=str, location='args')
+report_arguments.add_argument('rep_filters', type=str, location='args')
+report_arguments.add_argument('params', type=str, location='args')
 
 @ns.route('/reports/run/<string:report_name>')
 @api.response(404, 'Malformed request')

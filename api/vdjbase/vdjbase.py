@@ -304,11 +304,11 @@ class SampleInfoApi(Resource):
 
 
 filter_arguments = reqparse.RequestParser()
-filter_arguments.add_argument('page_number', type=int)
-filter_arguments.add_argument('page_size', type=int)
-filter_arguments.add_argument('filter', type=str)
-filter_arguments.add_argument('sort_by', type=str)
-filter_arguments.add_argument('cols', type=str)
+filter_arguments.add_argument('page_number', type=int, location='args')
+filter_arguments.add_argument('page_size', type=int, location='args')
+filter_arguments.add_argument('filter', type=str, location='args')
+filter_arguments.add_argument('sort_by', type=str, location='args')
+filter_arguments.add_argument('cols', type=str, location='args')
 
 
 @ns.route('/samples/<string:species>/<string:dataset>')

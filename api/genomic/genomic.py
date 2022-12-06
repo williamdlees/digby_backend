@@ -111,8 +111,8 @@ class SubjectInfoApi(Resource):
 
 
 range_arguments = reqparse.RequestParser()
-range_arguments.add_argument('start', type=int, required=True)
-range_arguments.add_argument('end', type=int, required=True)
+range_arguments.add_argument('start', type=int, required=True, location='args')
+range_arguments.add_argument('end', type=int, required=True, location='args')
 
 
 def enumerate_feature(f):
@@ -159,11 +159,11 @@ genomic_sequence_bool_values = {
 }
 
 filter_arguments = reqparse.RequestParser()
-filter_arguments.add_argument('page_number', type=int)
-filter_arguments.add_argument('page_size', type=int)
-filter_arguments.add_argument('filter', type=str)
-filter_arguments.add_argument('sort_by', type=str)
-filter_arguments.add_argument('cols', type=str)
+filter_arguments.add_argument('page_number', type=int, location='args')
+filter_arguments.add_argument('page_size', type=int, location='args')
+filter_arguments.add_argument('filter', type=str, location='args')
+filter_arguments.add_argument('sort_by', type=str, location='args')
+filter_arguments.add_argument('cols', type=str, location='args')
 
 # borrowed from sqlalchemy-filters
 

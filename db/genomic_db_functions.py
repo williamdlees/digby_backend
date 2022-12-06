@@ -150,9 +150,7 @@ def find_or_assign_allele(session, gene_sequence, v_gene, functional):
 
 
 def link_sequence_to_feature(sequence, feature):
-    sf = SequenceFeature()
-    sf.sequence = sequence
-    sf.feature = feature
+    sequence.features.append(feature)
 
 
 def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence):
@@ -222,15 +220,22 @@ def find_all_alleles(session, gene_name):
 
 def update_subject_sequence_link(session, h, subject, sequence):
     ss = session.query(SubjectSequence).filter(SubjectSequence.subject == subject, SubjectSequence.sequence == sequence).one_or_none()
-    if ss:
+
+    if not ss:
+        subject.sequences.append(sequence)
+        sequence.appearances += 1
+        session.flush()
+        ss = session.query(SubjectSequence).filter(SubjectSequence.subject == subject, SubjectSequence.sequence == sequence).one_or_none()
+        ss.haplotype = h
+        ss.haplo_count = 1
+
+    else:
         haplo = ss.haplotype.split(',')
         haplo.append('h%1d' % h)
         haplo = ','.join(sorted(haplo))
         ss.haplotype = haplo
         ss.haplo_count += 1
-    else:
-        SubjectSequence(subject=subject, sequence=sequence, haplotype='h%1d' % h, haplo_count=1)
-        sequence.appearances += 1
+
     session.flush()
 
 

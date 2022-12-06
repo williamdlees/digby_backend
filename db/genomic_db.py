@@ -28,22 +28,23 @@ class RefSeq(Base):
     subjects = relationship("Subject", backref='ref_seq')
 
 
+# The association proxy extension is used for many-many relationshups: see
+# https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html
+
 class SubjectSequence(Base):
     __tablename__ = 'subject_sequence'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    haplo_count = Column(Integer)
-    subject_id = Column(Integer, ForeignKey('subject.id'), nullable=False, index=True)
-    sequence_id = Column(Integer, ForeignKey('sequence.id'), nullable=False, index=True)
+    subject_id = Column(ForeignKey('subject.id'), primary_key=True)
+    sequence_id = Column(ForeignKey('sequence.id'), primary_key=True)
     subject = relationship('Subject', backref='sequence_associations', cascade="all")
     sequence = relationship('Sequence', backref='subject_associations', cascade="all")
+    haplo_count = Column(Integer)
     haplotype = Column(String(50))
 
 
 class SequenceFeature(Base):
     __tablename__ = 'sequence_feature'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    feature_id = Column(Integer, ForeignKey('feature.id'), nullable=False)
-    sequence_id = Column(Integer, ForeignKey('sequence.id'), nullable=False)
+    feature_id = Column(Integer, ForeignKey('feature.id'), primary_key=True)
+    sequence_id = Column(Integer, ForeignKey('sequence.id'), primary_key=True)
     feature = relationship('Feature', backref='sequence_associations', cascade="all")
     sequence = relationship('Sequence', backref='feature_associations', cascade="all")
 
@@ -64,7 +65,7 @@ class Feature(Base):
     parent_id = Column(Integer)
     refseq_id = Column(Integer, ForeignKey('ref_seq.id'))
     refseq = relationship('RefSeq', backref='features')
-    sequences = relationship('Sequence', secondary='sequence_feature')
+    sequences = relationship('Sequence', secondary='sequence_feature', back_populates='features')
 
 
 class Sequence(Base):
@@ -82,7 +83,7 @@ class Sequence(Base):
     gapped_sequence = Column(Text(1000))
     gene_id = Column(Integer, ForeignKey('gene.id'))
     subjects = relationship('Subject', secondary='subject_sequence', back_populates='sequences')
-    features = relationship('Feature', secondary='sequence_feature')
+    features = relationship('Feature', secondary='sequence_feature', back_populates='sequences')
 
 
 class Subject(Base):

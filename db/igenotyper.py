@@ -101,6 +101,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 add_feature('L-PART2', 'EXON_2', reference_features, row, seq, session, subject)
                 add_feature('V-INTRON', 'INTRON', reference_features, row, seq, session, subject)
                 add_feature('L-PART1', 'EXON_1', reference_features, row, seq, session, subject)
+                add_feature('V-UTR', 'UTR', reference_features, row, seq, session, subject)
 
             elif gene_type == 'D':
                 if not feature:
@@ -132,6 +133,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 add_feature('J-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, subject)
 
         add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, subject)
+
 
     session.commit()
 
@@ -197,6 +199,8 @@ def add_gene_level_features(session, ref, reference_features):
                     add_gene_level_subfeature(locus, feature, 'V-INTRON', f'{locus}VIntron', feature_id, parent_id, ref)
                 elif feature_type == 'EXON_1':
                     add_gene_level_subfeature(locus, feature, 'L_PART-1', f'{locus}VLP1', feature_id, parent_id, ref)
+                elif feature_type == 'UTR':
+                    add_gene_level_subfeature(locus, feature, 'V-UTR', f'{locus}VUTR', feature_id, parent_id, ref)
 
             elif 'D' in feature['gene']:
                 if feature_type == 'GENE':

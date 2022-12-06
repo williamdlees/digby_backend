@@ -60,7 +60,7 @@ class Allele(Base):
 
     closest_ref = relationship('Allele', remote_side=[id])
     gene = relationship('Gene', back_populates="alleles")
-    samples = relationship("AllelesSample", back_populates="allele")
+    samples = relationship("Sample", secondary="alleles_sample", back_populates="alleles")
 
 
 class AlleleConfidenceReport(Base):
@@ -97,23 +97,25 @@ class SNP(Base):
     allele = relationship('Allele')
 
 
+# The association proxy extension is used for many-many relationshups: see
+# https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html
+
 class AllelesSample(Base):
     __tablename__ = 'alleles_sample'
 
-    id = Column(Integer, primary_key=True)
+    allele_id = Column(ForeignKey('allele.id'), primary_key=True)
+    patient_id = Column(ForeignKey('patient.id'), primary_key=True)
+    sample_id = Column(ForeignKey('sample.id'), primary_key=True)
     hap = Column(String(20), nullable=False)
     kdiff = Column(DECIMAL, nullable=False)
     freq_by_clone = Column(Integer, nullable=True)
     freq_by_seq = Column(Integer, nullable=True)
     count = Column(Integer, nullable=True)
     total_count = Column(Integer, nullable=True)
-    allele_id = Column(ForeignKey('allele.id'), nullable=False, index=True)
-    patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
-    sample_id = Column(ForeignKey('sample.id'), nullable=False, index=True)
 
-    allele = relationship('Allele', back_populates="samples")
+    allele = relationship('Allele', backref='sample_associations', cascade="all")
     patient = relationship('Patient')
-    sample = relationship('Sample', back_populates="alleles")
+    sample = relationship('Sample', backref='allele_associations', cascade="all")
 
 
 class GenesDistribution(Base):

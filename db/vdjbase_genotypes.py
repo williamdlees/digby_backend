@@ -758,7 +758,7 @@ def process_haplotype(filename, sample, haplo_gene, session):
     allele1 = gene + "_" + alleles.split("_")[0]
     allele2 = gene + "_" + alleles.split("_")[1]
 
-    hf = HaplotypesFile(
+    hf =   HaplotypesFile(
         by_gene=haplo_gene,
         allele_col1=allele1,
         allele_col2=allele2,

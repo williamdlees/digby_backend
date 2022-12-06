@@ -58,7 +58,7 @@ class Sample(Base):
     study = relationship('Study')
     tissue_pro = relationship('TissuePro')
     data_pro = relationship('DataPro')
-    alleles = relationship("AllelesSample", back_populates="sample")
+    alleles = relationship("Allele", secondary="alleles_sample", back_populates="samples")
     patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
 
 

@@ -323,11 +323,9 @@ def check_shared_snp(novels, session):
         novel_positions = positions[novel.name]
         issues = []
 
-        for s_assoc in novel.samples:
-            sample = s_assoc.sample
+        for sample in novel.samples:
             shared_infs = []
-            for a_assoc in sample.alleles:
-                inf = a_assoc.allele
+            for inf in sample.alleles:
                 if inf.novel and inf != novel:
                     shared = positions[inf.name] & novel_positions
                     if shared:
@@ -494,12 +492,12 @@ def check_ogrdbstats_for_novels(novels, ds_dir):
 
     for novel in novels:
         for sample in novel.samples:
-            if not sample.sample.genotype_stats:
-                print(f"ERROR - No genotype stats for sample {sample.sample.sample_name}")
+            if not sample.genotype_stats:
+                print(f"ERROR - No genotype stats for sample {sample.sample_name}")
                 continue
-            if sample.sample.genotype_stats not in ogrdbstats_to_check:
-                ogrdbstats_to_check[sample.sample.genotype_stats] = []
-            ogrdbstats_to_check[sample.sample.genotype_stats].append(novel)
+            if sample.genotype_stats not in ogrdbstats_to_check:
+                ogrdbstats_to_check[sample.genotype_stats] = []
+            ogrdbstats_to_check[sample.genotype_stats].append(novel)
 
     for stat_file, expected in ogrdbstats_to_check.items():
         check_novels_in_ogrdbstats(os.path.join(ds_dir, stat_file), expected)
