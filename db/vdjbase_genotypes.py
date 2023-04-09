@@ -53,8 +53,8 @@ def process_genotypes(ds_dir, species, dataset, session):
 
 def find_genotype_files(ds_dir, sample, result):
     geno_files = glob.glob(os.path.join(ds_dir, 'samples', sample.study.study_name, sample.sample_name, '*_geno*'))
-    asc_files = [x for x in geno_files if 'asc' in x]
-    tigger_files = [x for x in geno_files if 'asc' not in x]
+    asc_files = [x for x in geno_files if 'asc' in os.path.basename(x)]
+    tigger_files = [x for x in geno_files if 'asc' not in os.path.basename(x)]
 
     asc_file = None
     tigger_file = None

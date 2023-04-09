@@ -55,7 +55,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             for frequency in frequencies:
                 genes_frequencies[frequency[1]].append(round(float(frequency[2]), 2))
 
-
+    if len(genes_frequencies) == 0:
+        raise BadRequest('No frequencies were found for the selected genes')
 
     labels = ['GENE', 'FREQ']
 

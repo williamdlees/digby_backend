@@ -3,7 +3,7 @@
 #
 
 # Update a non-IMGT reference set for a specific species
-import importlib
+import importlib.util
 
 from receptor_utils import simple_bio_seq as simple
 from db.genomic_db import Sequence, Gene
