@@ -5,7 +5,7 @@ from os.path import join, isdir, isfile
 from os import listdir
 from time import sleep
 from flask import render_template, request, redirect, url_for, Markup
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 from flask_table import Table, Col
 from flask_wtf import FlaskForm
@@ -53,6 +53,20 @@ def study_data_db_init(vdjbase_db_path):
                         sqlite_dbs[species] = {}
                     sqlite_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
                     sqlite_dbs[species][name + '_description'] = description
+
+    # temp fix: add asc_genotype column to sample table if not there already
+
+    if 'genomic' not in vdjbase_db_path.lower():
+        for species in sqlite_dbs:
+            for locus in sqlite_dbs[species]:
+                if 'description' not in locus:
+                    inspector = inspect(sqlite_dbs[species][locus].db)
+                    cols = inspector.get_columns('Sample')
+                    if 'asc_genotype' not in [col['name'] for col in cols]:
+                        with sqlite_dbs[species][locus].connection as con:
+                            con.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
+                            sqlite_dbs[species][locus].session.commit()
+
 
     # sort datasets of each species
 

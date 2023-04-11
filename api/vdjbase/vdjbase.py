@@ -125,7 +125,7 @@ class NovelsSpApi(Resource):
             d_haps = 0
             j_haps = 0
             hetero_haps = 0
-            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample.sample_name}
+            best_hap = {'gene_type': '', 'hetero': False, 'count': 0, 'example': novel.samples[0].sample_name}
 
             for haplo in haplos:
                 gene_type = 'D' if 'D' in haplo.hap_gene else 'J'
