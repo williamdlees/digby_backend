@@ -140,7 +140,7 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
 
 # Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
 def add_feature(feature, bed_name, reference_features, row, seq, session, subject):
-    if not row[feature]:
+    if feature not in row or not row[feature]:
         return
 
     feature_seq = find_sequence_by_sequence(session, feature, seq.gene.name, row[feature])
