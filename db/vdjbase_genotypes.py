@@ -52,6 +52,26 @@ def process_genotypes(ds_dir, species, dataset, session):
 
 
 def find_genotype_files(ds_dir, sample, result):
+    """
+    Finds genotype files for the given sample in the specified directory, and returns the file paths for the tigger and asc files.
+
+    :param ds_dir: The directory where the sample genotype files are located.
+    :type ds_dir: str
+    :param sample: The sample for which to find the genotype files.
+    :type sample: Sample object
+    :param result: A list to which any warning messages will be appended.
+    :type result: list
+    :return: A tuple containing the file paths for the tigger and asc genotype files, respectively. If no file is found, the corresponding variable in the tuple will be None.
+    :rtype: tuple
+
+    This function searches for genotype files for the given sample in the 'samples' directory of the specified ds_dir.
+    It first looks for files with 'geno' in their name. If a file is found with 'asc' in its name, it is considered as the asc genotype file,
+    and all other geno files are considered as tigger genotype files. If no file is found with 'asc' in its name, then the first geno file
+    found is considered as the tigger genotype file.
+
+    If multiple files of either type are found, a warning message will be appended to the result list, and the function will choose the
+    first file.
+    """
     geno_files = glob.glob(os.path.join(ds_dir, 'samples', sample.study.study_name, sample.sample_name, '*_geno*'))
     asc_files = [x for x in geno_files if 'asc' in os.path.basename(x)]
     tigger_files = [x for x in geno_files if 'asc' not in os.path.basename(x)]
@@ -73,6 +93,34 @@ def find_genotype_files(ds_dir, sample, result):
 
 
 def read_ambiguous_alleles_file(ds_dir, result, session):
+    """
+    Reads an ambiguous allele definition file from the given directory, creates two dictionaries to map allele names and pipeline names,
+    and updates the database session with compound genes if necessary.
+
+    :param ds_dir: The directory where the ambiguous allele definition file is located.
+    :type ds_dir: str
+    :param result: A list to which any error messages will be appended.
+    :type result: list
+    :param session: A session object to update the database with compound genes.
+    :type session: database session
+    :return: A tuple containing two dictionaries: allele_names and pipeline_names.
+    :rtype: tuple
+
+    The allele_names dictionary maps allele names to pipeline names, while the pipeline_names dictionary maps pipeline names to allele names.
+
+    Each row in the ambiguous allele definition file should have the following columns:
+    - GENE: The gene name.
+    - PATTERN: The pattern of the gene.
+    - ALLELES: A comma-separated list of allele names for the gene.
+
+    If the length of the PATTERN or ALLELES field is 1, a '0' is added before the value. If the ALLELES field contains dots, it is split into a list of allele names,
+    and the gene number is extracted. If the alleles belong to a different gene, the gene name is updated by replacing the original gene number with the new gene number.
+
+    If an error is encountered during the parsing of the ambiguous allele definition file, it will be appended to the result list.
+
+    If the gene name in the allele_name variable does not match the gene name in the pipeline_name variable, the add_compound_gene function will be called to
+    add a compound gene to the database session.
+    """
     pipeline_names = {}  # allele name given pipeline name
     allele_names = {}  # pipeline name given allele name
     if os.path.isfile(os.path.join(ds_dir, 'reference/ambiguous_allele_names.csv')):
@@ -124,11 +172,24 @@ gene_pattern = re.compile(".+\.[0-9]{2}$")
 nt_pattern = re.compile("[A,G,T,C,a,g,t,c]+")
 
 
-# parse allele, handling old ambiguous style (01_02) and new bp style
-# note that ambiguity is with respect to the sequence *before* SNPs are taken into consideration,
-# i.e. the SNPS apply to all the alleles listed as ambiguous. If we allowed different SNPs accociated
-# to individual unmutated alleles, we could include every allele in the reference set in the name!
 def parse_allele(allele):
+    """
+    Parse allele names, handling old ambiguous style (01_02) and new bp style.
+
+    Note that ambiguity is with respect to the sequence *before* SNPs are taken into consideration,
+    i.e. the SNPs apply to all the alleles listed as ambiguous. If different SNPs were allowed
+    to be associated with individual unmutated alleles, every allele in the reference set would
+    need to be included in the name.
+
+    :param allele: The allele name to be parsed.
+    :type allele: str
+    :return: A tuple containing:
+        - base_allele: the base allele name, without any ambiguity or SNP information.
+        - ambig_alleles: a list of ambiguous alleles, if any are present in the allele name.
+        - allele_snps: a list of SNPs associated with the allele, if any are present in the allele name.
+        - ext_snps: a list of external SNPs associated with the allele, if any are present in the allele name.
+    :rtype: tuple[str, list[str], list[str], list[str]]
+    """
     ambig_alleles = []
     allele_snps = []
     ext_snps = []
@@ -153,8 +214,16 @@ def parse_allele(allele):
     return base_allele, ambig_alleles, allele_snps, ext_snps
 
 
-# Parse an allele, taking account of ambiguous alleles listed in pipeline_names
 def parse_ambiguous_allele(allele, gene, pipeline_names):
+    """
+    Parse an allele, taking into account ambiguous alleles listed in pipeline_names.
+
+    :param allele: The name of the allele.
+    :param gene: The name of the gene.
+    :param pipeline_names: A dictionary of ambiguous allele names.
+
+    :returns: A tuple containing the parsed allele SNPs, base allele name, pipeline name, and this allele name.
+    """
     base_allele, ambig_alleles, allele_snps, ext_snps = parse_allele(allele)
     base_allele_name = gene + "*" + base_allele
     pipeline_name = gene + "*" + allele
@@ -198,6 +267,25 @@ def sample_genotype(sample, pipeline_names, session):
 
 
 def process_asc_genotype(sample, processed_gene_types, pipeline_names, session):
+    """
+    Processes an ASC genotype file for a sample, adds the resulting data to the database, and returns a list of
+    processed gene types.
+
+    :param sample: A `Sample` object representing the sample to process.
+    :type sample: Sample
+
+    :param processed_gene_types: A list of gene types that have already been processed.
+    :type processed_gene_types: list
+
+    :param pipeline_names: A list of pipeline names to use when parsing ambiguous allele names.
+    :type pipeline_names: list
+
+    :param session: The database session to use for adding the processed data.
+    :type session: Session
+
+    :return: The updated list of processed gene types, including any new gene types processed during this function call.
+    :rtype: list
+    """
     my_processed_types = []
     print(sample.asc_genotype)
     genotype = pd.read_csv(sample.asc_genotype, sep='\t')
@@ -261,6 +349,17 @@ def process_asc_genotype(sample, processed_gene_types, pipeline_names, session):
 # Convert an ASC genotype style name (e.g. IGHV3-23D*01/IGHV3-23*01) to a VDJbase-style name (IGHV3-23*01_3.23D_01)
 
 def asc_name_to_vdjbase(allele_calls, session):
+    """
+    Convert an ASC genotype style name to a VDJbase-style name, e.g. IGHV3-23D*01/IGHV3-23*01 to IGHV3-23*01_3.23D_01.
+
+    :param allele_calls: list of ASC-style genotype names to convert
+    :type allele_calls: list[str]
+    :param session: SQLAlchemy session object for database queries
+    :type session: sqlalchemy.orm.Session
+    :return: the converted VDJbase-style name, or None if there is an error
+    :rtype: str or None
+    :raises DbCreationError: if the input allele_calls contain unexpected ambiguous allele format, extension-style snp, or different SNPs
+    """
     parsed_calls = []
 
     for allele_call in allele_calls:
@@ -319,9 +418,21 @@ def asc_name_to_vdjbase(allele_calls, session):
     return vdjbase_name
 
 
-# Process the tigger genotype, ignoring any rows whose gene type is listed in processed_gene_types
-# this lets us, for example, take Vs from asc, and Ds and Js from tigger
 def process_tigger_genotype(sample, processed_gene_types, pipeline_names, session):
+    """
+    Process the TIGGER genotype data for a given sample.
+    ignore any rows whose gene type is listed in processed_gene_types.
+    this lets us, for example, take Vs from asc, and Ds and Js from tigger
+
+    :param sample: the sample object
+    :type sample: obj
+    :param processed_gene_types: a list of processed gene types
+    :type processed_gene_types: list
+    :param pipeline_names: a list of pipeline names
+    :type pipeline_names: list
+    :param session: the database session
+    :type session: obj
+    """
     print(sample.genotype)
     genotype = pd.read_csv(sample.genotype, sep='\t')
     for index, row in genotype.iterrows():
@@ -375,11 +486,21 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
                        total_count, session)
 
 
-# Each unique sequence is only present on one single row in Allele. If multiple allele names
-# correspond to the same sequence, they are listed in that row in the 'similar' field.
-# This function returns that row, given the allele name
+
 
 def find_allele_or_similar(allele_name, session):
+    """
+    Each unique sequence is only present on one single row in Allele. If multiple allele names
+    correspond to the same sequence, they are listed in that row in the 'similar' field.
+    This function returns that row, given the allele name
+
+    :param allele_name:
+    :type allele_name:
+    :param session:
+    :type session:
+    :return:
+    :rtype:
+    """
     try:
         allele = session.query(Allele).filter(Allele.name == allele_name).one_or_none()
     except Exception as e:
@@ -392,11 +513,39 @@ def find_allele_or_similar(allele_name, session):
     return allele
 
 
-# Add a row to AllelesSample reflecting the presence of this allele in the sample.
-# If the allele is not present in Allele already, add it there
-# if the allele has a 'pipeline name', translate it to the 01_02 form
 
 def add2sample (allele_name, base_allele_name, sample_id, pid, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count, total_count, session):
+    """
+    Add a row to AllelesSample reflecting the presence of this allele in the sample.
+    If the allele is not present in Allele already, add it there
+    if the allele has a 'pipeline name', translate it to the 01_02 form
+
+    :param allele_name: The name of the allele to add.
+    :type allele_name: str
+    :param base_allele_name: The base name of the allele.
+    :type base_allele_name: str
+    :param sample_id: The ID of the sample to which the allele belongs.
+    :type sample_id: int
+    :param pid: The patient ID.
+    :type pid: int
+    :param kdiff: The kdiff value.
+    :type kdiff: float
+    :param pipeline_name: The name of the pipeline.
+    :type pipeline_name: str
+    :param allele_snps: The SNPs of the allele.
+    :type allele_snps: str
+    :param freq_by_clone: The allele frequency by clone.
+    :type freq_by_clone: float
+    :param freq_by_seq: The allele frequency by sequence.
+    :type freq_by_seq: float
+    :param count: The count of the allele.
+    :type count: int
+    :param total_count: The total count of the allele.
+    :type total_count: int
+    :param session: The database session.
+    :type session: SQLAlchemy session object
+    :return: None
+    """
     kdiff = float(kdiff)
     if math.isnan(kdiff):
         kdiff = 0.0
@@ -446,10 +595,25 @@ def add2sample (allele_name, base_allele_name, sample_id, pid, kdiff, pipeline_n
 
 
 
-# allele_name is the name of the allele as it will appear in VDJbase.
-# base_allele_name is the name without snps. It can include ambiguous alleles.
-# pipeline_name is the name of the allele as found in the genotype file
 def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, session):
+    """
+    Create a new Allele object in the database and return it. If the sequence of the allele is the same as an existing
+    allele, return that instead.
+
+    :param allele_name: the name of the allele as it will appear in VDJbase
+    :type allele_name: str
+    :param base_allele_name: the name without snps. It can include ambiguous alleles.
+    :type base_allele_name: str
+    :param pipeline_name: the name of the allele as found in the genotype file
+    :type pipeline_name: str
+    :param allele_snps: list of SNPs for the new allele
+    :type allele_snps: List[str]
+    :param session: the SQLAlchemy session for database operations
+    :type session: Any
+    :return: the newly created Allele object
+    :rtype: Allele
+    :raises DbCreationError: if the base allele is not found in the reference set
+    """
     xx = f"allele_name: {allele_name}, base_allele_name: {base_allele_name}"
 
     ambiguous_alleles = [allele_name.split("*")[1].split("_")[0]]
@@ -576,15 +740,31 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
     return allele
 
 
-# For each gene/allele referenced in the name as being indistinguishable, check that
-# we have the sequence in the reference set. Construct a merged 'ambiguous' sequence
-# which masks out any sites differing between all the mentioned alleles with ns. Also
-# take account in the sequence of any SNPs in the name.
-# Example: TRBV3-1*01_02_2.01_2.02_2.03_a234g. Here there are 4 alleles to check and
-# merge, plus one mutation. Check for syntax errors in the allele designation. Warn
-# (and ignore) if any incorrectly-formatted terms are encountered.
-
 def create_merged_sequence(allele_name, ambiguous_alleles, base_allele_name, seq, session):
+    """
+    Creates a merged 'ambiguous' sequence for a given allele name by checking that the sequence for each allele referenced
+    in the name as being indistinguishable is in the reference set. This function also takes into account any SNPs in the
+     name. If any incorrectly-formatted terms are encountered, a warning is issued and the term is ignored.
+
+    Example: TRBV3-1*01_02_2.01_2.02_2.03_a234g. Here there are 4 alleles to check and
+    merge, plus one mutation. Check for syntax errors in the allele designation.
+
+    Warn (and ignore) if any incorrectly-formatted terms are encountered.
+
+    :param allele_name: the name of the allele to be merged
+    :type allele_name: str
+    :param ambiguous_alleles: a list of ambiguous alleles
+    :type ambiguous_alleles: list
+    :param base_allele_name: the base name of the allele
+    :type base_allele_name: str
+    :param seq: the sequence of the allele
+    :type seq: str
+    :param session: a session object for connecting to the database
+    :type session: sqlalchemy.orm.session.Session
+    :return: a tuple of the final allele name, a boolean indicating whether the allele is novel, and the merged sequence
+    :rtype: tuple
+    :raises DbCreationError: if the base allele is not in the reference set
+    """
     final_allele_name = base_allele_name
 
     if allele_name != base_allele_name:
@@ -655,6 +835,26 @@ def create_merged_sequence(allele_name, ambiguous_alleles, base_allele_name, seq
 
 # Construct and add a 'compound gene', e.g. TRBV5/6, based on an allele name, eg TRBV6-5*01_6.01_6.02_6.03
 def add_compound_gene(session, vdjbase_allele_name, pipeline_gene_name):
+    """
+    Add a compound gene to the database based on an allele name and pipeline gene name.
+
+    :param session: The database session to use.
+    :type session: sqlalchemy.orm.session.Session
+    :param vdjbase_allele_name: The name of the VDJbase allele to use as the basis for the compound gene.
+    :type vdjbase_allele_name: str
+    :param pipeline_gene_name: The name of the pipeline gene to add the compound gene to.
+    :type pipeline_gene_name: str
+    :return: None
+    :rtype: None
+
+    Construct and add a 'compound gene', e.g. TRBV5/6, based on an allele name, eg TRBV6-5*01_6.01_6.02_6.03
+
+    If the pipeline gene name already has a compound gene associated with it in the database, this function does nothing.
+
+    After constructing the gene name, this function adds a new Gene object to the database with the appropriate attributes,
+    including the newly constructed gene name. The locus_order and alpha_order attributes are set to the maximum values already
+    present in the database plus one. The pseudo_gene attribute is set to False.
+    """
     if pipeline_gene_name in compound_genes:
         return
 
@@ -696,6 +896,13 @@ def add_compound_gene(session, vdjbase_allele_name, pipeline_gene_name):
 
 # Add Allele records for *Del
 def add_deleted_alleles(session):
+    """
+    Add *Del Allele records for each gene
+
+    :param session: A SQLAlchemy session object.
+    :return: A list of strings, with one item indicating the start of the function operation.
+    :rtype: list of str
+    """
     result = ['Adding deleted alleles']
     genes = session.query(Gene).all()
 
@@ -719,6 +926,20 @@ def add_deleted_alleles(session):
 
 
 def process_haplotypes_and_stats(ds_dir, species, dataset, session):
+    """
+    Process haplotype files and update genotype information for each sample in the given dataset.
+
+    :param ds_dir: A string representing the path to the dataset directory.
+    :param species: A string representing the species of the samples.
+    :param dataset: A string representing the dataset name.
+    :param session: A SQLAlchemy session object.
+
+    :return: A list of strings containing the processing result message.
+
+    :raises OSError: If the dataset directory does not exist.
+
+    :raises Exception: If any error occurs while processing the haplotype files.
+    """
     result = ['Processing haplotype files']
     samples = session.query(Sample).all()
 
