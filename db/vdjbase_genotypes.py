@@ -1,5 +1,5 @@
 # TODO - I think we could do with some serious refactoring of the following functions
-# the startnng point might be to have one place where the allele name we are working with
+# the starting point might be to have one place where the allele name we are working with
 # - read from the genotype - is parsed into its components and other attributes (eg the
 # 'ambiguous' alleles/genes it cites - are assembled.
 import csv
@@ -21,6 +21,26 @@ new_alleles = {}
 
 
 def process_genotypes(ds_dir, species, dataset, session):
+    """
+    Process genotype files for samples in the given directory.
+
+    This function reads genotype files for each sample in the given directory, finds the assigned ambiguous alleles,
+    and parses the genotypes.
+
+    It logs allele audit information and returns a list of log messages.
+
+    :param ds_dir: The directory containing the genotype files.
+    :type ds_dir: str
+    :param species: The species of the samples.
+    :type species: str
+    :param dataset: The dataset (locus) of the samples.
+    :type dataset: str
+    :param session: The database session to use.
+    :type session: sqlalchemy.orm.session.Session
+    :return: A list of log messages.
+    :rtype: list of str
+    """
+
     result = ['Processing genotype files']
     samples = session.query(Sample).all()
 
@@ -258,6 +278,21 @@ def parse_ambiguous_allele(allele, gene, pipeline_names):
 
 # Read a genotype. Add the contents of each row to the database
 def sample_genotype(sample, pipeline_names, session):
+    """
+    Read a genotype file for the given sample and add the contents of each row to the database.
+
+    :param sample: The sample object for which to process the genotype.
+    :type sample: Sample
+
+    :param pipeline_names: A dictionary of ambiguous allele names and their pipeline-assigned names.
+    :type pipeline_names: dict
+
+    :param session: The database session object to use for database operations.
+    :type session: sqlalchemy.orm.session.Session
+
+    :return: A list of strings containing information about the processing of the genotype file.
+    :rtype: list
+    """
     processed_gene_types = []
 
     if sample.asc_genotype:
