@@ -666,8 +666,10 @@ def find_genomic_subjects(attribute_query, species, genomic_datasets, genomic_fi
 
         if allele_filters is not None:
             subjects_with_alleles = db.session.query(Subject.identifier)\
-                .join(SubjectSequence)\
-                .join(Sequence).filter(Sequence.name.in_(allele_filters['value'])).all()
+                .join(SubjectSequence, SubjectSequence.subject_id == Subject.id)\
+                .join(Sequence, SubjectSequence.sequence_id == Sequence.id)\
+                .filter(Sequence.name.in_(allele_filters['value']))\
+                .all()
             subjects_with_alleles = [x[0] for x in subjects_with_alleles]
             subject_query = subject_query.filter(Subject.identifier.in_(subjects_with_alleles))
 
@@ -789,7 +791,7 @@ class SamplesApi(Resource):
             return None
 
         reference_set_version = sample.reference_set_version
-        genotype = process_genomic_genotype(subject_name, [], session, False)
+        genotype = process_genomic_genotype(subject_name, [], session, True, False)
         documented = []
         undocumented = []
         deleted = []

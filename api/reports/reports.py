@@ -143,7 +143,7 @@ class ReportsRunApi(Resource):
                 genomic_filters = json.loads(args.genomic_filters)
 
                 if genomic_datasets is not None:
-                    genomic_samples = find_genomic_subjects([Subject.id, Subject.identifier, RefSeq.name], args.species, genomic_datasets, genomic_filters)
+                    genomic_samples = find_genomic_subjects([Subject.id, Subject.identifier], args.species, genomic_datasets, genomic_filters)
                 else:
                     genomic_samples = []
 
@@ -161,7 +161,7 @@ class ReportsRunApi(Resource):
 
             except Exception as e:
                 print("Bad Request: error parsing arguments")
-                raise BadRequest("Malformed request")
+                raise BadRequest(f"Malformed request: {e.description}")
 
 
             if len(rep_samples) == 0 and len(genomic_samples) == 0:
@@ -177,7 +177,7 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # IN THE IMPORT BELOW, CHOOSE THE REPORT YOU WISH TO DEBUG
-            #from api.reports.allele_appearance import run
+            #from api.reports.rep_single_genotype import run
             #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
             #raise BadRequest("we're debugging!")
 
