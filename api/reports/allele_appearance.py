@@ -143,11 +143,16 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     output_path = make_output_file('pdf')
     book = xlwt.Workbook()
 
+    output_created = False
     for row in multi_alleles:
         if len(row[1]) > 0:
             write_gene(book, row)
+            output_created = True
 
-    book.save(input_path)
+    if output_created:
+        book.save(input_path)
+    else:
+        raise BadRequest('No output from report')
 
     if format == 'xls':
         return send_report(input_path, format, '%s_allele_appearance.xls' % species)
