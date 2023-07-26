@@ -669,6 +669,7 @@ class SequencesApi(Resource):
         if len(sort_specs) > 0:
             for spec in sort_specs:
                 if spec['field'] in sequence_filters.keys():
+                    f = spec['field']
                     if 'sort' in sequence_filters[f] and sequence_filters[f]['sort'] == 'numeric':
                         ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
                     else:
