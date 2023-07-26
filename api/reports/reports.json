@@ -462,6 +462,98 @@
       "format": [
         "xls"
       ]
+    },
+    "novel_haplotypes": {
+      "title": "Halotypes for novel allele inferences",
+      "description": "Itemises for each novel inference the samples that provide haplotyping evidence",
+      "thumbnail": "allele_support.png",
+      "scope": [
+        "rep_sample"
+      ],
+      "params": [
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": [
+            "Exclude",
+            "Include"
+          ]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": [
+            "Locus",
+            "Alphabetic"
+          ]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        },
+        {
+          "id": "read_length",
+          "type": "select",
+          "label": "",
+          "options": [
+            "Only include inferences from full-length reads",
+            "Include inferences from full-length and short reads"
+          ]
+        }
+      ],
+      "filter_params": true,
+      "format": [
+        "xls"
+      ]
+    },
+    "novel_samples": {
+      "title": "Sample support for novel allele inferences",
+      "description": "Itemises for each AIRR-seq novel inference the samples that support them, with associated read counts",
+      "thumbnail": "allele_support.png",
+      "scope": [
+        "rep_sample"
+      ],
+      "params": [
+        {
+          "id": "ambiguous_alleles",
+          "type": "select",
+          "label": "Ambiguous Alleles",
+          "options": [
+            "Exclude",
+            "Include"
+          ]
+        },
+        {
+          "id": "sort_order",
+          "type": "select",
+          "label": "Gene Sort Order",
+          "options": [
+            "Locus",
+            "Alphabetic"
+          ]
+        },
+        {
+          "id": "f_kdiff",
+          "type": "decimal",
+          "label": "Min Kdiff"
+        },
+        {
+          "id": "read_length",
+          "type": "select",
+          "label": "",
+          "options": [
+            "Only include inferences from full-length reads",
+            "Include inferences from full-length and short reads"
+          ]
+        }
+      ],
+      "filter_params": true,
+      "format": [
+        "xls"
+      ]
     }
   }
 }
