@@ -54,6 +54,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     output_path = make_output_file('csv')
     write_csv(output_path, results)
-    return send_report(output_path, 'csv', f'{species}_allele_support.csv')
+    return send_report(output_path, 'csv', f'{species}_novels_in_samples.csv')
 
 
