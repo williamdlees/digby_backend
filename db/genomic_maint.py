@@ -117,7 +117,7 @@ def process_reference_assembly(session, ref, species):
     if ref['sense'] == '-':
         ref_seqs[ref_seq_name] = simple.reverse_complement(ref_seqs[ref_seq_name])
 
-    simple.write_fasta(ref_seqs, os.path.join('samples', species + '_' + ref['sequence_file']))
+    simple.write_fasta(os.path.join('samples', species + '_' + ref['sequence_file']), ref_seqs)
 
     save_genomic_ref_seq(session, ref['name'], ref_seqs[ref_seq_name], ref['reference'], ref['chromosome'], ref['start'], ref['end'])
     reference_features = read_bed_files(ref['locations'], ref['sense'], len(ref_seqs[ref_seq_name]))

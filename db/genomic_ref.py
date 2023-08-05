@@ -6,7 +6,7 @@
 import importlib.util
 
 from receptor_utils import simple_bio_seq as simple
-from receptor_utils import number_ighv
+from receptor_utils import number_v
 from db.genomic_db import Sequence, Gene
 import os
 
@@ -58,7 +58,7 @@ def update_genomic_ref(session, ref_file):
         notes = ''
 
         if 'V' in name:
-            _, _, notes = number_ighv.gap_sequence(seq.replace('.', ''), {name: seq}, {name: seq.replace('.', '')})
+            _, _, notes = number_v.gap_sequence(seq.replace('.', ''), {name: seq}, {name: seq.replace('.', '')})
 
             if not notes:
                 functionality = 'Functional'
