@@ -4,6 +4,8 @@ import os
 
 from db.genomic_db_functions import add_feature_to_ref
 
+from receptor_utils import simple_bio_seq as simple
+
 
 def build_gff(session, dataset_dir):
     details = session.query(Details).one_or_none()
@@ -149,8 +151,13 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
     if len(sequence.sequence) > 0:
         if 'D' in cigar_string:
             sequence.sequence = sequence.sequence.replace('-', '')
+        
+        seq = sequence.sequence
+        if feature.strand == '-':
+            seq = simple.reverse_complement(seq)
+
         return '%s\t0\t%s\t%d\t255\t%s\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (
-            sequence.name, ref_seq.name, feature.start, cigar_string, sequence.sequence, legend)
+            sequence.name, ref_seq.name, feature.start, cigar_string, seq, legend)
 
 
 def make_cigar(sequence):

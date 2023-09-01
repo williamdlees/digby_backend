@@ -100,8 +100,8 @@
           "type": "select",
           "label": "Show genomic alleles",
           "options": [
-            "Only if fully haplotyped",
-            "Fully and partially haplotyped"
+            "Fully and partially haplotyped",
+            "Only if fully haplotyped"
           ]
         }
       ],

@@ -53,12 +53,15 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
     feature_id = 1
 
     for row in rows:
+        if 'sense' in row:
+            sense = row['sense']
+
         if not row['vdjbase_allele']:
             continue        # probably an incomplete/fragmentary row
 
         gene_type = row['genotyper_gene'][3]
 
-        if gene_type in ['V', 'D', 'J']:
+        if gene_type in ['V', 'D', 'J', 'C']:
             seq = find_allele_by_name(session, row['vdjbase_allele'])
 
             if not seq:
@@ -79,8 +82,12 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                 if not feature:
                     feature_id = session.query(Feature).count()
 
-                    start = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_2']['start'] + 11
-                    end = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_2']['end']
+                    if 'REGION' in reference_features[subject.ref_seq.name][seq.gene.name]:
+                        start = reference_features[subject.ref_seq.name][seq.gene.name]['REGION']['start']
+                        end = reference_features[subject.ref_seq.name][seq.gene.name]['REGION']['end']
+                    else:
+                        start = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_2']['start'] + 11
+                        end = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_2']['end']
 
                     # if there are gaps in the alignment against the reference assembly, carry these into the feature
                     # TODO - this shouldn't be needed any longer now: gaps are maintained in the CIGAR, not as dots
@@ -91,55 +98,63 @@ def process_igenotyper_record(session, species, dataset_dir, subject, annotation
                     else:
                         feature_seq = seq.sequence
 
-                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, row['V-REGION_CIGAR'], 'CDS', start, end, '+',
+                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, row['V-REGION_CIGAR'], 'CDS', start, end, sense,
                                                  f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
-                add_feature('V-NONAMER', 'NONAMER', reference_features, row, seq, session, subject)
-                add_feature('V-SPACER', 'SPACER', reference_features, row, seq, session, subject)
-                add_feature('V-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, subject)
-                add_feature('L-PART2', 'EXON_2', reference_features, row, seq, session, subject)
-                add_feature('V-INTRON', 'INTRON', reference_features, row, seq, session, subject)
-                add_feature('L-PART1', 'EXON_1', reference_features, row, seq, session, subject)
-                add_feature('V-UTR', 'UTR', reference_features, row, seq, session, subject)
+                add_feature('V-NONAMER', 'NONAMER', reference_features, row, seq, session, subject, sense)
+                add_feature('V-SPACER', 'SPACER', reference_features, row, seq, session, subject, sense)
+                add_feature('V-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, subject, sense)
+                add_feature('L-PART2', 'L-PART2', reference_features, row, seq, session, subject, sense)
+                add_feature('V-INTRON', 'INTRON', reference_features, row, seq, session, subject, sense)
+                add_feature('L-PART1', 'EXON_1', reference_features, row, seq, session, subject, sense)
+                add_feature('V-UTR', 'UTR', reference_features, row, seq, session, subject, sense)
 
             elif gene_type == 'D':
                 if not feature:
                     feature_id = session.query(Feature).count()
                     start = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_1']['start']
                     end = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_1']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION_CIGAR'], 'CDS', start, end, '+',
+                    feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION_CIGAR'], 'CDS', start, end, sense,
                                                  f"Name={seq.name}_D-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
-                add_feature('D-3_NONAMER', '3_NONAMER', reference_features, row, seq, session, subject)
-                add_feature('D-3_SPACER', '3_SPACER', reference_features, row, seq, session, subject)
-                add_feature('D-3_HEPTAMER', '3_HEPTAMER', reference_features, row, seq, session, subject)
-                add_feature('D-5_NONAMER', '5_NONAMER', reference_features, row, seq, session, subject)
-                add_feature('D-5_SPACER', '5_SPACER', reference_features, row, seq, session, subject)
-                add_feature('D-5_HEPTAMER', '5_HEPTAMER', reference_features, row, seq, session, subject)
+                add_feature('D-3_NONAMER', '3_NONAMER', reference_features, row, seq, session, subject, sense)
+                add_feature('D-3_SPACER', '3_SPACER', reference_features, row, seq, session, subject, sense)
+                add_feature('D-3_HEPTAMER', '3_HEPTAMER', reference_features, row, seq, session, subject, sense)
+                add_feature('D-5_NONAMER', '5_NONAMER', reference_features, row, seq, session, subject, sense)
+                add_feature('D-5_SPACER', '5_SPACER', reference_features, row, seq, session, subject, sense)
+                add_feature('D-5_HEPTAMER', '5_HEPTAMER', reference_features, row, seq, session, subject, sense)
 
             elif gene_type == 'J':
                 if not feature:
                     feature_id = session.query(Feature).count()
                     start = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_1']['start']
                     end = reference_features[subject.ref_seq.name][seq.gene.name]['EXON_1']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION_CIGAR'], 'CDS', start, end, '+',
+                    feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION_CIGAR'], 'CDS', start, end, sense,
                                                  f"Name={seq.name}_J-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
-                add_feature('J-NONAMER', 'NONAMER', reference_features, row, seq, session, subject)
-                add_feature('J-SPACER', 'SPACER', reference_features, row, seq, session, subject)
-                add_feature('J-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, subject)
+                add_feature('J-NONAMER', 'NONAMER', reference_features, row, seq, session, subject, sense)
+                add_feature('J-SPACER', 'SPACER', reference_features, row, seq, session, subject, sense)
+                add_feature('J-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, subject, sense)
 
-        add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, subject)
+            elif gene_type == 'C':
+                if not feature:
+                    feature_id = session.query(Feature).count()
+                    start = reference_features[subject.ref_seq.name][seq.gene.name]['GENE']['start']
+                    end = reference_features[subject.ref_seq.name][seq.gene.name]['GENE']['end']
+                    feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
+                                                 f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, subject.ref_seq)
 
+                link_sequence_to_feature(seq, feature)
 
+        add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, subject, sense)
     session.commit()
 
 
 # Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
-def add_feature(feature, bed_name, reference_features, row, seq, session, subject):
+def add_feature(feature, bed_name, reference_features, row, seq, session, subject, strand='+'):
     if feature not in row or not row[feature]:
         return
 
@@ -163,13 +178,9 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, subjec
             breakpoint()
 
         start = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['start']
+        end = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['end']
 
-        if feature != 'L-PART2':
-            end = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['end']
-        else:
-            end = reference_features[subject.ref_seq.name][seq.gene.name][bed_name]['start'] + 11
-
-        feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence,  row[feature + '_CIGAR'], 'UTR', start, end, '+',
+        feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence,  row[feature + '_CIGAR'], 'UTR', start, end, strand,
                                      f"Name={feature_seq.name};ID={feature_id}", feature_id, subject.ref_seq)
 
     link_sequence_to_feature(feature_seq, feature_rec)
@@ -198,9 +209,13 @@ def add_gene_level_features(session, ref, reference_features):
                 elif feature_type == 'INTRON':
                     add_gene_level_subfeature(locus, feature, 'V-INTRON', f'{locus}VIntron', feature_id, parent_id, ref)
                 elif feature_type == 'EXON_1':
-                    add_gene_level_subfeature(locus, feature, 'L_PART-1', f'{locus}VLP1', feature_id, parent_id, ref)
+                    add_gene_level_subfeature(locus, feature, 'L-PART1', f'{locus}VLP1', feature_id, parent_id, ref)
                 elif feature_type == 'UTR':
                     add_gene_level_subfeature(locus, feature, 'V-UTR', f'{locus}VUTR', feature_id, parent_id, ref)
+                elif feature_type == 'L-PART2':
+                    add_gene_level_subfeature(locus, feature, 'L-PART2', f'{locus}VLP2', feature_id, parent_id, ref)
+                elif feature_type == 'REGION':
+                    add_gene_level_subfeature(locus, feature, 'V-REGION', f'{locus}VRegion', feature_id, parent_id, ref)
 
             elif 'D' in feature['gene']:
                 if feature_type == 'GENE':
@@ -236,23 +251,19 @@ def add_gene_level_features(session, ref, reference_features):
                 elif feature_type == 'EXON_1':
                     add_gene_level_subfeature(locus, feature, 'J-REGION', f'{locus}JRegion', feature_id, parent_id, ref)
 
+            elif 'C' in feature['gene']:
+                if feature_type == 'GENE':
+                    add_feature_to_ref(feature['gene'], 'gene', 'C-GENE', feature['ref_seq'], '', 'gene', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", feature_id, ref)
+                    feature_id += 1
+                    add_feature_to_ref(feature['gene'], 'gene', 'C-GENE', feature['ref_seq'], '', 'mRNA', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", parent_id, ref)
             feature_id += 1
 
 
 # Helper function for add_gene_level_features
 def add_gene_level_subfeature(locus, feature, imgt_feature_name, name_prefix, feature_id, parent_id, ref):
-    if imgt_feature_name == 'EXON_2':
-        name = f"{locus}VRegion{feature['gene'].replace(locus + 'V', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-        add_feature_to_ref(name, 'gene', 'V-REGION', feature['ref_seq'], '', 'CDS', feature['start']+11, feature['end'], '+',
-                           f"Name={feature['gene']}_V-REGION;ID={feature_id}", parent_id, ref)
-
-        name = f"{locus}VLpart2{feature['gene'].replace(locus + 'V', '')}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-        add_feature_to_ref(name, 'gene', 'L_PART-2', feature['ref_seq'], '', 'CDS', feature['start'], feature['start']+11, '+',
-                           f"Name={feature['gene']}_L_PART2;ID={feature_id}", parent_id, ref)
-    else:
-        name = f"{name_prefix}{feature['gene'][3:]}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
-        add_feature_to_ref(name, 'gene', imgt_feature_name, feature['ref_seq'], '', 'CDS', feature['start'], feature['end'], '+',
-                           f"Name={feature['gene']}_{imgt_feature_name};ID={feature_id}", parent_id, ref)
+    name = f"{name_prefix}{feature['gene'][3:]}*{sha256(feature['ref_seq'].encode('utf-8')).hexdigest()[-4:]}"
+    add_feature_to_ref(name, 'gene', imgt_feature_name, feature['ref_seq'], '', 'CDS', feature['start'], feature['end'], '+',
+                        f"Name={feature['gene']}_{imgt_feature_name};ID={feature_id}", parent_id, ref)
 
 
 
