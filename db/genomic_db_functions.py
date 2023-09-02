@@ -2,7 +2,7 @@
 
 from receptor_utils import simple_bio_seq as simple
 from receptor_utils import novel_allele_name
-from db.genomic_db import RefSeq, Feature, Subject, SubjectSequence, Sequence, Study, Details, Assembly, SequenceFeature, Gene
+from db.genomic_db import RefSeq, Feature, Subject, SampleSequence, Sequence, Study, Details, Assembly, Gene, Sample
 from sqlalchemy import and_
 from db.genomic_ref import find_type
 import datetime
@@ -63,18 +63,23 @@ def save_genomic_sequence(session, name, gene, allele_type, novel, deleted, func
     return sequence
 
 
-def save_genomic_subject(session, identifier, name_in_study, annotation_path, annotation_method, annotation_format, annotation_reference, reference_assembly, study, reference_set_version):
-    subject = Subject(identifier=identifier, name_in_study=name_in_study, annotation_path=annotation_path, annotation_method=annotation_method,
-                      annotation_format=annotation_format, annotation_reference=annotation_reference, reference_set_version=reference_set_version)
+def save_genomic_subject(identifier, name_in_study, study):
+    subject = Subject(identifier=identifier, name_in_study=name_in_study)
+    study.subjects.append(subject)
+    return subject
+
+
+def save_genomic_sample(session, identifier, subject, name_in_study, reference_assembly, annotation_format):
+    sample = Sample(identifier=identifier, name_in_study=name_in_study, annotation_format=annotation_format)
     if reference_assembly:
         ref = session.query(RefSeq).filter(RefSeq.name == reference_assembly).one_or_none()
         if not ref:
             print(f'Error: reference assembly {reference_assembly} not found')
             return None
-        ref.subjects.append(subject)
+        ref.samples.append(sample)
 
-    study.subjects.append(subject)
-    return subject
+    subject.samples.append(sample)
+    return sample
 
 
 def save_genomic_assembly(identifier, reference, sequence_file, sequence, chromosome, start, end, subject):
@@ -218,14 +223,14 @@ def find_all_alleles(session, gene_name):
     return sequences
 
 
-def update_subject_sequence_link(session, h, subject, sequence):
-    ss = session.query(SubjectSequence).filter(SubjectSequence.subject == subject, SubjectSequence.sequence == sequence).one_or_none()
+def update_sample_sequence_link(session, h, sample, sequence):
+    ss = session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
 
     if not ss:
-        subject.sequences.append(sequence)
+        sample.sequences.append(sequence)
         sequence.appearances += 1
         session.flush()
-        ss = session.query(SubjectSequence).filter(SubjectSequence.subject == subject, SubjectSequence.sequence == sequence).one_or_none()
+        ss = session.query(SampleSequence).filter(SampleSequence.sample == sample, SampleSequence.sequence == sequence).one_or_none()
         ss.haplotype = h
         ss.haplo_count = 1
 

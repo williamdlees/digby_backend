@@ -25,18 +25,18 @@ class RefSeq(Base):
     start = Column(BigInteger)
     end = Column(BigInteger)
     reference = Column(String(500))
-    subjects = relationship("Subject", backref='ref_seq')
+    samples = relationship("Sample", backref='ref_seq')
 
 
-# The association proxy extension is used for many-many relationshups: see
+# The association proxy extension is used for many-many relationships: see
 # https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html
 
-class SubjectSequence(Base):
-    __tablename__ = 'subject_sequence'
-    subject_id = Column(ForeignKey('subject.id'), primary_key=True)
+class SampleSequence(Base):
+    __tablename__ = 'sample_sequence'
+    sample_id = Column(ForeignKey('sample.id'), primary_key=True)
     sequence_id = Column(ForeignKey('sequence.id'), primary_key=True)
-    subject = relationship('Subject', backref='sequence_associations', cascade="all")
-    sequence = relationship('Sequence', backref='subject_associations', cascade="all")
+    sample = relationship('Sample', backref='sequence_associations', cascade="all")
+    sequence = relationship('Sequence', backref='sample_associations', cascade="all")
     haplo_count = Column(Integer)
     haplotype = Column(String(50))
 
@@ -82,7 +82,7 @@ class Sequence(Base):
     sequence = Column(Text(1000))
     gapped_sequence = Column(Text(1000))
     gene_id = Column(Integer, ForeignKey('gene.id'))
-    subjects = relationship('Subject', secondary='subject_sequence', back_populates='sequences')
+    samples = relationship('Sample', secondary='sample_sequence', back_populates='sequences')
     features = relationship('Feature', secondary='sequence_feature', back_populates='sequences')
 
 
@@ -95,24 +95,35 @@ class Subject(Base):
     father_in_study = Column(String(100))
     age = Column(Integer)
     sex = Column(String(10))
-    annotation_path = Column(String(200))
-    annotation_method = Column(String(100))
-    annotation_format = Column(String(100))
-    annotation_reference = Column(String(100))
-    reference_set_version = Column(String(100))
     self_ethnicity = Column(String(100))
     grouped_ethnicity = Column(String(100))
     population = Column(String(100))
     population_abbr = Column(String(100))
     super_population = Column(String(100))
+
+    study_id = Column(Integer, ForeignKey('study.id'))
+    samples = relationship("Sample", backref='subject')
+
+
+class Sample(Base):
+    __tablename__ = 'sample'
+    id = Column(Integer, primary_key=True)
+    identifier = Column(String(100))
+    name_in_study = Column(String(100))
+    annotation_path = Column(String(200))
+    annotation_method = Column(String(100))
+    annotation_format = Column(String(100))
+    annotation_reference = Column(String(100))
+    reference_assembly = Column(String(100))
+    reference_set_version = Column(String(100))
     locus_coverage = Column(Float)
     sequencing_platform = Column(String(200))
     assembly_method = Column(String(100))
     DNA_source = Column(String(100))
 
     ref_seq_id = Column(Integer, ForeignKey('ref_seq.id'))
-    study_id = Column(Integer, ForeignKey('study.id'))
-    sequences = relationship('Sequence', secondary='subject_sequence', back_populates='subjects')
+    subject_id = Column(Integer, ForeignKey('subject.id'))
+    sequences = relationship('Sequence', secondary='sample_sequence', back_populates='samples')
 
 
 class Assembly(Base):

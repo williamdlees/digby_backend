@@ -3,9 +3,9 @@ import os.path
 import shutil
 import csv
 
-from db.genomic_db import RefSeq, Feature, Sequence, Subject, SubjectSequence, Study
+from db.genomic_db import RefSeq, Feature, Sequence, Subject, SampleSequence, Study
 from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_study, add_feature_to_ref, \
-    save_genomic_sequence, save_genomic_ref_seq, find_allele_by_seq, get_ref_set, find_or_assign_allele, link_sequence_to_feature, update_subject_sequence_link
+    save_genomic_sequence, save_genomic_ref_seq, find_allele_by_seq, get_ref_set, find_or_assign_allele, link_sequence_to_feature, update_sample_sequence_link
 
 
 def process_digger_record(session, species, assembly, dataset_dir, subject, annotation_file, reference_features):

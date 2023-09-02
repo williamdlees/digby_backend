@@ -10,9 +10,8 @@ import os
 import yaml
 
 from db.genomic_ref import update_genomic_ref, read_gene_order
-from db.digger_assembly import process_digger_record
 from db.genomic_db import Base, RefSeq
-from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_assembly, save_genomic_dataset_details, save_genomic_ref_seq
+from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_sample, save_genomic_dataset_details, save_genomic_ref_seq
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
 
@@ -142,19 +141,15 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                                    study['Study_description'],
                                    study['Researcher'],
                                    study['Reference'],
-                                   study['Contact'],
+                                   study['Contact']
                                    )
     session.commit()
-    for name, subject in study['Subjects'].items():
-        needed_subject_items = {'Name_in_study', 'Annotation_file', 'Annotation_format', 'Annotation_method', 'Annotation_reference',
-                                'Reference_assembly'}
+    for subject_name, subject in study['Subjects'].items():
+        needed_subject_items = {'Name_in_study'}
         if needed_subject_items - set(subject.keys()):
             raise ImportException(f'Error - subject attributes missing: {",".join(list(needed_subject_items - set(subject.keys())))}')
 
-        report_link = '/'.join([species.replace(' ', '_'), dataset.replace(' ', '_'), subject['Annotation_file']])
-        subject_obj = save_genomic_subject(session, name, subject['Name_in_study'], report_link,
-                                           subject['Annotation_method'], subject['Annotation_format'], subject['Annotation_reference'],
-                                           subject['Reference_assembly'], study_obj, reference_set_version)
+        subject_obj = save_genomic_subject(subject_name, subject['Name_in_study'], study_obj)
 
         optional_subject_items = [
             ('Self-reported Ethnicity', 'self_ethnicity'),
@@ -166,50 +161,33 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
             ('Name_in_study', 'name_in_study'),
             ('Mother_in_study', 'mother_in_study'),
             ('Father_in_study', 'father_in_study'),
-            ('Sequencing_platform', 'sequencing_platform'),
-            ('Assembly_method', 'assembly_method'),
-            ('DNA_source', 'DNA_source'),
         ]
 
         for yml_attr, sql_attr in optional_subject_items:
             if yml_attr in subject and subject[yml_attr]:
                 setattr(subject_obj, sql_attr, subject[yml_attr])
 
-        assembly_objs = []
-        for assembly in subject['Assemblies'].values():
-            needed_assembly_items = {'Assembly_id', 'Assembly_reference', 'Assembly_file', 'Chromosome', 'Start_CoOrd', 'End_CoOrd'}
-            if needed_assembly_items - set(assembly.keys()):
-                raise ImportException(f'Error - assembly attributes missing: {",".join(list(needed_assembly_items - set(assembly.keys())))}')
+        for name, sample in study['Samples'].items():
+            if sample['Subject_name'] == subject_name:
+                needed_sample_items = {'Sample_name_in_study', 'Subject_name', 'Reference_assembly', 'Annotation_format'}
+                if needed_sample_items - set(sample.keys()):
+                    raise ImportException(f'Error - sample attributes missing: {",".join(list(needed_sample_items - set(sample.keys())))}')
 
-            if '>' in assembly['Assembly_file']:
-                filename, seqname = assembly['Assembly_file'].split('>')
-                seqs = simple.read_fasta(os.path.join(dataset_dir, filename))
+                sample_obj = save_genomic_sample(session,
+                                                name, 
+                                                subject_obj,
+                                                sample['Sample_name_in_study'], 
+                                                sample['Reference_assembly'], 
+                                                sample['Annotation_format']) 
 
-                if seqname not in seqs:
-                    raise ImportException(f'Sequence {seqname} not found in assembly file {filename}')
 
-                assembly_seq = seqs[seqname]
-            else:
-                assembly_seq = simple.read_single_fasta(os.path.join(dataset_dir, assembly['Assembly_file']))
+                # IMGT and Digger formats not currently supported
+                if sample_obj.annotation_format == 'IGenotyper':
+                    if not reference_features:
+                        raise ImportException('Error: Igenotyper records require a reference assembly and one or more bed files')
 
-            assembly_obj = save_genomic_assembly(assembly['Assembly_id'], assembly['Assembly_reference'],
-                                                 assembly['Assembly_file'], assembly_seq, assembly['Chromosome'], assembly['Start_CoOrd'],
-                                                 assembly['End_CoOrd'], subject_obj)
-
-            assembly_objs.append(assembly_obj)
-
-        if subject_obj.annotation_format == 'IMGT':
-            # process_imgt_assembly(assembly_obj)
-            pass
-        elif subject_obj.annotation_format == 'VDJbase':
-            for assembly_obj in assembly_objs:
-                process_digger_record(session, species, assembly_obj, dataset_dir, subject_obj, subject['Annotation_file'], reference_features)
-        elif subject_obj.annotation_format == 'IGenotyper':
-            if not reference_features:
-                raise ImportException('Error: Igenotyper records require a reference assembly and one or more bed files')
-
-            process_igenotyper_record(session, species, dataset_dir, subject_obj, subject['Annotation_file'], reference_features)
-        else:
-            raise ImportException('Error: in yml file: Invalid type/format %s' % (assembly['Annotation_format']))
+                    process_igenotyper_record(session, dataset_dir, sample_obj, sample['Annotation_file'], reference_features)
+                else:
+                    raise ImportException('Error: in yml file: Invalid type/format %s' % (sample_obj.annotation_format))
 
 
