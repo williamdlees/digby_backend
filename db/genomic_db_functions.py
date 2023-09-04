@@ -76,9 +76,11 @@ def save_genomic_sample(session, identifier, subject, name_in_study, reference_a
         if not ref:
             print(f'Error: reference assembly {reference_assembly} not found')
             return None
+        #sample.reference_assembly = ref
         ref.samples.append(sample)
 
     subject.samples.append(sample)
+    session.commit()
     return sample
 
 
@@ -294,5 +296,18 @@ def find_feature_by_name(session, feature_type, name, ref_seq):
                      Feature.refseq == ref_seq)) \
         .one_or_none()
     return feature
+
+
+# Once all samples are onboard, calculate the number of subjects that each sequence appears in
+def calculate_appearances(session):
+    seqs = session.query(Sequence).all()
+    for seq in seqs:
+        subject_count = session.query(Subject) \
+            .join(Sample, Sample.subject_id == Subject.id) \
+            .join(SampleSequence, SampleSequence.sample_id == Sample.id) \
+            .join(Sequence, Sequence.id == SampleSequence.sequence_id) \
+            .filter(Sequence.id == seq.id) \
+            .distinct().count()
+        seq.appearances = subject_count
 
 

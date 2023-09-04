@@ -13,7 +13,7 @@ def build_gff(session, dataset_dir):
 
     ref_seqs = session.query(RefSeq).all()
     for ref_seq in ref_seqs:
-        name_prefix = f"{species.replace(' ', '_')}_{ref_seq.name}"
+        name_prefix = f"{species.replace(' ', '_')}_{ref_seq.name.split(':')[0]}"
         build_ref_seq_gff(session, dataset_dir, ref_seq, name_prefix)
         phased_feature_alignment(dataset_dir, name_prefix + '_phased', ref_seq, session)
         unphased_feature_alignment(dataset_dir, name_prefix, ref_seq, session)

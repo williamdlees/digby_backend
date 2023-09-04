@@ -8,7 +8,7 @@ from api.reports.report_utils import collate_samples, chunk_list, collate_gen_sa
 from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file
 from app import vdjbase_dbs, genomic_dbs
-from db.genomic_db import Subject as GenomicSubject
+from db.genomic_db import Sample as GenomicSample
 
 from db.vdjbase_airr_model import Sample
 import os
@@ -50,23 +50,23 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     for dataset in gen_samples_by_dataset.keys():
         session = genomic_dbs[species][dataset].session
-        subjects = session.query(GenomicSubject).filter(GenomicSubject.identifier.in_(gen_samples_by_dataset[dataset])).all()
+        samples = session.query(GenomicSample).filter(GenomicSample.identifier.in_(gen_samples_by_dataset[dataset])).all()
 
-        if not subjects:
+        if not samples:
             continue
 
-        sample_list = [(subject.identifier, subject.annotation_path, subject.identifier) for subject in subjects]
+        sample_list = [(sample.identifier, sample.annotation_path, sample.identifier) for sample in samples]
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
         all_wanted_genes |= set(wanted_genes)
 
         # now that we have the filtered samples, build a richer list for genomic processing
         filtered_samples = [s[0] for s in sample_list]
-        sample_list = [(subject.identifier, subject.name_in_study, subject.study.study_name, subject.annotation_path) for subject in subjects if subject.identifier in filtered_samples]
+        sample_list = [(sample.identifier) for sample in samples if sample.identifier in filtered_samples]
 
         if len(wanted_genes) > 0:
-            for (subject_name, name_in_study, study_name, annotation_path) in sample_list:
-                genotype = process_genomic_genotype(subject_name, all_wanted_genes, session, not params['f_pseudo_genes'], fully_haplotyped)
-                genotypes[subject_name] = genotype
+            for (sample_name) in sample_list:
+                genotype = process_genomic_genotype(sample_name, all_wanted_genes, session, not params['f_pseudo_genes'], fully_haplotyped)
+                genotypes[sample_name] = genotype
 
     if len(genotypes) == 0:
         raise BadRequest('No records matching the filter criteria were found.')

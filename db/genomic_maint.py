@@ -11,7 +11,7 @@ import yaml
 
 from db.genomic_ref import update_genomic_ref, read_gene_order
 from db.genomic_db import Base, RefSeq
-from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_sample, save_genomic_dataset_details, save_genomic_ref_seq
+from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_sample, save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
 
@@ -152,12 +152,13 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
         subject_obj = save_genomic_subject(subject_name, subject['Name_in_study'], study_obj)
 
         optional_subject_items = [
+            ('Age', 'age'),
+            ('Sex', 'sex'),
             ('Self-reported Ethnicity', 'self_ethnicity'),
             ('Grouped Ethnicity', 'grouped_ethnicity'),
             ('Population', 'population'),
             ('Pop', 'population_abbr'),
             ('Superpopulation', 'super_population'),
-            ('Locus_coverage', 'locus_coverage'),
             ('Name_in_study', 'name_in_study'),
             ('Mother_in_study', 'mother_in_study'),
             ('Father_in_study', 'father_in_study'),
@@ -178,8 +179,23 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                                                 subject_obj,
                                                 sample['Sample_name_in_study'], 
                                                 sample['Reference_assembly'], 
-                                                sample['Annotation_format']) 
+                                                sample['Annotation_format'],
+                                                ) 
 
+                optional_sample_items = [
+                    ('Annotation_file', 'annotation_file'),
+                    ('Annotation_method', 'annotation_method'),
+                    ('Annotation_reference', 'annotation_reference'),
+                    ('Reference_set_version', 'reference_set_version'),
+                    ('Locus_coverage', 'locus_coverage'),
+                    ('Sequencing_platform', 'sequencing_platform'),
+                    ('Assembly_method', 'assembly_method'),
+                    ('DNA_source', 'dna_source'),
+                ]
+
+                for yml_attr, sql_attr in optional_sample_items:
+                    if yml_attr in sample and sample[yml_attr]:
+                        setattr(sample_obj, sql_attr, sample[yml_attr])
 
                 # IMGT and Digger formats not currently supported
                 if sample_obj.annotation_format == 'IGenotyper':
@@ -190,4 +206,6 @@ def process_study(dataset, dataset_dir, reference_features, session, species, st
                 else:
                     raise ImportException('Error: in yml file: Invalid type/format %s' % (sample_obj.annotation_format))
 
-
+    session.commit()
+    calculate_appearances(session)
+    session.commit()

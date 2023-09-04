@@ -1,6 +1,6 @@
 # Functions to extract genotypes by database query
 
-from db.genomic_db import Subject as GenomicSubject, Gene as GenomicGene, Sequence as GenomicSequence, SubjectSequence as GenomicSubjectSequence
+from db.genomic_db import Subject as GenomicSubject, Sample as GenomicSample, Gene as GenomicGene, Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, SampleSequence as GenomicSampleSequence
 from db.vdjbase_model import Gene, Allele, AllelesSample
 from db.vdjbase_airr_model import Sample
 from receptor_utils.simple_bio_seq import read_csv
@@ -36,11 +36,11 @@ def fake_gene(gene_details, gene_name, subject):
     return rec
 
 
-def process_genomic_genotype(subject_name, wanted_genes, session, functional, fully_haplotyped):
-    allele_query = session.query(GenomicSubject.identifier, GenomicSequence.name, GenomicGene.name, GenomicSubjectSequence.haplotype)\
-        .filter(GenomicSubject.identifier == subject_name) \
-        .join(GenomicSubjectSequence, GenomicSubjectSequence.subject_id == GenomicSubject.id) \
-        .join(GenomicSequence, GenomicSubjectSequence.sequence_id == GenomicSequence.id) \
+def process_genomic_genotype(sample_name, wanted_genes, session, functional, fully_haplotyped):
+    allele_query = session.query(GenomicSample.identifier, GenomicSequence.name, GenomicGene.name, GenomicSampleSequence.haplotype)\
+        .filter(GenomicSample.identifier == sample_name) \
+        .join(GenomicSampleSequence, GenomicSampleSequence.sample_id == GenomicSample.id) \
+        .join(GenomicSequence, GenomicSampleSequence.sequence_id == GenomicSequence.id) \
         .filter(GenomicSequence.type.like('%REGION%')) \
         .join(GenomicGene, GenomicGene.id == GenomicSequence.gene_id)
 
@@ -87,7 +87,7 @@ def process_genomic_genotype(subject_name, wanted_genes, session, functional, fu
                 dropped.append(genes[gene_name])
                 del genes[gene_name]
 
-    geno_list = fake_genotype(subject_name, genes)
+    geno_list = fake_genotype(sample_name, genes)
     return pd.DataFrame(geno_list)
 
 

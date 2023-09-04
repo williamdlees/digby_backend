@@ -8,9 +8,9 @@ from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
 import json
 from werkzeug.exceptions import BadRequest
-from db.genomic_db import RefSeq, Subject
+from db.genomic_db import Sample as GenomicSample
 from db.vdjbase_airr_model import Sample as vdjb_Sample, SeqProtocol as vdjb_SeqProtocol
-from api.genomic.genomic import find_genomic_filter_params, find_genomic_subjects
+from api.genomic.genomic import find_genomic_filter_params, find_genomic_samples
 from api.vdjbase.vdjbase import find_vdjbase_samples, find_rep_filter_params
 from app import app
 import importlib
@@ -143,7 +143,7 @@ class ReportsRunApi(Resource):
                 genomic_filters = json.loads(args.genomic_filters)
 
                 if genomic_datasets is not None:
-                    genomic_samples = find_genomic_subjects([Subject.id, Subject.identifier], args.species, genomic_datasets, genomic_filters)
+                    genomic_samples = find_genomic_samples([GenomicSample.id, GenomicSample.identifier], args.species, genomic_datasets, genomic_filters)
                 else:
                     genomic_samples = []
 
@@ -177,7 +177,7 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # IN THE IMPORT BELOW, CHOOSE THE REPORT YOU WISH TO DEBUG
-            #from api.reports.rep_single_genotype import run
+            #from api.reports.rep_genotype import run
             #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
             #raise BadRequest("we're debugging!")
 
