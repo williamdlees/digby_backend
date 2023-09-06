@@ -1,0 +1,55 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Flask",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "app.py",
+                "FLASK_DEBUG": "1"
+            },
+            "args": [
+                "run",
+                "--no-debugger",
+                "--no-reload"
+            ],
+            "jinja": true,
+            "justMyCode": true
+        },
+        {
+            "name": "make_genomic_db - digby_private_data/IGK",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_genomic_db.py",
+            "args": ["Human", "IGK"],
+            "cwd": "D:/Research/digby_private_data/Genomic/Human/IGK",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "make_genomic_db - digby_private_data/IGH",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_genomic_db.py",
+            "args": ["Human", "IGH"],
+            "cwd": "D:/Research/digby_private_data/Genomic/Human/IGH",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "make_genomic_db - digby_private_data/IGL",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_genomic_db.py",
+            "args": ["Human", "IGL"],
+            "cwd": "D:/Research/digby_private_data/Genomic/Human/IGL",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
