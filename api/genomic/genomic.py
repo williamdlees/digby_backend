@@ -690,8 +690,12 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
                 v = r[k]
                 if isinstance(v, datetime):
                     r[k] = v.date().isoformat()
-                elif k == 'annotation_path' and 'http' not in v:
-                    r[k] = os.path.join(app.config['STATIC_LINK'], 'study_data/Genomic/samples', r[k])
+                elif k == 'annotation_path':
+                    if v is None:
+                        app.logger.error('No annotation path for sample %s' % r['sample_identifier'])
+                        r[k] = ''
+                    elif 'http' not in v:
+                        r[k] = os.path.join(app.config['STATIC_LINK'], 'study_data/Genomic/samples', r[k])
             r['dataset'] = dataset
             results.append(r)
 

@@ -153,8 +153,8 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
             sequence.sequence = sequence.sequence.replace('-', '')
         
         seq = sequence.sequence
-        if feature.strand == '-':
-            seq = simple.reverse_complement(seq)
+        #if feature.strand == '-':                      # never reverse because the reference sequence is reversed if -ve
+        #    seq = simple.reverse_complement(seq)
 
         return '%s\t0\t%s\t%d\t255\t%s\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (
             sequence.name, ref_seq.name, feature.start, cigar_string, seq, legend)
