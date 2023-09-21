@@ -35,8 +35,8 @@ def save_genomic_dataset_details(session, species, locus):
         session.add(details)
 
 
-def save_genomic_ref_seq(session, name, ref_sequence, reference, chromosome, start, end):
-    ref_seq = RefSeq(name=name, sequence='', length=len(ref_sequence), reference=reference, chromosome=chromosome, start=start, end=end)
+def save_genomic_ref_seq(session, name, ref_sequence, reference, chromosome, start, end, sense):
+    ref_seq = RefSeq(name=name, sequence='', length=len(ref_sequence), reference=reference, chromosome=chromosome, start=start, end=end, sense=sense)
     session.add(ref_seq)
     return ref_seq
 

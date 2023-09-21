@@ -113,12 +113,14 @@ def process_reference_assembly(session, ref, species):
     ref_seqs = simple.read_fasta(ref['sequence_file'])
     ref_seq_name = list(ref_seqs.keys())[0]
 
+    # the ref is always stored in forward sense
+    # we record the sense in which it is presented. This is used in conjunction with the sense markers in imported_genes.csv
     if ref['sense'] == '-':
         ref_seqs[ref_seq_name] = simple.reverse_complement(ref_seqs[ref_seq_name])
 
     simple.write_fasta(os.path.join('samples', species + '_' + ref['sequence_file']), ref_seqs)
 
-    save_genomic_ref_seq(session, ref['name'], ref_seqs[ref_seq_name], ref['reference'], ref['chromosome'], ref['start'], ref['end'])
+    save_genomic_ref_seq(session, ref['name'], ref_seqs[ref_seq_name], ref['reference'], ref['chromosome'], ref['start'], ref['end'], ref['sense'])
     reference_features = read_bed_files(ref['locations'], ref['sense'], len(ref_seqs[ref_seq_name]))
     return reference_features
 

@@ -25,6 +25,7 @@ class RefSeq(Base):
     start = Column(BigInteger)
     end = Column(BigInteger)
     reference = Column(String(500))
+    sense = Column(String(1))
     samples = relationship("Sample", backref='ref_seq')
 
 
