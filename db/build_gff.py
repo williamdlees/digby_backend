@@ -5,6 +5,7 @@ import os
 from db.genomic_db_functions import add_feature_to_ref
 
 from receptor_utils import simple_bio_seq as simple
+from db.cigar import Cigar
 
 
 def build_gff(session, dataset_dir):
@@ -136,18 +137,9 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
         legend += f" ({sequence.appearances})"
     else:
         legend += f" ({sequence.appearances}, {sequence.functional[0]})"
-    # IGenotyper records will always have a cigar, but we may need this code for other formats
-    # Likewise the handling of gaps is kept here in case it is needed
-    if feature.feature_cigar:
-        cigar_string = feature.feature_cigar
-    else:
-        if '.' not in sequence.sequence:
-            cigar_string = f"{len(sequence.sequence)}M"
-        else:
-            cigar_string = make_cigar(sequence)
-
-        sequence.sequence = sequence.sequence.replace('.', '')
-        session.commit()
+    # IGenotyper records will always have a cigar string
+    
+    cigar_string = feature.feature_cigar
     if len(sequence.sequence) > 0:
         if 'D' in cigar_string:
             sequence.sequence = sequence.sequence.replace('-', '')
@@ -156,38 +148,11 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
         if feature.strand != ref_seq.sense:
             seq = simple.reverse_complement(seq)
 
+        if ref_seq.sense == '-':
+            cigar_string = Cigar(cigar_string)._reverse_cigar()
+
         return '%s\t0\t%s\t%d\t255\t%s\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (
             sequence.name, ref_seq.name, feature.start, cigar_string, seq, legend)
-
-
-def make_cigar(sequence):
-    counting_d = False
-    count = 0
-    cigar_string = ''
-    for i in range(len(sequence.sequence)):
-        if counting_d:
-            if sequence.sequence[i] == '.':
-                count += 1
-            else:
-                if count:
-                    cigar_string += f"{count}D"
-                counting_d = False
-                count = 1
-        else:
-            if sequence.sequence[i] != '.':
-                count += 1
-            else:
-                if count:
-                    cigar_string += f"{count}M"
-                counting_d = True
-                count = 1
-    if count > 0:
-        if counting_d:
-            cigar_string += f"{count}D"
-        else:
-            cigar_string += f"{count}M"
-    return cigar_string
-
 
 def build_fake_ref(session, dataset_dir):
     details = session.query(Details).one_or_none()

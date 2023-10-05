@@ -2,12 +2,12 @@
 from Bio import SeqIO
 from werkzeug.exceptions import BadRequest
 
-from api.genomic.genomic import genomic_sequence_filters, find_genomic_subjects, genomic_subject_filters, \
+from api.genomic.genomic import genomic_sequence_filters, find_genomic_samples, genomic_subject_filters, \
     find_genomic_sequences
 from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file
 from app import app
-from db.genomic_db import Subject
+from db.genomic_db import Subject, Sample
 import csv
 import zipfile
 import os
@@ -24,8 +24,8 @@ def zipdir(path, ziph, arc_root):
             ziph.write(path, arcname=path.replace(arc_root, ''))
 
 
-def run(format, species, genomic_datasets, genomic_subjects, rep_datasets, rep_samples, params):
-    if len(genomic_subjects) == 0:
+def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
+    if len(genomic_samples) == 0:
         raise BadRequest('No repertoire-derived genotypes were selected.')
 
     if 'Sample info' in params['type']:
@@ -36,7 +36,7 @@ def run(format, species, genomic_datasets, genomic_subjects, rep_datasets, rep_s
             if filter['model'] is not None:
                 attribute_query.append(filter['field'])
 
-        rows = find_genomic_subjects(attribute_query, species, genomic_datasets, params['filters'])
+        rows = find_genomic_samples(attribute_query, species, genomic_datasets, params['filters'])
 
         outfile = make_output_file('csv')
         with open(outfile, 'w', newline='') as fo:
@@ -51,7 +51,7 @@ def run(format, species, genomic_datasets, genomic_subjects, rep_datasets, rep_s
         outfile = make_output_file('zip')
         with zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED) as fo:
             added_dirs = []
-            sample_paths = find_genomic_subjects([Subject.annotation_path], species, genomic_datasets, params['filters'])
+            sample_paths = find_genomic_samples([Sample.annotation_path], species, genomic_datasets, params['filters'])
             sample_paths = ['/'.join(['study_data/Genomic', s['annotation_path'].split('Genomic')[1]]) for s in sample_paths]
             sample_paths = [os.path.join(app.config['STATIC_PATH'], s) for s in sample_paths]
             for sample_path in sample_paths:
