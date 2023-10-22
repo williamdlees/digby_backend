@@ -24,6 +24,7 @@ numpy==1.23.5
 pandas==1.5.1
 pika==1.3.1
 pydevd==2.9.1
+PyGithub==2.1.1
 PyYAML==6.0
 receptor_utils
 redis==4.4.4
