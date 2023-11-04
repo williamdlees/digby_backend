@@ -6,6 +6,7 @@ from flask_restx import Resource, reqparse
 from api.reports.report_utils import make_output_file
 from api.restx import api
 from sqlalchemy import inspect, func, or_
+from sqlalchemy import null as sa_null
 from math import ceil
 import json
 from sqlalchemy_filters import apply_filters
@@ -504,7 +505,7 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
     dataset_filters = []
     filter_spec = []
 
-    for f in filter:
+    for f in list(filter):
         try:
             if f['field'] == 'haplotypes':
                 hap_filters = f
@@ -522,10 +523,21 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
                         value.append('1' if v == rep_sample_bool_values[f['field']][0] else '0')
                     f['value'] = value
                 elif '(blank)' in f['value']:
-                    f['value'].append('')
+                    value_specs = [
+                        {'model': sample_info_filters[f['field']]['model'], 'field': f['field'], 'op': 'is_null', 'value': ''},
+                        {'model': sample_info_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': ''},
+                    ]
+
+                    for v in f['value']:
+                        if v != '(blank)':
+                            value_specs.append({'model': sample_info_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
+                    
+                    f = {'or': value_specs}
+
                 filter_spec.append(f)
-        except:
-            raise BadRequest('Bad filter string')
+
+        except Exception as e:
+            raise BadRequest(f'Bad filter string: {f}: {e}')
     ret = []
 
     if len(dataset_filters) > 0:
@@ -715,7 +727,10 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                     if f['field'] == 'similar':
                         value = []
                         for v in f['value']:
-                            value.append('|' + v.replace(',', '|') + '|')
+                            if v != '(blank)':
+                                value.append('|' + v.replace(',', '|') + '|')
+                            else:
+                                value.append(v)
                         f['value'] = value
                     f['model'] = sequence_filters[f['field']]['model']
                     if 'fieldname' in sequence_filters[f['field']]:
@@ -726,10 +741,20 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                             value.append('1' if v == rep_sequence_bool_values[f['field']][0] else '0')
                         f['value'] = value
                     elif '(blank)' in f['value']:
-                        f['value'].append('')
+                        value_specs = [
+                            {'model': sequence_filters[f['field']]['model'], 'field': f['field'], 'op': 'is_null', 'value': ''},
+                            {'model': sequence_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': ''},
+                        ]
+
+                        for v in f['value']:
+                            if v != '(blank)':
+                                value_specs.append({'model': sequence_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
+                        
+                        f = {'or': value_specs}
+
                     filter_spec.append(f)
-            except:
-                raise BadRequest('Bad filter string: %s' % f)
+            except Exception as e:
+                raise BadRequest(f'Bad filter string: {f}: {e}')
 
     if 'notes_count' in required_cols and 'notes' not in required_cols:
         required_cols.append('notes')

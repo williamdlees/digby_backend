@@ -367,10 +367,20 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
                                 value.append('1' if v == genomic_sequence_bool_values[f['field']][0] else '0')
                             f['value'] = value
                         elif '(blank)' in f['value']:
-                            f['value'].append('')
+                            value_specs = [
+                                {'model': genomic_sequence_filters[f['field']]['model'], 'field': f['field'], 'op': 'is_null', 'value': ''},
+                                {'model': genomic_sequence_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': ''},
+                            ]
+
+                            for v in f['value']:
+                                if v != '(blank)':
+                                    value_specs.append({'model': genomic_sequence_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
+                            
+                            f = {'or': value_specs}
+
                         filter_spec.append(f)
-                except:
-                    raise BadRequest('Bad filter string %s' % f)
+                except Exception as e:
+                    raise BadRequest(f'Bad filter string: {f}: {e}')
 
         seq_query = apply_filters(seq_query, filter_spec)
 
@@ -664,10 +674,20 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
                     if 'fieldname' in genomic_subject_filters[f['field']]:
                         f['field'] = genomic_subject_filters[f['field']]['fieldname']
                     if '(blank)' in f['value']:
-                        f['value'].append('')
+                        value_specs = [
+                            {'model': genomic_subject_filters[f['field']]['model'], 'field': f['field'], 'op': 'is_null', 'value': ''},
+                            {'model': genomic_subject_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': ''},
+                        ]
+
+                        for v in f['value']:
+                            if v != '(blank)':
+                                value_specs.append({'model': genomic_subject_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
+                        
+                        f = {'or': value_specs}
+
                     filter_spec.append(f)
-            except:
-                raise BadRequest('Bad filter string %s')
+            except Exception as e:
+                raise BadRequest(f'Bad filter string: {f}: {e}')
 
         if len(filter_spec) > 0:
             sample_query = apply_filters(sample_query, filter_spec)
