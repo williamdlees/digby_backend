@@ -4,7 +4,7 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file, chunk_list
 from app import vdjbase_dbs
-from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample
+from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
 import csv
 import zipfile
 import os
@@ -56,8 +56,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 results = session.query(*attribute_query)\
                     .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
                     .join(Patient, Patient.id == Sample.patient_id)\
-                    .join(SeqProtocol)\
-                    .join(TissuePro)\
+                    .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
+                    .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
+                    .join(DataPro, DataPro.id == Sample.data_pro_id)\
                     .join(Study, Sample.study_id == Study.id)\
                     .filter(Sample.sample_name.in_(sample_list)).all()
 
