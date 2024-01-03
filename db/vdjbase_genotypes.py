@@ -58,6 +58,12 @@ def process_genotypes(ds_dir, species, dataset, session):
             result.append('Error: no genotype file for sample %s - removing from sample list' % sample.sample_name)
             session.delete(sample)
 
+        # fix up filenames for the live database
+        if sample.genotype:
+            sample.genotype = sample.genotype.replace(ds_dir + '\\', '').replace('\\', '/')
+        if sample.asc_genotype:
+            sample.asc_genotype = sample.asc_genotype.replace(ds_dir + '\\', '').replace('\\', '/')
+            
     session.commit()
 
     # dump audit log
@@ -374,9 +380,13 @@ def process_asc_genotype(sample, processed_gene_types, pipeline_names, session):
             allele_part = '*'.join(allele.split('*')[1:])
             gene_part = allele.split('*')[0]
             allele_snps, base_allele_name, pipeline_name, this_allele_name = parse_ambiguous_allele(allele_part, gene_part, pipeline_names)
-            add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
-                       total_count, session)
 
+            try:
+                add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
+                    total_count, session)
+            except DbCreationError as e:
+                print(e)
+                
     processed_gene_types.extend(my_processed_types)
     return processed_gene_types
 
@@ -517,11 +527,13 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
                 count = int(allele_counts[allele]) if allele in allele_counts else 0
 
             allele_snps, base_allele_name, pipeline_name, this_allele_name = parse_ambiguous_allele(allele, gene, pipeline_names)
-            add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
+
+            try:
+                add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
                        total_count, session)
-
-
-
+            except DbCreationError as e:
+                print(e)
+            
 
 def find_allele_or_similar(allele_name, session):
     """
@@ -676,7 +688,7 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
         first_allele = find_allele_or_similar(allele_D_name, session)
 
     if first_allele is None:
-        raise DbCreationError('Error processing allele %s: base allele not in reference set' % first_allele_name)
+        raise DbCreationError('Error processing allele %s: base allele %s not in reference set. Allele not added.' % (allele_name, first_allele_name))
 
     # Check for a compound gene in the pipeline name, set gene id accordingly
     base_gene = pipeline_name.split('*')[0]

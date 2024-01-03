@@ -50,6 +50,26 @@
             "cwd": "D:/Research/digby_private_data/Genomic/Human/IGL",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "make_airr_seq_db - digby_data/TRB",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Human", "TRB"],
+            "cwd": "D:/Research/digby_data/AIRR-seq/Human/TRB",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "make_airr_seq_db - digby_data/IGK",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Human", "IGK"],
+            "cwd": "D:/Research/digby_data/AIRR-seq/Human/IGK",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }
