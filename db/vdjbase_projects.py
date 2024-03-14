@@ -73,13 +73,29 @@ def import_studies(ds_dir, species, dataset, session):
 
         process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, session)
 
+    for project_name in miairr_projects:
+        if project_name not in yml_data:
+            miairr_metadata = process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, session)
+            process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, session)
+
     session.commit()
     return result
 
 
 def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, session):
-    project_data = yml_data[project_name]
-    for sample_name in project_data['Samples'].keys():
+    sample_names = []
+    if project_name in yml_data:
+        yml_project_data = yml_data[project_name]
+        sample_names = yml_project_data['Samples'].keys()
+    else:
+        yml_project_data = None
+        sample_names = miairr_metadata.keys()
+
+    if not sample_names:
+        print(f"Error: No MiAIRR data or YML data found for project {project_name}")
+        return
+
+    for sample_name in sample_names:
         meta_records = {
             'Study': {},
             'Patient': {},
@@ -91,16 +107,17 @@ def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, 
         }
 
         if sample_name not in miairr_metadata:
+            if yml_project_data is None:
+                print(f"Error: No MiAIRR data or YML data found for sample {sample_name}")
+                continue
+
             # get everything we can from yml
-            build_yml_metadata(sample_name, table_fields, project_data, meta_records, True)
+            build_yml_metadata(sample_name, table_fields, yml_project_data, meta_records, True)
             commit_database(meta_records, sample_name, session)     # fall back to YML exclusively
-            # print(f"No MiAIRR data found for sample {sample_name}")
             continue
 
-        #if 'P8' in project_name:
-        #   breakpoint()
-
-        build_yml_metadata(sample_name, table_fields, project_data, meta_records, False)
+        if yml_project_data is not None:
+            build_yml_metadata(sample_name, table_fields, yml_project_data, meta_records, False)
 
         def setattrs(_self, **kwargs):
             for k, v in kwargs.items():
@@ -408,8 +425,8 @@ def consolidate_metadata(export_dir):
         for sample_name, sample_path in listdp(project_path):
             metadata_file = os.path.join(sample_path, sample_name + '.yml')
             if not os.path.isfile(metadata_file):
-                print('metadata file %s not found: sample will not be included!' % metadata_file)
-                results.append('metadata file %s not found: sample will not be included!' % metadata_file)
+                # print('metadata file %s not found: sample will not be included!' % metadata_file)
+                results.append('metadata file %s not found: using json data only' % metadata_file)
                 continue
 
             try:

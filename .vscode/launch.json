@@ -70,6 +70,16 @@
             "cwd": "D:/Research/digby_data/AIRR-seq/Human/IGK",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "make_airr_seq_db - digby_dev_data/IGH",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Human", "IGH"],
+            "cwd": "D:/Research/digby_dev_data/AIRR-seq/Human/IGH",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }
