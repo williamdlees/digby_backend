@@ -36,6 +36,7 @@ def read_bed_files(bed_files, sense, ref_seq_len):
             if ref_file not in features:
                 features[ref_file] = {}
             for rec in recs:
+                rec['feature'] = rec['feature'].upper()
                 if rec['start'] and rec['end']:
                     rec['start'] = int(rec['start'])
                     rec['end'] = int(rec['end'])

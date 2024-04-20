@@ -1,22 +1,26 @@
 # Create database and associated files for a single genomic dataset
 from datetime import date
+import json
 
 from receptor_utils import simple_bio_seq as simple
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, exc
 from sqlalchemy.pool import NullPool
 
 import os
 import yaml
 
 from db.genomic_ref import update_genomic_ref, read_gene_order
+from db.genomic_airr_model import Sample, Study, Subject, SeqProtocol, TissuePro, DataPro
 from db.genomic_db import Base, RefSeq
 from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_sample, save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
 
 
+
 Session = sessionmaker()
+
 
 class ImportException(Exception):
     pass
@@ -66,7 +70,7 @@ def create_dataset(species, dataset):
 
         session.commit()
         for study_name, study in study_data['Studies'].items():
-            process_study(dataset, dataset_dir, reference_features, session, species, study, study_name, reference_set_version)
+            process_study(dataset_dir, reference_features, session, study, study_name)
 
     except ImportException as e:
         print(e)
@@ -111,7 +115,7 @@ def process_reference_assembly(session, ref, species):
         raise ImportException(f"Error: reference sequence file {ref['sequence_file']} not found.")
 
     ref_seqs = simple.read_fasta(ref['sequence_file'])
-    ref_seq_name = list(ref_seqs.keys())[0]
+    ref_seq_name = ref['name']
 
     # the ref is always stored in forward sense
     # we record the sense in which it is presented. This is used in conjunction with the sense markers in imported_genes.csv
@@ -125,89 +129,392 @@ def process_reference_assembly(session, ref, species):
     return reference_features
 
 
-def process_study(dataset, dataset_dir, reference_features, session, species, study, study_name, reference_set_version):
-    needed_study_items = {'Study', 'Id', 'Date', 'Institute', 'Study_description', 'Researcher', 'Reference', 'Contact'}
-    if needed_study_items - set(list(study.keys())):
-        raise ImportException(f'Error - study attributes missing: {",".join(list(needed_study_items - set(study.keys())))}')
+required_fields = {
+    'study': {'study_id', 'accession_reference', 'study_title', 'study_description', 'study_type', 'inclusion_exclusion_criteria', 'grants', 'study_contact', 'collected_by', 'lab_name', 'lab_address', 'submitted_by', 'pub_ids', 'keywords_study'},
+    'subject': {'subject_id', 'synthetic', 'species', 'sex', 'age_min', 'age_max', 'age_unit', 'age_event', 'ancestry_population', 'ethnicity', 'race', 'strain_name', 'linked_subjects', 'link_type', 'study_group_description', 'disease_diagnosis', 'disease_length', 'disease_stage', 'prior_therapies', 'immunogen', 'intervention', 'medical_history'},
+    'sample': {'sample_id', 'sample_type', 'anatomic_site', 'disease_state_sample', 'collection_time_point_relative', 'collection_time_point_relative_unit', 'collection_time_point_reference', 'biomaterial_provider', 'reference_assembly'},
+    'tissuepro': {'tissue_processing', 'tissue', 'cell_subset', 'cell_phenotype', 'cell_species', 'single_cell', 'cell_number', 'cells_per_reaction', 'cell_storage', 'cell_quality', 'cell_isolation', 'cell_processing_protocol'},
+    'seqprotocol': {'template_class', 'template_quality', 'template_amount', 'template_amount_unit', 'library_generation_method', 'library_generation_protocol', 'library_generation_kit_version', 'complete_sequences', 'physical_linkage', 'pcr_target_locus', 'forward_pcr_primer_target_location', 'reverse_pcr_primer_target_location', 'sequencing_run_id', 'total_reads_passing_qc_filter', 'sequencing_platform', 'sequencing_facility', 'sequencing_run_date', 'sequencing_kit', 'read_length', 'paired_read_length'},
+    'datapro': {'sequencing_data_id', 'primary_annotation', 'file_type', 'filename', 'read_direction', 'paired_filename', 'paired_read_direction', 'software_versions', 'paired_reads_assembly', 'quality_thresholds', 'primer_match_cutoffs', 'collapsing_method', 'data_processing_protocols', 'germline_database', 'data_processing_files', 'analysis_provenance_id'},
+}
 
-    study_date = study['Date']
-    if isinstance(study_date, str):
-        study_date = date.fromisoformat(study_date)
 
-    study_obj = save_genomic_study(session,
-                                   study_name,
-                                   study['Study'],
-                                   study['Id'],
-                                   study_date,
-                                   study['Institute'],
-                                   study['Study_description'],
-                                   study['Researcher'],
-                                   study['Reference'],
-                                   study['Contact']
-                                   )
-    session.commit()
-    for subject_name, subject in study['Subjects'].items():
-        needed_subject_items = {'Name_in_study'}
-        if needed_subject_items - set(subject.keys()):
-            raise ImportException(f'Error - subject attributes missing: {",".join(list(needed_subject_items - set(subject.keys())))}')
+def check_required_fields(fields, row):
+    if required_fields[fields] - set(list(row.keys())):
+        raise ImportException(f'Error - metadata attributes missing: {",".join(list(required_fields[fields] - set(list(row.keys()))))}')
 
-        subject_obj = save_genomic_subject(subject_name, subject['Name_in_study'], study_obj)
 
-        optional_subject_items = [
-            ('Age', 'age'),
-            ('Sex', 'sex'),
-            ('Self-reported Ethnicity', 'self_ethnicity'),
-            ('Grouped Ethnicity', 'grouped_ethnicity'),
-            ('Population', 'population'),
-            ('Pop', 'population_abbr'),
-            ('Superpopulation', 'super_population'),
-            ('Name_in_study', 'name_in_study'),
-            ('Mother_in_study', 'mother_in_study'),
-            ('Father_in_study', 'father_in_study'),
-        ]
+def process_study(dataset_dir, reference_features, session, study, study_name):
+    study_obj = None
+    tissuepros = []
+    seqprotocols = []
+    datapros = []
+    subject_num = 1
+    subjects = {}
+    subject_samples = {}
 
-        for yml_attr, sql_attr in optional_subject_items:
-            if yml_attr in subject and subject[yml_attr]:
-                setattr(subject_obj, sql_attr, subject[yml_attr])
+    metadata = simple.read_csv(os.path.join(dataset_dir, study['metadata_file']))
 
-        for name, sample in study['Samples'].items():
-            if sample['Subject_name'] == subject_name:
-                needed_sample_items = {'Sample_name_in_study', 'Subject_name', 'Reference_assembly', 'Annotation_format'}
-                if needed_sample_items - set(sample.keys()):
-                    raise ImportException(f'Error - sample attributes missing: {",".join(list(needed_sample_items - set(sample.keys())))}')
+    for row in metadata:
+        for k, v in row.items():
+            if v == 'NA':
+                row[k] = ''
 
-                sample_obj = save_genomic_sample(session,
-                                                name, 
-                                                subject_obj,
-                                                sample['Sample_name_in_study'], 
-                                                sample['Reference_assembly'], 
-                                                sample['Annotation_format'],
-                                                ) 
+        if not study_obj:
+            study_obj = create_study(session, study_name, required_fields, row)
 
-                optional_sample_items = [
-                    ('Annotation_file', 'annotation_file'),
-                    ('Annotation_method', 'annotation_method'),
-                    ('Annotation_reference', 'annotation_reference'),
-                    ('Reference_set_version', 'reference_set_version'),
-                    ('Locus_coverage', 'locus_coverage'),
-                    ('Sequencing_platform', 'sequencing_platform'),
-                    ('Assembly_method', 'assembly_method'),
-                    ('DNA_source', 'dna_source'),
-                ]
+        if row['subject_id'] not in subjects:
+            subject_name = f'{study_name}_I{subject_num}'
+            subject_num += 1
+            subject_samples[row['subject_id']] = 1
 
-                for yml_attr, sql_attr in optional_sample_items:
-                    if yml_attr in sample and sample[yml_attr]:
-                        setattr(sample_obj, sql_attr, sample[yml_attr])
+            subject_object = create_subject(session, study_obj, subject_name, row)
+            subjects[row['subject_id']] = subject_object
+        else:
+            subject_object = subjects[row['subject_id']]
+            subject_samples[row['subject_id']] += 1
 
-                # IMGT and Digger formats not currently supported
-                if sample_obj.annotation_format == 'IGenotyper':
-                    if not reference_features:
-                        raise ImportException('Error: Igenotyper records require a reference assembly and one or more bed files')
+        sample_name = f'{study_name}_I{subject_num}_S{subject_samples[row["subject_id"]]}'
 
-                    process_igenotyper_record(session, dataset_dir, sample_obj, sample['Annotation_file'], reference_features)
-                else:
-                    raise ImportException('Error: in yml file: Invalid type/format %s' % (sample_obj.annotation_format))
+        tissuepro_object = find_or_create_tissuepro(session, tissuepros, row)
+        seqprotocol_object = find_or_create_seqprotocol(session, seqprotocols, row)
+        datapro_object = find_or_create_datapro(session, datapros, row)
+        sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row)
 
+        process_igenotyper_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features)
+        
     session.commit()
     calculate_appearances(session)
     session.commit()
+
+
+def create_subject(session, study_obj, subject_name, row):
+    check_required_fields('subject', row)
+
+    row['synthetic'] = 'T' in row['synthetic'].upper()
+
+    try:
+        species_rec = json.loads(row['species'])
+        species_id = species_rec['id']
+        species_label = species_rec['label']
+    except json.JSONDecodeError:
+        raise ImportException('Error - species is not a valid ontology object.')
+
+    row['sex'] = row['sex'].upper()
+    if row['sex'] in ('F', 'FEMALE'):
+        row['sex'] = 'female'
+    elif row['sex'] in ('M', 'MALE'):
+        row['sex'] = 'male'
+    elif row['sex'] == '':
+        row['sex'] = 'not collected'
+    else:
+        raise ImportException(f"study {study_obj.study_name} sample {row['subject_id']}: invalid sex: {row['sex']}")
+        
+    try:
+        age_min = age_max = None
+        if row['age_min']:
+            age_min = float(row['age_min'])
+        if row['age_max']:
+            age_max = float(row['age_max'])
+    except ValueError:
+        raise ImportException('Error - age_min and age_max must be numeric.')
+        
+    try:
+        age_unit_id = age_unit_label = None
+        if row['age_unit']:
+            age_unit_rec = json.loads(row['age_unit'])
+            age_unit_id = age_unit_rec['id']
+            age_unit_label = age_unit_rec['label']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - age_unit is not a valid ontology object: {e}')
+        
+    mother_in_study = None
+    father_in_study = None
+    if row['linked_subjects']:
+        linked_subjects = row['linked_subjects'].split(',')
+        link_type = row['link_type'].split(',')
+
+        if len(linked_subjects) != len(link_type):
+            raise ImportException('Error - linked_subjects and link_type must have the same number of entries.')
+            
+        linked_subjects = [x.strip() for x in linked_subjects]
+        link_type = [x.strip() for x in link_type]
+
+        for sub, stype in zip(linked_subjects, link_type):
+            if stype.lower() == 'mother':
+                mother_in_study = sub
+            elif stype.lower() == 'father':
+                father_in_study = sub
+
+    try:
+        disease_diagnosis_id = disease_diagnosis_label = None
+        if row['disease_diagnosis']:
+            disease_rec = json.loads(row['disease_diagnosis'])
+            disease_diagnosis_id = disease_rec['id']
+            disease_diagnosis_label = disease_rec['label']
+    except json.JSONDecodeError:
+        raise ImportException('Error - disease_diagnosis is not a valid ontology object.')
+    
+    subject_obj = Subject(
+        subject_id=row['subject_id'],
+        synthetic=row['synthetic'],
+        species_id=species_id,
+        species_label=species_label,
+        organism_id='',
+        organism_label='',
+        sex=row['sex'],
+        age_min=age_min,
+        age_max=age_max,
+        age_unit_id=age_unit_id,
+        age_unit_label=age_unit_label,
+        age_event=row['age_event'],
+        ancestry_population=row['ancestry_population'],
+        ethnicity=row['ethnicity'],
+        race=row['race'],
+        strain_name=row['strain_name'],
+        linked_subjects=row['linked_subjects'],
+        link_type=row['link_type'],
+        study_group_description=row['study_group_description'],
+        disease_diagnosis_id=disease_diagnosis_id,
+        disease_diagnosis_label=disease_diagnosis_label,
+        disease_length=row['disease_length'],
+        disease_stage=row['disease_stage'],
+        prior_therapies=row['prior_therapies'],
+        immunogen=row['immunogen'],
+        intervention=row['intervention'],
+        medical_history=row['medical_history'],
+        patient_name=subject_name,
+        mother_in_study=mother_in_study,
+        father_in_study=father_in_study,
+        study_id=study_obj.id,
+    )
+    session.add(subject_obj)
+    session.commit()
+    return subject_obj
+
+
+def create_study(session, study_name, required_fields, row):
+    check_required_fields('study', row)
+
+    try:
+        type_rec = json.loads(row['study_type'])
+        study_type_id = type_rec['id']
+        study_type_label = type_rec['label']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - study type is not a valid ontology object: {e}')
+            
+    try:
+        keywords_study = json.loads(row['keywords_study'])
+        keywords_study = ', '.join(keywords_study)
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - keywords_study is not a valid JSON list: {e}')
+
+    study_obj = Study(
+                study_id=row['study_id'],
+                study_title=row['study_title'],
+                study_type_id=study_type_id,
+                study_type_label=study_type_label,
+                study_description=row['study_description'],
+                inclusion_exclusion_criteria=row['inclusion_exclusion_criteria'],
+                grants=row['grants'],
+                study_contact=row['study_contact'],
+                collected_by=row['collected_by'],
+                lab_name=row['lab_name'],
+                lab_address=row['lab_address'],
+                submitted_by=row['submitted_by'],
+                pub_ids=row['pub_ids'],
+                keywords_study=keywords_study,
+                adc_publish_date='',
+                adc_update_date='',
+                num_subjects=0,
+                num_samples=0,
+                accession_reference=row['accession_reference'],
+                study_name=study_name,
+            )
+    session.add(study_obj)
+    session.commit()
+    return study_obj
+
+
+def find_or_create_tissuepro(session, tissuepros, row):
+    check_required_fields('tissuepro', row)
+
+    tissuepro_dict = {k: v for k, v in row.items() if k in required_fields['tissuepro']}
+
+    try:
+        type_rec = json.loads(row['tissue'])
+        tissuepro_dict['tissue_id'] = type_rec['id']
+        tissuepro_dict['tissue_label'] = type_rec['label']
+        del tissuepro_dict['tissue']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - tissue is not a valid ontology object: {e}')
+
+    try:
+        tissuepro_dict['cell_species_id'] = tissuepro_dict['cell_species_label'] = None
+        if row['cell_species']:
+            type_rec = json.loads(row['cell_species'])
+            tissuepro_dict['cell_species_id'] = type_rec['id']
+            tissuepro_dict['cell_species_label'] = type_rec['label']
+        del tissuepro_dict['cell_species']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - cell_species is not a valid ontology object: {e}')
+    
+    try:
+        tissuepro_dict['cell_subset_id'] = tissuepro_dict['cell_subset_label'] = None
+        if row['cell_subset']:
+            type_rec = json.loads(row['cell_subset'])
+            tissuepro_dict['cell_subset_id'] = type_rec['id']
+            tissuepro_dict['cell_subset_label'] = type_rec['label']
+        del tissuepro_dict['cell_subset']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - cell_subset is not a valid ontology object: {e}')
+    
+    for obj, td in tissuepros:
+        if td == tissuepro_dict:
+            return obj
+        
+    tp_label = f"TP{len(tissuepros) + 1}"
+
+    tissuepro_obj = TissuePro(
+        tissue_processing=tp_label,
+        tissue_id=tissuepro_dict['tissue_id'],
+        tissue_label=tissuepro_dict['tissue_label'],
+        cell_subset_id=tissuepro_dict['cell_subset_id'],
+        cell_subset_label=tissuepro_dict['cell_subset_label'],
+        cell_phenotype=tissuepro_dict['cell_phenotype'],
+        cell_species_id=tissuepro_dict['cell_species_label'],
+        cell_species_label=tissuepro_dict['cell_species_label'],
+        single_cell=tissuepro_dict['single_cell'],
+        cell_number=tissuepro_dict['cell_number'],
+        cells_per_reaction=tissuepro_dict['cells_per_reaction'],
+        cell_storage=tissuepro_dict['cell_storage'],
+        cell_quality=tissuepro_dict['cell_quality'],
+        cell_isolation=tissuepro_dict['cell_isolation'],
+        cell_processing_protocol=tissuepro_dict['cell_processing_protocol'],
+    )
+    session.add(tissuepro_obj)
+    session.commit()
+    tissuepros.append([tissuepro_obj, tissuepro_dict])
+    return tissuepro_obj
+
+
+def find_or_create_seqprotocol(session, seqprotocols, row):
+    check_required_fields('seqprotocol', row)
+
+    seqprotocol_dict = {k: v for k, v in row.items() if k in required_fields['seqprotocol']}
+
+    try:
+        seqprotocol_dict['template_amount_unit_id'] = seqprotocol_dict['template_amount_unit_label'] = None
+        if row['template_amount_unit']:
+            type_rec = json.loads(row['template_amount_unit'])
+            seqprotocol_dict['template_amount_unit_id'] = type_rec['id']
+            seqprotocol_dict['template_amount_unit_label'] = type_rec['label']
+        del seqprotocol_dict['template_amount_unit']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - template_amount_unit is not a valid ontology object: {e}')
+
+    for obj, sd in seqprotocols:
+        if sd == seqprotocol_dict:
+            return obj
+
+    sp_label = f"SP{len(seqprotocols) + 1}"
+
+    seqprotocol_obj = SeqProtocol(
+        template_class=seqprotocol_dict['template_class'],
+        template_quality=seqprotocol_dict['template_quality'],
+        template_amount=seqprotocol_dict['template_amount'],
+        template_amount_unit_id=seqprotocol_dict['template_amount_unit_id'],
+        template_amount_unit_label=seqprotocol_dict['template_amount_unit_label'],
+        library_generation_method=seqprotocol_dict['library_generation_method'],
+        library_generation_protocol=seqprotocol_dict['library_generation_protocol'],
+        library_generation_kit_version=seqprotocol_dict['library_generation_kit_version'],
+        pcr_target_locus=seqprotocol_dict['pcr_target_locus'],
+        forward_pcr_primer_target_location=seqprotocol_dict['forward_pcr_primer_target_location'],
+        reverse_pcr_primer_target_location=seqprotocol_dict['reverse_pcr_primer_target_location'],
+        complete_sequences=seqprotocol_dict['complete_sequences'],
+        physical_linkage=seqprotocol_dict['physical_linkage'],
+        sequencing_platform=seqprotocol_dict['sequencing_platform'],
+        sequencing_facility=seqprotocol_dict['sequencing_facility'],
+        sequencing_kit=seqprotocol_dict['sequencing_kit'],
+        read_length=seqprotocol_dict['read_length'],
+        paired_read_length=seqprotocol_dict['paired_read_length'],
+    )
+
+    session.add(seqprotocol_obj)
+    session.commit()
+    seqprotocols.append([seqprotocol_obj, seqprotocol_dict])
+    return seqprotocol_obj
+
+
+def find_or_create_datapro(session, datapros, row):
+    check_required_fields('datapro', row)
+
+    datapro_dict = {k: v for k, v in row.items() if k in required_fields['datapro']}
+
+    for obj, dd in datapros:
+        if dd == datapro_dict:
+            return obj
+
+    dp_label = f"DP{len(datapros) + 1}"
+
+    datapro_obj = DataPro(
+        data_processing_id=dp_label,
+        primary_annotation=datapro_dict['primary_annotation'],
+        software_versions=datapro_dict['software_versions'],
+        paired_reads_assembly=datapro_dict['paired_reads_assembly'],
+        quality_thresholds=datapro_dict['quality_thresholds'],
+        primer_match_cutoffs=datapro_dict['primer_match_cutoffs'],
+        collapsing_method=datapro_dict['collapsing_method'],
+        data_processing_protocols=datapro_dict['data_processing_protocols'],
+        data_processing_files=datapro_dict['data_processing_files'],
+        germline_database=datapro_dict['germline_database'],
+        analysis_provenance_id=datapro_dict['analysis_provenance_id'],
+    )
+
+    session.add(datapro_obj)
+    session.commit()
+    datapros.append([datapro_obj, datapro_dict])
+    return datapro_obj
+
+
+def create_sample(session, study, subject, sample_name, tissuepro, seqprotocol, datapro, row):
+    check_required_fields('sample', row)
+
+    try:
+        row['collection_time_point_relative_unit_id'] = row['collection_time_point_relative_unit_label'] = None
+        if row['collection_time_point_relative_unit']:
+            type_rec = json.loads(row['collection_time_point_relative_unit'])
+            row['collection_time_point_relative_unit_id'] = type_rec['id']
+            row['collection_time_point_relative_unit_label'] = type_rec['label']
+        del row['collection_time_point_relative_unit']
+    except json.JSONDecodeError as e:
+        raise ImportException(f'Error - template_amount_unit is not a valid ontology object: {e}')
+    
+    try:
+        ref = session.query(RefSeq).filter(RefSeq.name == row['reference_assembly']).one_or_none()
+    except exc.NoResultFound:
+        raise ImportException(f'Error - reference assembly {row["reference_assembly"]} not found in database.')
+
+    sample_obj = Sample(
+        sample_name=sample_name,
+        sample_id=row['sample_id'],
+        sample_type=row['sample_type'],
+        anatomic_site=row['anatomic_site'],
+        disease_state_sample=row['disease_state_sample'],
+        collection_time_point_relative=row['collection_time_point_relative'],
+        collection_time_point_relative_unit_id=row['collection_time_point_relative_unit_id'],
+        collection_time_point_relative_unit_label=row['collection_time_point_relative_unit_label'],
+        collection_time_point_reference=row['collection_time_point_reference'],
+        biomaterial_provider=row['biomaterial_provider'],
+        reference_assembly=row['reference_assembly'],
+        annotation_path='',
+        ref_seq_id=ref.id,
+        study_id=study.id,
+        subject_id=subject.id,
+        tissue_pro_id=tissuepro.id,
+        seq_protocol_id=seqprotocol.id,
+        data_pro_id=datapro.id,
+    )
+    session.add(sample_obj)
+    session.commit()
+    return sample_obj

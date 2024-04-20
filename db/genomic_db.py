@@ -1,10 +1,7 @@
 from sqlalchemy import Boolean, Column, DECIMAL, DateTime, ForeignKey, Index, Integer, String, Table, Text, func, BigInteger, Float
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from db.genomic_airr_model import Base
 
-
-Base = declarative_base()
-metadata = Base.metadata
 
 
 class Details(Base):
@@ -87,45 +84,6 @@ class Sequence(Base):
     features = relationship('Feature', secondary='sequence_feature', back_populates='sequences')
 
 
-class Subject(Base):
-    __tablename__ = 'subject'
-    id = Column(Integer, primary_key=True)
-    identifier = Column(String(100))
-    name_in_study = Column(String(100))
-    mother_in_study = Column(String(100))
-    father_in_study = Column(String(100))
-    age = Column(Integer)
-    sex = Column(String(10))
-    self_ethnicity = Column(String(100))
-    grouped_ethnicity = Column(String(100))
-    population = Column(String(100))
-    population_abbr = Column(String(100))
-    super_population = Column(String(100))
-
-    study_id = Column(Integer, ForeignKey('study.id'))
-    samples = relationship("Sample", backref='subject')
-
-
-class Sample(Base):
-    __tablename__ = 'sample'
-    id = Column(Integer, primary_key=True)
-    identifier = Column(String(100))
-    name_in_study = Column(String(100))
-    annotation_path = Column(String(200))
-    annotation_method = Column(String(100))
-    annotation_format = Column(String(100))
-    annotation_reference = Column(String(100))
-    reference_assembly = Column(String(100))
-    reference_set_version = Column(String(100))
-    locus_coverage = Column(Float)
-    sequencing_platform = Column(String(200))
-    assembly_method = Column(String(100))
-    DNA_source = Column(String(100))
-
-    ref_seq_id = Column(Integer, ForeignKey('ref_seq.id'))
-    subject_id = Column(Integer, ForeignKey('subject.id'))
-    sequences = relationship('Sequence', secondary='sample_sequence', back_populates='samples')
-
 
 class Assembly(Base):
     __tablename__ = 'assembly'
@@ -139,21 +97,6 @@ class Assembly(Base):
     chromosome = Column(String(10))
     start = Column(BigInteger)
     end = Column(BigInteger)
-
-
-class Study(Base):
-    __tablename__ = 'study'
-    id = Column(Integer, primary_key=True)
-    study_name = Column(String(50), nullable=False)
-    study_id = Column(String(50), nullable=False)
-    title = Column(String(50), nullable=False)
-    date = Column(DateTime())
-    institute = Column(String(500))
-    description = Column(String(500))
-    researcher = Column(String(200))
-    reference = Column(String(500))
-    contact = Column(String(200))
-    subjects = relationship("Subject", backref='study')
 
 
 class Gene(Base):

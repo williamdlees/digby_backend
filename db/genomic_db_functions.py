@@ -2,7 +2,8 @@
 
 from receptor_utils import simple_bio_seq as simple
 from receptor_utils import novel_allele_name
-from db.genomic_db import RefSeq, Feature, Subject, SampleSequence, Sequence, Study, Details, Assembly, Gene, Sample
+from db.genomic_db import RefSeq, Feature, SampleSequence, Sequence, Details, Assembly, Gene
+from db.genomic_airr_model import Sample, Study, Subject, SeqProtocol, TissuePro, DataPro
 from sqlalchemy import and_
 from db.genomic_ref import find_type
 import datetime

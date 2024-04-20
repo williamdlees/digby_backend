@@ -61,7 +61,7 @@ class MiAIRR_StudyMixin(object):
     study_name = Column(String(100))
 
 
-class MiAIRR_ProjectMixin(object):
+class MiAIRR_PatientMixin(object):
     id = Column(Integer, primary_key=True)
     subject_id = Column(String(100))
     synthetic = Column(Boolean)
@@ -125,6 +125,7 @@ class MiAIRR_SeqProtocolMixin(object):
 
 class MiAIRR_TissueProMixin(object):
     id = Column(Integer, primary_key=True)
+    tissue_id = Column(String(100))
     tissue_label = Column(String(100))
     tissue_processing = Column(String(100))
     cell_subset_id = Column(String(100))

@@ -11,7 +11,10 @@ from math import ceil
 from werkzeug.exceptions import BadRequest
 
 from api.system.system import digby_protected
-from db.genomic_db import RefSeq, Feature, Sequence, Subject, Study, Sample, SampleSequence, Gene
+from db.genomic_db import RefSeq, Feature, Sequence, SampleSequence, Gene
+from db.genomic_airr_model import Sample, Study, Subject, SeqProtocol, TissuePro, DataPro, Base
+from db.genomic_api_query_filters import genomic_sequence_filters, genomic_subject_filters
+
 import json
 from datetime import datetime
 from sqlalchemy_filters import apply_filters
@@ -135,7 +138,7 @@ def enumerate_feature(f):
 
     return ret
 
-
+'''
 genomic_sequence_filters = {
     'name': {'model': 'Sequence', 'field': Sequence.name, 'sort': 'gene'},
     'imgt_name': {'model': 'Sequence', 'field': Sequence.imgt_name},
@@ -153,6 +156,7 @@ genomic_sequence_filters = {
     'sample_identifier': {'model': None, 'fieldname': 'sample_identifier'},
     'dataset': {'model': None, 'fieldname': 'dataset'},
 }
+'''
 
 genomic_sequence_bool_values = {
     'novel': ('Novel', '(blank)'),
@@ -489,6 +493,7 @@ class FeaturePosAPI(Resource):
         else:
             return []
 
+'''
 genomic_subject_filters = {
     'subject_identifier': {'model': 'Subject', 'field': Subject.identifier.label('subject_identifier'), 'fieldname': 'identifier', 'sort': 'underscore'},
     'name_in_study': {'model': 'Subject', 'field': Subject.name_in_study},
@@ -526,7 +531,7 @@ genomic_subject_filters = {
 
     'dataset': {'model': None, 'field': None, 'fieldname': 'dataset'},
 }
-
+'''
 
 @ns.route('/subjects/<string:species>/<string:genomic_datasets>')
 @api.response(404, 'Reference sequence not found.')

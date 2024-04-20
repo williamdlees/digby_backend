@@ -29,21 +29,21 @@ def read_csv(filename):
 def process_igenotyper_record(session, dataset_dir, sample, annotation_file, reference_features):
     global annotation_records
 
-    print(f"Importing sample {sample.identifier}")
+    print(f"Importing sample {sample.sample_name}")
 
     if annotation_file not in annotation_records:
         annotation_records[annotation_file] = read_csv(annotation_file)
 
-    rows = [x for x in annotation_records[annotation_file] if str(x['sample_name']) == str(sample.name_in_study) and str(x['subject']) == str(sample.subject.name_in_study) and x['project'] == sample.subject.study.study_id]
+    rows = [x for x in annotation_records[annotation_file] if str(x['sample_name']) == str(sample.sample_id) and str(x['subject']) == str(sample.subject.subject_id) and x['project'] == sample.subject.study.study_id]
 
     if not rows:
-        print(f'ERROR: {annotation_file} contains no data for sample {sample.name_in_study} subject {sample.subject.name_in_study} project {sample.subject.study.study_id}')
+        print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.subject.subject_id} project {sample.subject.study.study_id}')
 
     # If the annotation file contains records for multiple samples, split into multiple files
 
     if len(rows) < len(annotation_records[annotation_file]):
         af_name, af_ext = os.path.splitext(os.path.basename(annotation_file))
-        sample_af_name = f"{af_name}_{sample.identifier}{af_ext}"
+        sample_af_name = f"{af_name}_{sample.sample_name}{af_ext}"
         write_csv(os.path.join(dataset_dir, 'samples', sample_af_name), rows)
         sample.annotation_path = sample_af_name
     else:
@@ -61,7 +61,12 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
         if not row['vdjbase_allele']:
             continue        # probably an incomplete/fragmentary row
 
-        gene_type = row['genotyper_gene'][3]
+        gene_type = row['gene'][3]
+
+        # TODO: allow constant genes when bed files are fixed
+
+        if gene_type == 'C':
+            continue
 
         if gene_type in ['V', 'D', 'J', 'C']:
             seq = find_allele_by_name(session, row['vdjbase_allele'])
@@ -72,13 +77,13 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
                 else:
                     gapped_seq = ''
 
-                seq = save_novel_allele(session, row['genotyper_gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row[f'{gene_type}-REGION'], gapped_seq)
+                seq = save_novel_allele(session, row['gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row[f'{gene_type}-REGION'], gapped_seq)
 
             update_sample_sequence_link(session, int(row['haplotype'].replace('h=', '')), sample, seq)
             feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, sample.ref_seq)
 
             if feature and seq.sequence.replace('.', '') != feature.feature_seq.replace('.', ''):
-                print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in sample {sample.identifier} subject {sample.subject.identifier}')
+                print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in sample {sample.sample_name} subject {sample.subject.patient_name}')
 
             if gene_type == 'V':
                 if not feature:
