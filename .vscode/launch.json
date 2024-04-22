@@ -80,6 +80,33 @@
             "cwd": "D:/Research/digby_dev_data/AIRR-seq/Human/IGH",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "vdjbase_create_airr_classes.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/vdjbase_create_airr_classes.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "vdjbase_create_filters.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/vdjbase_create_filters.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "genomic_create_filters.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/genomic_create_filters.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }

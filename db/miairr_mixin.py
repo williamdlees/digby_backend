@@ -1,6 +1,9 @@
+
 # Mixin classes defining MiAIRR fields
+# This file is created by vdjbase_create_classes.py. DO NOT UPDATE BY HAND
 
 from sqlalchemy import Column, Integer, String, Boolean, Float
+
 
 
 class MiAIRR_SampleMixin(object):
@@ -28,13 +31,6 @@ class MiAIRR_SampleMixin(object):
     paired_filename = Column(String(100))
     paired_read_direction = Column(String(100))
     sample_name = Column(String(100))
-    reads = Column(Integer)
-    genotype = Column(String(100))
-    asc_genotype = Column(String(100))
-    igsnper_plot_path = Column(String(100))
-    sample_group = Column(String(100))
-    genotype_stats = Column(String(100))
-    genotype_report = Column(String(100))
 
 
 class MiAIRR_StudyMixin(object):
@@ -101,6 +97,24 @@ class MiAIRR_PatientMixin(object):
     patient_name = Column(String(100))
 
 
+class MiAIRR_TissueProMixin(object):
+    id = Column(Integer, primary_key=True)
+    tissue_label = Column(String(100))
+    tissue_processing = Column(String(100))
+    cell_subset_id = Column(String(100))
+    cell_subset_label = Column(String(100))
+    cell_phenotype = Column(String(100))
+    cell_species_id = Column(String(100))
+    cell_species_label = Column(String(100))
+    single_cell = Column(String(100))
+    cell_number = Column(String(100))
+    cells_per_reaction = Column(String(100))
+    cell_storage = Column(String(100))
+    cell_quality = Column(String(100))
+    cell_isolation = Column(String(100))
+    cell_processing_protocol = Column(String(100))
+
+
 class MiAIRR_SeqProtocolMixin(object):
     id = Column(Integer, primary_key=True)
     template_class = Column(String(100))
@@ -123,26 +137,6 @@ class MiAIRR_SeqProtocolMixin(object):
     paired_read_length = Column(String(100))
 
 
-class MiAIRR_TissueProMixin(object):
-    id = Column(Integer, primary_key=True)
-    tissue_id = Column(String(100))
-    tissue_label = Column(String(100))
-    tissue_processing = Column(String(100))
-    cell_subset_id = Column(String(100))
-    cell_subset_label = Column(String(100))
-    cell_phenotype = Column(String(100))
-    cell_species_id = Column(String(100))
-    cell_species_label = Column(String(100))
-    single_cell = Column(String(100))
-    cell_number = Column(String(100))
-    cells_per_reaction = Column(String(100))
-    cell_storage = Column(String(100))
-    cell_quality = Column(String(100))
-    cell_isolation = Column(String(100))
-    cell_processing_protocol = Column(String(100))
-    sub_cell_type = Column(String(100))
-
-
 class MiAIRR_DataProMixin(object):
     id = Column(Integer, primary_key=True)
     data_processing_id = Column(String(100))
@@ -160,16 +154,4 @@ class MiAIRR_DataProMixin(object):
 
 class MiAIRR_GenoDetectionMixin(object):
     id = Column(Integer, primary_key=True)
-    prepro_tool = Column(String(100))
-    aligner_tool = Column(String(100))
-    aligner_ver = Column(String(100))
-    aligner_reference_v = Column(String(100))
-    aligner_reference_d = Column(String(100))
-    aligner_reference_j = Column(String(100))
-    geno_tool = Column(String(100))
-    geno_ver = Column(String(100))
-    haplotype_tool = Column(String(100))
-    haplotype_ver = Column(String(100))
-    single_assignment = Column(Boolean)
-    sample_basis = Column(String(100))
 

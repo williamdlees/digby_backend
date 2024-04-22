@@ -1,7 +1,9 @@
 from sqlalchemy import Boolean, Column, DECIMAL, DateTime, ForeignKey, Index, Integer, String, Table, Text, func, BigInteger, Float
 from sqlalchemy.orm import relationship
-from db.genomic_airr_model import Base
+from sqlalchemy.ext.declarative import declarative_base
 
+Base = declarative_base()
+metadata = Base.metadata
 
 
 class Details(Base):

@@ -12,8 +12,8 @@ from werkzeug.exceptions import BadRequest
 
 from api.system.system import digby_protected
 from db.genomic_db import RefSeq, Feature, Sequence, SampleSequence, Gene
-from db.genomic_airr_model import Sample, Study, Subject, SeqProtocol, TissuePro, DataPro, Base
-from db.genomic_api_query_filters import genomic_sequence_filters, genomic_subject_filters
+from db.genomic_airr_model import Sample, Study, Patient as Subject, SeqProtocol, TissuePro, DataPro, Base
+from db.genomic_api_query_filters import genomic_sequence_filters, genomic_sample_filters
 
 import json
 from datetime import datetime
@@ -95,9 +95,9 @@ class SubjectInfoApi(Resource):
 
         attribute_query = []
 
-        for col in genomic_subject_filters.keys():
-            if genomic_subject_filters[col]['field'] is not None:
-                attribute_query.append(genomic_subject_filters[col]['field'])
+        for col in genomic_sample_filters.keys():
+            if genomic_sample_filters[col]['field'] is not None:
+                attribute_query.append(genomic_sample_filters[col]['field'])
 
         info = db.session.query(*attribute_query)\
             .join(Subject, Subject.id == Sample.subject_id)\
@@ -542,10 +542,10 @@ class SubjectsAPI(Resource):
         """ Returns a list of subjects in the selected datasets  """
         args = filter_arguments.parse_args(request)
 
-        required_cols = json.loads(args['cols']) if 'cols' in args and args['cols'] else list(genomic_subject_filters.keys())
+        required_cols = json.loads(args['cols']) if 'cols' in args and args['cols'] else list(genomic_sample_filters.keys())
 
         for col in required_cols:
-            if col not in genomic_subject_filters.keys():
+            if col not in genomic_sample_filters.keys():
                 raise BadRequest('Bad filter string %s' % args['filter'])
 
         if 'study_name' not in required_cols:
@@ -560,11 +560,11 @@ class SubjectsAPI(Resource):
             if 'annotation_reference' not in required_cols:
                 required_cols.append('annotation_reference')
 
-        attribute_query = [genomic_subject_filters['id']['field']]        # the query requires the first field to be from Sample
+        attribute_query = [genomic_sample_filters['id']['field']]        # the query requires the first field to be from Sample
 
         for col in required_cols:
-            if col != 'id' and genomic_subject_filters[col]['field'] is not None:
-                attribute_query.append(genomic_subject_filters[col]['field'])
+            if col != 'id' and genomic_sample_filters[col]['field'] is not None:
+                attribute_query.append(genomic_sample_filters[col]['field'])
 
         filter = json.loads(args['filter']) if args['filter'] else []
         datasets = genomic_datasets.split(',')
@@ -600,7 +600,7 @@ class SubjectsAPI(Resource):
 
         for s in ret:
             for f in required_cols:
-                if genomic_subject_filters[f]['field'] is not None and 'no_uniques' not in genomic_subject_filters[f]:
+                if genomic_sample_filters[f]['field'] is not None and 'no_uniques' not in genomic_sample_filters[f]:
                     el = s[f]
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
@@ -613,9 +613,9 @@ class SubjectsAPI(Resource):
 
         for f in required_cols:
             try:
-                if 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'numeric':
+                if 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'numeric':
                     uniques[f].sort(key=num_sort_key)
-                elif 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'underscore':
+                elif 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'underscore':
                     uniques[f].sort(key=name_sort_key)
                 else:
                     uniques[f].sort(key=lambda x: (x is None or x == '', x))
@@ -628,10 +628,10 @@ class SubjectsAPI(Resource):
 
         for spec in sort_specs:
             f = spec['field']
-            if f in genomic_subject_filters.keys():
-                if 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'underscore':
+            if f in genomic_sample_filters.keys():
+                if 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'underscore':
                     ret = sorted(ret, key=lambda x: name_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
-                elif 'sort' in genomic_subject_filters[f] and genomic_subject_filters[f]['sort'] == 'numeric':
+                elif 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'numeric':
                     ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
                 else:
                     ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''),  x[f]), reverse=(spec['order'] == 'desc'))
@@ -675,18 +675,18 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
                     if f['op'] == 'in' and dataset not in f['value']:
                         continue        # just going to ignore other criteria I'm afraid
                 else:
-                    f['model'] = genomic_subject_filters[f['field']]['model']
-                    if 'fieldname' in genomic_subject_filters[f['field']]:
-                        f['field'] = genomic_subject_filters[f['field']]['fieldname']
+                    f['model'] = genomic_sample_filters[f['field']]['model']
+                    if 'fieldname' in genomic_sample_filters[f['field']]:
+                        f['field'] = genomic_sample_filters[f['field']]['fieldname']
                     if '(blank)' in f['value']:
                         value_specs = [
-                            {'model': genomic_subject_filters[f['field']]['model'], 'field': f['field'], 'op': 'is_null', 'value': ''},
-                            {'model': genomic_subject_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': ''},
+                            {'model': genomic_sample_filters[f['field']]['model'], 'field': f['field'], 'op': 'is_null', 'value': ''},
+                            {'model': genomic_sample_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': ''},
                         ]
 
                         for v in f['value']:
                             if v != '(blank)':
-                                value_specs.append({'model': genomic_subject_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
+                                value_specs.append({'model': genomic_sample_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
                         
                         f = {'or': value_specs}
 

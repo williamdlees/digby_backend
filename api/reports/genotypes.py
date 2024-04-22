@@ -1,7 +1,7 @@
 # Functions to extract genotypes by database query
 
-from db.genomic_db import Subject as GenomicSubject, Sample as GenomicSample, Gene as GenomicGene, Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, SampleSequence as GenomicSampleSequence
-from db.genomic_airr_model import Sample as GenomicSample, Sequence as GenomicSequence, G
+from db.genomic_db import Gene as GenomicGene, Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, SampleSequence as GenomicSampleSequence
+from db.genomic_airr_model import Sample as GenomicSample
 from db.vdjbase_model import Gene, Allele, AllelesSample
 from db.vdjbase_airr_model import Sample
 from receptor_utils.simple_bio_seq import read_csv

@@ -8,6 +8,9 @@ It is the master file defining the attributes in the VDJbase AIRR sample schema.
 vdjbase_airr_schema_defs.csv is the file read by the VDJbase utilities that build the database definition, filter file and front-end column definitions. It should
 be a straightforward CSV save of the xls file.
 
+rows with miairr category are used to create miairr_mixin.py, this is common to airrseq and genomic databases and contains all the miairr fields, plus one or two others.
+rows with germline or airrseq category are added to vdjbase_airr_model.py or genomic_airr_model.py
+
 Therefore, if the AIRR schema is updated, the process is:
 - Run parse_airr_schema.py to create a new from airr_schema_defs.csv
 - Review airr_schema_defs.csv and modify airr_schema_defs.xlsx as necessary (hopefully this will mostly require additional rows to be inserted)

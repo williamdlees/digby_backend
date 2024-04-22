@@ -1,11 +1,10 @@
 # Create filter definitions for the sample API, using the sqlalchemy class definitions
 
 from db.vdjbase_airr_common import read_definition_data
-from vdjbase_model import *
-from vdjbase_airr_model import *
+from db.vdjbase_model import *
+from db.vdjbase_airr_model import *
 
-class_files = ['vdjbase_model.py', 'vdjbase_airr_model.py']
-filter_file = 'vdjbase_api_query_filters.py'
+filter_file = 'db/vdjbase_api_query_filters.py'
 
 prelude = '''
 # API filter definitions, based on the SQLAlchemy class definitions
@@ -106,9 +105,6 @@ def process_classes(fo, class_defs):
 
 def write_prelude(fo):
     fo.write(prelude)
-
-
-
 
 
 def main():

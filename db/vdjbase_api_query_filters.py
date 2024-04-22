@@ -7,8 +7,7 @@ from sqlalchemy import func
 from db.vdjbase_airr_model import GenoDetection, Sample, Patient, Study, TissuePro, SeqProtocol, DataPro
 from db.vdjbase_model import Allele, Gene, AlleleConfidenceReport
 
-sample_info_filters = {    
-    'repertoire_id': {'model': 'Sample', 'field': Sample.repertoire_id, 'help': 'Identifier for the repertoire object. This identifier should be globally unique so that repertoires from multiple studies can be combined together without conflict. The repertoire_id is used to link other AIRR data to a Repertoire. Specifically, the Rearrangements Schema includes repertoire_id for referencing the specific Repertoire for that Rearrangement.', 'example': '' },
+sample_info_filters = {    'repertoire_id': {'model': 'Sample', 'field': Sample.repertoire_id, 'help': 'Identifier for the repertoire object. This identifier should be globally unique so that repertoires from multiple studies can be combined together without conflict. The repertoire_id is used to link other AIRR data to a Repertoire. Specifically, the Rearrangements Schema includes repertoire_id for referencing the specific Repertoire for that Rearrangement.', 'example': '' },
     'repertoire_name': {'model': 'Sample', 'field': Sample.repertoire_name, 'help': 'Short generic display name for the repertoire', 'example': '' },
     'repertoire_description': {'model': 'Sample', 'field': Sample.repertoire_description, 'help': 'Generic repertoire description', 'example': '' },
     'sample_processing_id': {'model': 'Sample', 'field': Sample.sample_processing_id, 'help': 'Identifier for the sample processing object. This field should be unique within the repertoire. This field can be used to uniquely identify the combination of sample, cell processing, nucleic acid processing and sequencing run information for the repertoire.', 'example': '' },

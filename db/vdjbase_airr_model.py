@@ -1,6 +1,6 @@
 
 # MiAIRR class definitions, based on the MiAIRR schema definition with extensions as noted in vdjbase_airr_schema_defs.xls
-# This file was derived from the output of db/vdjbase_create_airr_classes.py. Consider making updates via that script.
+# This file is created by vdjbase_create_classes.py. DO NOT UPDATE BY HAND
 
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
@@ -12,6 +12,13 @@ from db.miairr_mixin import MiAIRR_SampleMixin, MiAIRR_StudyMixin, MiAIRR_Patien
 
 class Sample(MiAIRR_SampleMixin, Base):
     __tablename__ = "sample"
+    reads = Column(Integer)
+    genotype = Column(String(100))
+    igsnper_plot_path = Column(String(100))
+    sample_group = Column(String(100))
+    genotype_stats = Column(String(100))
+    genotype_report = Column(String(100))
+
     geno_detection_id = Column(ForeignKey('geno_detection.id'), nullable=True, index=True)
     patient_id = Column(ForeignKey('patient.id'), nullable=False, index=True)
     seq_protocol_id = Column(ForeignKey('seq_protocol.id'), nullable=False, index=True)
@@ -23,8 +30,8 @@ class Sample(MiAIRR_SampleMixin, Base):
     study = relationship('Study')
     tissue_pro = relationship('TissuePro')
     data_pro = relationship('DataPro')
-    patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
     alleles = relationship("Allele", secondary="alleles_sample", back_populates="samples")
+    patient = relationship('Patient', back_populates='samples', foreign_keys=[patient_id])
 
 
 class Study(MiAIRR_StudyMixin, Base):
@@ -33,14 +40,16 @@ class Study(MiAIRR_StudyMixin, Base):
 
 class Patient(MiAIRR_PatientMixin, Base):
     __tablename__ = "patient"
+    igsnper_sample_id = Column(ForeignKey('sample.id'), nullable=True, index=True)
+
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
     study = relationship('Study')
     samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
-    igsnper_sample_id = Column(ForeignKey('sample.id'), nullable=True, index=True)
 
 
 class TissuePro(MiAIRR_TissueProMixin, Base):
     __tablename__ = "tissue_pro"
+    sub_cell_type = Column(String(100))
 
 
 class SeqProtocol(MiAIRR_SeqProtocolMixin, Base):
@@ -53,3 +62,16 @@ class DataPro(MiAIRR_DataProMixin, Base):
 
 class GenoDetection(MiAIRR_GenoDetectionMixin, Base):
     __tablename__ = "geno_detection"
+    prepro_tool = Column(String(100))
+    aligner_tool = Column(String(100))
+    aligner_ver = Column(String(100))
+    aligner_reference_v = Column(String(100))
+    aligner_reference_d = Column(String(100))
+    aligner_reference_j = Column(String(100))
+    geno_tool = Column(String(100))
+    geno_ver = Column(String(100))
+    haplotype_tool = Column(String(100))
+    haplotype_ver = Column(String(100))
+    single_assignment = Column(Boolean)
+    sample_basis = Column(String(100))
+
