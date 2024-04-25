@@ -9,29 +9,32 @@ filter_file = 'db/genomic_api_query_filters.py'
 prelude = '''
 # API filter definitions, based on the SQLAlchemy class definitions
 
-# This file is created programmatically by db/vdjbase_create_filters.py. DO NOT UPDATE BY HAND. 
+# This file is created programmatically by db/vdjbase_create_filters.py. DO NOT UPDATE BY HAND.
 
 from sqlalchemy import func
 from db.genomic_airr_model import GenoDetection, Sample, Patient, Study, TissuePro, SeqProtocol, DataPro
-from db.genomic_db import Sequence, Gene
+from db.genomic_db import Sequence, Gene, Feature
 
 '''
 
 required_classes = {
     'genomic_sample_filters': [Sample, Patient, Study, TissuePro, SeqProtocol, DataPro, GenoDetection],
-    'genomic_sequence_filters': [Sequence, Gene]
+    'genomic_sequence_filters': [Sequence, Gene, Feature]
 }
 
 extras = {
     'genomic_sample_filters': """
+    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
 """,
     'genomic_sequence_filters': """
+    'sample_id': {'model': None, 'field': None, 'fieldname': 'sample_id'},
+    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
 """
 }
 
 excludes = {
-    'genomic_sample_filters': [],
-    'genomic_sequence_filters': [],
+    'genomic_sample_filters': ['id'],
+    'genomic_sequence_filters': ['id', 'locus_order', 'alpha_order', 'pseudo_gene'],
 }
 
 renames = {
@@ -39,7 +42,9 @@ renames = {
         {'name': 'name', 'class': 'Sample', 'rename': 'sample_name'}
     ],
     'genomic_sequence_filters': [
-        {'name': 'name', 'class': 'Gene', 'rename': 'gene_name'}
+        {'name': 'name', 'class': 'Gene', 'rename': 'gene_name'},
+        {'name': 'type', 'class': 'Gene', 'rename': 'gene_type'},
+        {'name': 'name', 'class': 'Feature', 'rename': 'feature_name'},
     ],
 }
 
@@ -71,18 +76,18 @@ def process_classes(fo, class_defs):
                         try:
                             renamed = True
                             if column.type.python_type is int:
-                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                             else:
-                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                         except NotImplementedError:
                             continue
 
                 if not renamed:
                     try:
                         if column.type.python_type is int:
-                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                         else:
-                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'help': '{help_text}', 'example': '{example_text}'}},\n")
                     except NotImplementedError:
                         continue
 

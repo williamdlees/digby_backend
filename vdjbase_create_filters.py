@@ -36,7 +36,7 @@ extras = {
     'notes_count': {'model': 'Allele', 'field': func.count(AlleleConfidenceReport.id).label('notes_count'), 'sort': 'numeric'},
 
     'sample_id': {'model': None, 'field': None, 'fieldname': 'sample_id'},
-    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},    
+    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset', 'no_uniques': True},
 """
 }
 
@@ -58,7 +58,7 @@ renames = {
 
 def process_classes(fo, class_defs):
     for filter, class_list in required_classes.items():
-        fo.write(f"{filter} = {{")
+        fo.write(f"{filter} = {{\n")
 
         for required_class in class_list:
 
@@ -82,18 +82,18 @@ def process_classes(fo, class_defs):
                         try:
                             renamed = True
                             if column.type.python_type is int:
-                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                             else:
-                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                                fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                         except NotImplementedError:
                             continue
 
                 if not renamed:
                     try:
                         if column.type.python_type is int:
-                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                         else:
-                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'help': '{help_text}', 'example': '{example_text}' }},\n")
+                            fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'help': '{help_text}', 'example': '{example_text}'}},\n")
                     except NotImplementedError:
                         continue
 
@@ -112,6 +112,7 @@ def main():
         class_defs = read_definition_data()
         write_prelude(fo)
         process_classes(fo, class_defs)
+
 
 if __name__ == "__main__":
     main()

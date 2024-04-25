@@ -3,7 +3,7 @@
 from db.vdjbase_airr_common import read_definition_data
 from operator import attrgetter
 
-cols_file = '../../digby/src/app/rep-sample/rep-sample-panel/rep-sample-panel-cols.ts'
+cols_file = '../digby/src/app/rep-sample/rep-sample-panel/rep-sample-panel-cols.ts'
 
 prelude = '''
 // Material table column definitions
@@ -26,14 +26,14 @@ def write_prelude(fo):
 def write_postlude(fo):
     fo.write(postlude)
 
+
 hidden_recs = []
 default_recs = {}
 
+
 def write_table(fo, table_name, items):
     for item in items:
-        if 'TRUE' in item['display']:
-            #if item['simple_name'] == 'lab_name':
-            #    breakpoint()
+        if 'TRUE' in item['display'] and item['category'] != 'genomic':
             rec = []
             rec.append(f"id: '{item['simple_name'].replace('.', '_')}'")
 

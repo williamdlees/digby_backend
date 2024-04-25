@@ -107,6 +107,24 @@
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "vdjbase_create_digby_panel_cols.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/vdjbase_create_digby_panel_cols.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "genomic_create_digby_panel_cols.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/genomic_create_digby_panel_cols.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }

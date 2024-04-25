@@ -11,12 +11,11 @@ import os
 import yaml
 
 from db.genomic_ref import update_genomic_ref, read_gene_order
-from db.genomic_airr_model import Sample, Study, Subject, SeqProtocol, TissuePro, DataPro
+from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro
 from db.genomic_db import Base, RefSeq
-from db.genomic_db_functions import save_genomic_study, save_genomic_subject, save_genomic_sample, save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances
+from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
-
 
 
 Session = sessionmaker()
@@ -131,7 +130,7 @@ def process_reference_assembly(session, ref, species):
 
 required_fields = {
     'study': {'study_id', 'accession_reference', 'study_title', 'study_description', 'study_type', 'inclusion_exclusion_criteria', 'grants', 'study_contact', 'collected_by', 'lab_name', 'lab_address', 'submitted_by', 'pub_ids', 'keywords_study'},
-    'subject': {'subject_id', 'synthetic', 'species', 'sex', 'age_min', 'age_max', 'age_unit', 'age_event', 'ancestry_population', 'ethnicity', 'race', 'strain_name', 'linked_subjects', 'link_type', 'study_group_description', 'disease_diagnosis', 'disease_length', 'disease_stage', 'prior_therapies', 'immunogen', 'intervention', 'medical_history'},
+    'patient': {'subject_id', 'synthetic', 'species', 'sex', 'age_min', 'age_max', 'age_unit', 'age_event', 'ancestry_population', 'ethnicity', 'race', 'strain_name', 'linked_subjects', 'link_type', 'study_group_description', 'disease_diagnosis', 'disease_length', 'disease_stage', 'prior_therapies', 'immunogen', 'intervention', 'medical_history'},
     'sample': {'sample_id', 'sample_type', 'anatomic_site', 'disease_state_sample', 'collection_time_point_relative', 'collection_time_point_relative_unit', 'collection_time_point_reference', 'biomaterial_provider', 'reference_assembly'},
     'tissuepro': {'tissue_processing', 'tissue', 'cell_subset', 'cell_phenotype', 'cell_species', 'single_cell', 'cell_number', 'cells_per_reaction', 'cell_storage', 'cell_quality', 'cell_isolation', 'cell_processing_protocol'},
     'seqprotocol': {'template_class', 'template_quality', 'template_amount', 'template_amount_unit', 'library_generation_method', 'library_generation_protocol', 'library_generation_kit_version', 'complete_sequences', 'physical_linkage', 'pcr_target_locus', 'forward_pcr_primer_target_location', 'reverse_pcr_primer_target_location', 'sequencing_run_id', 'total_reads_passing_qc_filter', 'sequencing_platform', 'sequencing_facility', 'sequencing_run_date', 'sequencing_kit', 'read_length', 'paired_read_length'},
@@ -189,7 +188,7 @@ def process_study(dataset_dir, reference_features, session, study, study_name):
 
 
 def create_subject(session, study_obj, subject_name, row):
-    check_required_fields('subject', row)
+    check_required_fields('patient', row)
 
     row['synthetic'] = 'T' in row['synthetic'].upper()
 
@@ -255,7 +254,7 @@ def create_subject(session, study_obj, subject_name, row):
     except json.JSONDecodeError:
         raise ImportException('Error - disease_diagnosis is not a valid ontology object.')
     
-    subject_obj = Subject(
+    subject_obj = Patient(
         subject_id=row['subject_id'],
         synthetic=row['synthetic'],
         species_id=species_id,
@@ -377,7 +376,6 @@ def find_or_create_tissuepro(session, tissuepros, row):
 
     tissuepro_obj = TissuePro(
         tissue_processing=tp_label,
-        tissue_id=tissuepro_dict['tissue_id'],
         tissue_label=tissuepro_dict['tissue_label'],
         cell_subset_id=tissuepro_dict['cell_subset_id'],
         cell_subset_label=tissuepro_dict['cell_subset_label'],
@@ -477,7 +475,7 @@ def find_or_create_datapro(session, datapros, row):
     return datapro_obj
 
 
-def create_sample(session, study, subject, sample_name, tissuepro, seqprotocol, datapro, row):
+def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, datapro, row):
     check_required_fields('sample', row)
 
     try:
@@ -510,7 +508,7 @@ def create_sample(session, study, subject, sample_name, tissuepro, seqprotocol, 
         annotation_path='',
         ref_seq_id=ref.id,
         study_id=study.id,
-        subject_id=subject.id,
+        patient_id=patient.id,
         tissue_pro_id=tissuepro.id,
         seq_protocol_id=seqprotocol.id,
         data_pro_id=datapro.id,

@@ -11,8 +11,8 @@ from math import ceil
 from werkzeug.exceptions import BadRequest
 
 from api.system.system import digby_protected
-from db.genomic_db import RefSeq, Feature, Sequence, SampleSequence, Gene
-from db.genomic_airr_model import Sample, Study, Patient as Subject, SeqProtocol, TissuePro, DataPro, Base
+from db.genomic_db import RefSeq, Feature, Sequence, SampleSequence, Gene, SequenceFeature
+from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro, Base
 from db.genomic_api_query_filters import genomic_sequence_filters, genomic_sample_filters
 
 import json
@@ -87,7 +87,7 @@ class SubjectInfoApi(Resource):
             raise BadRequest('Bad species or dataset name')
 
         sample = db.session.query(Sample)\
-            .filter(Sample.identifier == sample_id)\
+            .filter(Sample.sample_name == sample_id)\
             .one_or_none()
 
         if sample is None:
@@ -100,9 +100,9 @@ class SubjectInfoApi(Resource):
                 attribute_query.append(genomic_sample_filters[col]['field'])
 
         info = db.session.query(*attribute_query)\
-            .join(Subject, Subject.id == Sample.subject_id)\
-            .join(Study, Study.id == Subject.study_id)\
-            .filter(Sample.identifier == sample_id)\
+            .join(Patient, Patient.id == Sample.patient_id)\
+            .join(Study, Study.id == Patient.study_id)\
+            .filter(Sample.sample_name == sample_id)\
             .one_or_none()
 
         if info is not None:
@@ -344,8 +344,9 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
 
         seq_query = db.session.query(*attribute_query)
 
-        if 'gene_name' in required_cols:
-            seq_query = seq_query.join(Gene, Sequence.gene_id == Gene.id)
+        seq_query = seq_query.join(Gene, Sequence.gene_id == Gene.id)
+        seq_query = seq_query.join(SequenceFeature, SequenceFeature.sequence_id == Sequence.id)
+        seq_query = seq_query.join(Feature, Feature.id == SequenceFeature.feature_id)
 
         filter_spec = []
         sample_count_filters = []
@@ -390,7 +391,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
 
         for f in sample_count_filters:
             if f['op'] in OPERATORS:
-                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Subject.name), f['value']))
+                seq_query = seq_query.having(OPERATORS[f['op']](func.count(Patient.name), f['value']))
 
         appears = {}
 
@@ -428,10 +429,10 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
 
             appearances = {}
 
-            for sequence_id, subject_id in subseqs:
+            for sequence_id, patient_id in subseqs:
                 if sequence_id not in appearances:
                     appearances[sequence_id] = []
-                appearances[sequence_id].append(subject_id)
+                appearances[sequence_id].append(patient_id)
 
             for k, v in appearances.items():
                 appears[ids_to_names[k]] = len(set(v))
@@ -493,45 +494,6 @@ class FeaturePosAPI(Resource):
         else:
             return []
 
-'''
-genomic_subject_filters = {
-    'subject_identifier': {'model': 'Subject', 'field': Subject.identifier.label('subject_identifier'), 'fieldname': 'identifier', 'sort': 'underscore'},
-    'name_in_study': {'model': 'Subject', 'field': Subject.name_in_study},
-    'mother_in_study': {'model': 'Subject', 'field': Subject.mother_in_study},
-    'father_in_study': {'model': 'Subject', 'field': Subject.father_in_study},
-    'age': {'model': 'Subject', 'field': Subject.age},
-    'sex': {'model': 'Subject', 'field': Subject.sex},
-    'self_ethnicity': {'model': 'Subject', 'field': Subject.self_ethnicity},
-    'grouped_ethnicity': {'model': 'Subject', 'field': Subject.grouped_ethnicity},
-    'population': {'model': 'Subject', 'field': Subject.population},
-    'population_abbr': {'model': 'Subject', 'field': Subject.population_abbr},
-    'super_population': {'model': 'Subject', 'field': Subject.super_population},
-  
-    'id': {'model': 'Sample', 'field': Sample.id},
-    'sample_name_in_study': {'model': 'Sample', 'field': Sample.name_in_study.label('sample_name_in_study'), 'fieldname': 'name_in_study'},
-    'sample_identifier': {'model': 'Sample', 'field': Sample.identifier.label('sample_identifier'), 'fieldname': 'identifier', 'sort': 'underscore'},
-    'annotation_path': {'model': 'Sample', 'field': Sample.annotation_path},
-    'annotation_method': {'model': 'Sample', 'field': Sample.annotation_method},
-    'annotation_format': {'model': 'Sample', 'field': Sample.annotation_format},
-    'annotation_reference': {'model': 'Sample', 'field': Sample.annotation_reference},
-    'locus_coverage': {'model': 'Sample', 'field': Sample.locus_coverage},
-    'sequencing_platform': {'model': 'Sample', 'field': Sample.sequencing_platform},
-    'assembly_method': {'model': 'Sample', 'field': Sample.assembly_method},
-    'DNA_source': {'model': 'Sample', 'field': Sample.DNA_source},
-
-    'study_name': {'model': 'Study', 'field': Study.study_name.label('study_name'), 'fieldname': 'study_name'},
-    'study_title': {'model': 'Study', 'field': Study.title.label('study_title'), 'fieldname': 'study_title'},
-    'study_id': {'model': 'Study', 'field': Study.study_id.label('study_id'), 'fieldname': 'study_id'},
-    'study_date': {'model': 'Study', 'field': Study.date.label('study_date'), 'fieldname': 'date'},
-    'study_description': {'model': 'Study', 'field': Study.description.label('study_description'), 'fieldname': 'description'},
-    'institute': {'model': 'Study', 'field': Study.institute},
-    'researcher': {'model': 'Study', 'field': Study.researcher},
-    'reference': {'model': 'Study', 'field': Study.reference},
-    'contact': {'model': 'Study', 'field': Study.contact},
-
-    'dataset': {'model': None, 'field': None, 'fieldname': 'dataset'},
-}
-'''
 
 @ns.route('/subjects/<string:species>/<string:genomic_datasets>')
 @api.response(404, 'Reference sequence not found.')
@@ -552,18 +514,18 @@ class SubjectsAPI(Resource):
             required_cols = ['study_name'] + required_cols
         if 'dataset' not in required_cols:
             required_cols.append('dataset')
-        if 'sample_identifier' not in required_cols:
-            required_cols.append('sample_identifier')
+        if 'sample_id' not in required_cols:
+            required_cols.append('sample_id')
         if 'annotation_path' in required_cols:
             if 'annotation_method' not in required_cols:
                 required_cols.append('annotation_method')
             if 'annotation_reference' not in required_cols:
                 required_cols.append('annotation_reference')
 
-        attribute_query = [genomic_sample_filters['id']['field']]        # the query requires the first field to be from Sample
+        attribute_query = [genomic_sample_filters['sample_id']['field']]        # the query requires the first field to be from Sample
 
         for col in required_cols:
-            if col != 'id' and genomic_sample_filters[col]['field'] is not None:
+            if col != 'sample_id' and genomic_sample_filters[col]['field'] is not None:
                 attribute_query.append(genomic_sample_filters[col]['field'])
 
         filter = json.loads(args['filter']) if args['filter'] else []
@@ -661,8 +623,8 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
 
         sample_query = db.session.query(*attribute_query)\
             .select_from(Sample)\
-            .join(Subject, Sample.subject_id == Subject.id)\
-            .join(Study, Study.id == Subject.study_id)
+            .join(Patient, Sample.patient_id == Patient.id)\
+            .join(Study, Study.id == Patient.study_id)
 
         allele_filters = None
 
@@ -699,7 +661,7 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
 
         if allele_filters is not None:
             samples_with_alleles = db.session.query(Sample.identifier)\
-                .join(Subject, Sample.subject_id == Subject.id)\
+                .join(Patient, Sample.patient_id == Patient.id)\
                 .join(SampleSequence, SampleSequence.sample_id == Sample.id)\
                 .join(Sequence, SampleSequence.sequence_id == Sequence.id)\
                 .filter(Sequence.name.in_(allele_filters['value']))\
@@ -790,11 +752,11 @@ class AssemblyAPI(Resource):
         return [{'assembly': row[0]} for row in results]
 
 
-@ns.route('/genotype/<string:species>/<string:subject_name>')
+@ns.route('/genotype/<string:species>/<string:patient_name>')
 class SamplesApi(Resource):
     @digby_protected()
-    def get(self, species, subject_name):
-        """ Returns the inferred genotype (in MiAIRR format) of the specified subject """
+    def get(self, species, patient_name):
+        """ Returns the inferred genotype (in MiAIRR format) of the specified patient """
 
         if species not in genomic_dbs:
             return None, 404
@@ -803,7 +765,7 @@ class SamplesApi(Resource):
 
         for dataset in genomic_dbs[species].keys():
             if '_description' not in dataset:
-                genotype = self.single_genotype(species, dataset, subject_name)
+                genotype = self.single_genotype(species, dataset, patient_name)
                 if genotype:
                     genotypes.append(genotype)
 
@@ -812,7 +774,7 @@ class SamplesApi(Resource):
 
         ret = {
             'GenotypeSet': {
-                'receptor_genotype_id': 'Genomic_genotype_set_' + subject_name,
+                'receptor_genotype_id': 'Genomic_genotype_set_' + patient_name,
                 'genotype_class_list': genotypes
             }
 
@@ -820,16 +782,16 @@ class SamplesApi(Resource):
 
         return ret
 
-    def single_genotype(self, species, dataset, subject_name):
+    def single_genotype(self, species, dataset, patient_name):
         print(dataset)
         session = genomic_dbs[species][dataset].session
-        sample = session.query(Subject).filter(Subject.identifier == subject_name).one_or_none()
+        sample = session.query(Patient).filter(Patient.identifier == patient_name).one_or_none()
 
         if not sample:
             return None
 
         reference_set_version = sample.reference_set_version
-        genotype = process_genomic_genotype(subject_name, [], session, True, False)
+        genotype = process_genomic_genotype(patient_name, [], session, True, False)
         documented = []
         undocumented = []
         deleted = []
@@ -847,7 +809,7 @@ class SamplesApi(Resource):
                     else:
                         documented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
         ret = {
-            'receptor_genotype_id': 'Tigger_genotype_' + subject_name + '_' + dataset,
+            'receptor_genotype_id': 'Tigger_genotype_' + patient_name + '_' + dataset,
             'locus': dataset,
             'documented_alleles': documented,
             'undocumented_alleles': undocumented,

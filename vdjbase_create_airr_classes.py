@@ -78,7 +78,7 @@ genomic_key_texts = {
     'Patient': """
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
     study = relationship('Study')
-    samples = relationship('Sample', back_populates="subject", primaryjoin="Sample.subject_id==Subject.id")
+    samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
 """,
 
     'Sample': """

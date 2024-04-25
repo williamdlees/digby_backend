@@ -34,10 +34,10 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
     if annotation_file not in annotation_records:
         annotation_records[annotation_file] = read_csv(annotation_file)
 
-    rows = [x for x in annotation_records[annotation_file] if str(x['sample_name']) == str(sample.sample_id) and str(x['subject']) == str(sample.subject.subject_id) and x['project'] == sample.subject.study.study_id]
+    rows = [x for x in annotation_records[annotation_file] if str(x['sample_name']) == str(sample.sample_id) and str(x['subject']) == str(sample.patient.subject_id) and x['project'] == sample.patient.study.study_id]
 
     if not rows:
-        print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.subject.subject_id} project {sample.subject.study.study_id}')
+        print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
 
     # If the annotation file contains records for multiple samples, split into multiple files
 
@@ -83,7 +83,7 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
             feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, sample.ref_seq)
 
             if feature and seq.sequence.replace('.', '') != feature.feature_seq.replace('.', ''):
-                print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in sample {sample.sample_name} subject {sample.subject.patient_name}')
+                print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in sample {sample.sample_name} subject {sample.patient.patient_name}')
 
             if gene_type == 'V':
                 if not feature:

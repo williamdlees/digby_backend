@@ -14,7 +14,7 @@ from db.miairr_mixin import MiAIRR_SampleMixin, MiAIRR_StudyMixin, MiAIRR_Patien
 class Sample(MiAIRR_SampleMixin, Base):
     __tablename__ = "sample"
     annotation_path = Column(String(100))
-    reference_assmebly = Column(String(100))
+    reference_assembly = Column(String(100))
 
     ref_seq_id = Column(Integer, ForeignKey('ref_seq.id'))
     sequences = relationship('Sequence', secondary='sample_sequence', back_populates='samples')
@@ -36,12 +36,12 @@ class Study(MiAIRR_StudyMixin, Base):
 
 class Patient(MiAIRR_PatientMixin, Base):
     __tablename__ = "patient"
-    mother_in_stury = Column(String(100))
+    mother_in_study = Column(String(100))
     father_in_study = Column(String(100))
 
     study_id = Column(ForeignKey('study.id'), nullable=False, index=True)
     study = relationship('Study')
-    samples = relationship('Sample', back_populates="subject", primaryjoin="Sample.subject_id==Subject.id")
+    samples = relationship('Sample', back_populates="patient", primaryjoin="Sample.patient_id==Patient.id")
 
 
 class TissuePro(MiAIRR_TissueProMixin, Base):

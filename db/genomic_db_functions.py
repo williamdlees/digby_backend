@@ -3,7 +3,7 @@
 from receptor_utils import simple_bio_seq as simple
 from receptor_utils import novel_allele_name
 from db.genomic_db import RefSeq, Feature, SampleSequence, Sequence, Details, Assembly, Gene
-from db.genomic_airr_model import Sample, Study, Subject, SeqProtocol, TissuePro, DataPro
+from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro
 from sqlalchemy import and_
 from db.genomic_ref import find_type
 import datetime
@@ -64,13 +64,13 @@ def save_genomic_sequence(session, name, gene, allele_type, novel, deleted, func
     return sequence
 
 
-def save_genomic_subject(identifier, name_in_study, study):
-    subject = Subject(identifier=identifier, name_in_study=name_in_study)
-    study.subjects.append(subject)
-    return subject
+def save_genomic_patient(identifier, name_in_study, study):
+    patient = Patient(identifier=identifier, name_in_study=name_in_study)
+    study.patients.append(patient)
+    return patient
 
 
-def save_genomic_sample(session, identifier, subject, name_in_study, reference_assembly, annotation_format):
+def save_genomic_sample(session, identifier, patient, name_in_study, reference_assembly, annotation_format):
     sample = Sample(identifier=identifier, name_in_study=name_in_study, annotation_format=annotation_format)
     if reference_assembly:
         ref = session.query(RefSeq).filter(RefSeq.name == reference_assembly).one_or_none()
@@ -80,14 +80,14 @@ def save_genomic_sample(session, identifier, subject, name_in_study, reference_a
         #sample.reference_assembly = ref
         ref.samples.append(sample)
 
-    subject.samples.append(sample)
+    patient.samples.append(sample)
     session.commit()
     return sample
 
 
-def save_genomic_assembly(identifier, reference, sequence_file, sequence, chromosome, start, end, subject):
+def save_genomic_assembly(identifier, reference, sequence_file, sequence, chromosome, start, end, patient):
     assembly = Assembly(identifier=identifier, reference=reference, sequence_file=sequence_file, sequence=sequence, chromosome=chromosome, start=start, end=end)
-    subject.assemblies.append(assembly)
+    patient.assemblies.append(assembly)
     return assembly
 
 
@@ -303,8 +303,8 @@ def find_feature_by_name(session, feature_type, name, ref_seq):
 def calculate_appearances(session):
     seqs = session.query(Sequence).all()
     for seq in seqs:
-        subject_count = session.query(Subject) \
-            .join(Sample, Sample.subject_id == Subject.id) \
+        subject_count = session.query(Patient) \
+            .join(Sample, Sample.patient_id == Patient.id) \
             .join(SampleSequence, SampleSequence.sample_id == Sample.id) \
             .join(Sequence, Sequence.id == SampleSequence.sequence_id) \
             .filter(Sequence.id == seq.id) \
