@@ -6,7 +6,8 @@ from api.reports.report_utils import make_output_file, chunk_list
 from app import vdjbase_dbs, genomic_dbs
 from db.vdjbase_model import AllelesSample, Gene, Allele
 from db.vdjbase_airr_model import Sample, Patient
-from db.genomic_db import Sequence as GenomicSequence, Sample as GenomicSample, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
+from db.genomic_db import Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
+from db.genomic_airr_model import Sample as GenomicSample
 import os
 from api.vdjbase.vdjbase import apply_rep_filter_params
 import xlwt
@@ -72,18 +73,18 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     for gen_sample in genomic_samples:
         if gen_sample['dataset'] not in gen_samples_by_dataset:
             gen_samples_by_dataset[gen_sample['dataset']] = []
-        gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
+        gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['sample_name'])
 
     for dataset in gen_samples_by_dataset.keys():
         session = genomic_dbs[species][dataset].session
         appearances = []
 
         for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(GenomicSample.identifier).filter(GenomicSample.identifier.in_(sample_chunk)).all()
+            sample_list = session.query(GenomicSample.sample_name).filter(GenomicSample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
-            app_query = session.query(GenomicSample.identifier,
+            app_query = session.query(GenomicSample.sample_name,
                                       GenomicGene.name,
                                       GenomicSequence.name,
                                       GenomicGene.locus_order,
@@ -92,7 +93,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 .filter(GenomicSequence.id == GenomicSampleSequence.sequence_id) \
                 .filter(GenomicGene.id == GenomicSequence.gene_id) \
                 .filter(GenomicSequence.type.in_(['V-REGION', 'D-REGION', 'J-REGION'])) \
-                .filter(GenomicSample.identifier.in_(sample_list))\
+                .filter(GenomicSample.sample_name.in_(sample_list))\
                 .filter(GenomicGene.name.in_(wanted_genes))
 
             if params['novel_alleles'] == 'Exclude':

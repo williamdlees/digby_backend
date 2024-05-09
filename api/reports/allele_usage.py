@@ -6,7 +6,8 @@ from api.reports.report_utils import make_output_file, collate_samples, chunk_li
 
 from app import vdjbase_dbs, genomic_dbs
 from db.vdjbase_model import AllelesSample, Gene, Allele, AllelesPattern
-from db.genomic_db import Sequence as GenomicSequence, Sample as GenomicSample, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
+from db.genomic_db import Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
+from db.genomic_airr_model import Sample as GenomicSample
 
 from db.vdjbase_airr_model import Patient, Sample
 import os
@@ -112,7 +113,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         allele_recs = []
 
         for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(GenomicSample.identifier).filter(GenomicSample.identifier.in_(sample_chunk)).all()
+            sample_list = session.query(GenomicSample.sample_name).filter(GenomicSample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
@@ -121,13 +122,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 .filter(GenomicSequence.id == GenomicSampleSequence.sequence_id) \
                 .filter(GenomicGene.id == GenomicSequence.gene_id)\
                 .filter(GenomicSequence.type.in_(['V-REGION', 'D-REGION', 'J-REGION'])) \
-                .filter(GenomicSample.identifier.in_(sample_list))\
+                .filter(GenomicSample.sample_name.in_(sample_list))\
                 .filter(GenomicGene.name.in_(wanted_genes))
 
             if 'sort_order' in params and params['sort_order'] == 'Locus':
-                query = query.order_by(GenomicGene.locus_order, GenomicSample.identifier, GenomicSequence.name)
+                query = query.order_by(GenomicGene.locus_order, GenomicSample.sample_name, GenomicSequence.name)
             else:
-                query = query.order_by(GenomicGene.alpha_order, GenomicSample.identifier, GenomicSequence.name)
+                query = query.order_by(GenomicGene.alpha_order, GenomicSample.sample_name, GenomicSequence.name)
 
             if params['novel_alleles'] == 'Exclude':
                 query = query.filter(GenomicSequence.novel == 0)

@@ -33,6 +33,18 @@ class RefSeq(Base):
 
 class SampleSequence(Base):
     __tablename__ = 'sample_sequence'
+    total_pos = Column(Integer, nullable=True)
+    av_coverage = Column(Float, nullable=True)
+    mismatched_positions = Column(Integer, nullable=True)
+    matched_positions = Column(Integer, nullable=True)
+    position_mismatches = Column(String, nullable=True)
+    position_matches = Column(String, nullable=True)
+    percent_accuracy = Column(Float, nullable=True)
+    percent_accuracy = Column(Float, nullable=True)
+    positions_10x = Column(Integer, nullable=True)
+    fully_spanning_reads = Column(Integer, nullable=True)
+    fully_spanning_matches = Column(Integer, nullable=True)
+
     sample_id = Column(ForeignKey('sample.id'), primary_key=True)
     sequence_id = Column(ForeignKey('sequence.id'), primary_key=True)
     sample = relationship('Sample', backref='sequence_associations', cascade="all")
@@ -81,6 +93,9 @@ class Sequence(Base):
     notes = Column(String(200))
     sequence = Column(Text(1000))
     gapped_sequence = Column(Text(1000))
+    max_coverage = Column(Integer)
+    max_coverage_sample_id = Column(Integer)
+    max_coverage_sample_name = Column(String)
     gene_id = Column(Integer, ForeignKey('gene.id'))
     samples = relationship('Sample', secondary='sample_sequence', back_populates='sequences')
     features = relationship('Feature', secondary='sequence_feature', back_populates='sequences')

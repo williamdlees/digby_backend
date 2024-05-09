@@ -133,7 +133,7 @@ def collate_gen_samples(gen_samples):
                 chain = locus
             elif chain != locus:
                 raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
-        samples_by_dataset[gen_sample['dataset']].append(gen_sample['identifier'])
+        samples_by_dataset[gen_sample['dataset']].append(gen_sample['sample_name'])
 
     return chain, samples_by_dataset
 

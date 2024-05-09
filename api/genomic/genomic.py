@@ -138,25 +138,6 @@ def enumerate_feature(f):
 
     return ret
 
-'''
-genomic_sequence_filters = {
-    'name': {'model': 'Sequence', 'field': Sequence.name, 'sort': 'gene'},
-    'imgt_name': {'model': 'Sequence', 'field': Sequence.imgt_name},
-    'type': {'model': 'Sequence', 'field': Sequence.type},
-    'novel': {'model': 'Sequence', 'field': Sequence.novel},
-    'deleted': {'model': 'Sequence', 'field': Sequence.deleted},
-    'functional': {'model': 'Sequence', 'field': Sequence.functional},
-    'notes': {'model': 'Sequence', 'field': Sequence.notes},
-    'sequence': {'model': 'Sequence', 'field': Sequence.sequence, 'no_uniques': True},
-    'gapped_sequence': {'model': 'Sequence', 'field': Sequence.gapped_sequence, 'no_uniques': True},
-    'appearances': {'model': 'Sequence', 'field': Sequence.appearances, 'fieldname': 'appearances', 'sort': 'numeric'},
-
-    'gene_name': {'model': 'Gene', 'field': Gene.name.label('gene_name'), 'sort': 'gene', 'fieldname': 'gene_name`'},
-
-    'sample_identifier': {'model': None, 'fieldname': 'sample_identifier'},
-    'dataset': {'model': None, 'fieldname': 'dataset'},
-}
-'''
 
 genomic_sequence_bool_values = {
     'novel': ('Novel', '(blank)'),
@@ -220,6 +201,10 @@ class SequencesAPI(Resource):
             for f in required_cols:
                 if 'field' in genomic_sequence_filters[f] and genomic_sequence_filters[f]['field'] is not None and 'no_uniques' not in genomic_sequence_filters[f]:
                     el = s[f]
+
+                    if f not in s:
+                        breakpoint()
+
                     if isinstance(el, datetime):
                         el = el.date().isoformat()
                     elif isinstance(el, Decimal):
@@ -517,10 +502,12 @@ class SubjectsAPI(Resource):
         if 'sample_id' not in required_cols:
             required_cols.append('sample_id')
         if 'annotation_path' in required_cols:
-            if 'annotation_method' not in required_cols:
-                required_cols.append('annotation_method')
             if 'annotation_reference' not in required_cols:
                 required_cols.append('annotation_reference')
+            if 'annotation_method' not in required_cols:
+                required_cols.append('annotation_method')
+            if 'contig_bam_path' not in required_cols:
+                required_cols.append('contig_bam_path')
 
         attribute_query = [genomic_sample_filters['sample_id']['field']]        # the query requires the first field to be from Sample
 
@@ -571,7 +558,7 @@ class SubjectsAPI(Resource):
                     if el not in uniques[f]:
                         uniques[f].append(el)
             if filter_applied:
-                uniques['names_by_dataset'][s['dataset']].append(s['sample_identifier'])
+                uniques['names_by_dataset'][s['dataset']].append(s['sample_id'])
 
         for f in required_cols:
             try:
@@ -677,12 +664,12 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
                 v = r[k]
                 if isinstance(v, datetime):
                     r[k] = v.date().isoformat()
-                elif k == 'annotation_path':
+                elif k == 'annotation_path' or k == 'contig_bam_path':
                     if v is None:
                         app.logger.error('No annotation path for sample %s' % r['sample_identifier'])
                         r[k] = ''
                     elif 'http' not in v:
-                        r[k] = os.path.join(app.config['STATIC_LINK'], 'study_data/Genomic/samples', r[k])
+                        r[k] = os.path.join(app.config['STATIC_LINK'], 'study_data/Genomic/samples', species, dataset, r[k])
             r['dataset'] = dataset
             results.append(r)
 
@@ -815,6 +802,6 @@ class SamplesApi(Resource):
             'undocumented_alleles': undocumented,
             'deleted_genes': deleted,
             'inference_process': 'genomic_sequencing',
-            'genotyping_tool': sample.annotation_method,
+            'genotyping_tool': 'IGenotyper',
         }
         return ret

@@ -2,12 +2,12 @@
 from Bio import SeqIO
 from werkzeug.exceptions import BadRequest
 
-from api.genomic.genomic import genomic_sequence_filters, find_genomic_samples, genomic_subject_filters, \
-    find_genomic_sequences
+from api.genomic.genomic import find_genomic_samples, find_genomic_sequences
+from db.genomic_api_query_filters import genomic_sequence_filters, genomic_sample_filters
 from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file
 from app import app
-from db.genomic_db import Subject, Sample
+from db.genomic_airr_model import Sample
 import csv
 import zipfile
 import os
@@ -29,10 +29,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('No repertoire-derived genotypes were selected.')
 
     if 'Sample info' in params['type']:
-        headers = genomic_subject_filters.keys()
+        headers = genomic_sample_filters.keys()
 
         attribute_query = []
-        for name, filter in genomic_subject_filters.items():
+        for name, filter in genomic_sample_filters.items():
             if filter['model'] is not None:
                 attribute_query.append(filter['field'])
 

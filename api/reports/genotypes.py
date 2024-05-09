@@ -38,8 +38,8 @@ def fake_gene(gene_details, gene_name, subject):
 
 
 def process_genomic_genotype(sample_name, wanted_genes, session, functional, fully_haplotyped):
-    allele_query = session.query(GenomicSample.identifier, GenomicSequence.name, GenomicGene.name, GenomicSampleSequence.haplotype)\
-        .filter(GenomicSample.identifier == sample_name) \
+    allele_query = session.query(GenomicSample.sample_name, GenomicSequence.name, GenomicGene.name, GenomicSampleSequence.haplotype)\
+        .filter(GenomicSample.sample_name == sample_name) \
         .join(GenomicSampleSequence, GenomicSampleSequence.sample_id == GenomicSample.id) \
         .join(GenomicSequence, GenomicSampleSequence.sequence_id == GenomicSequence.id) \
         .filter(GenomicSequence.type.like('%REGION%')) \

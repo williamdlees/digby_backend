@@ -14,6 +14,9 @@ from db.miairr_mixin import MiAIRR_SampleMixin, MiAIRR_StudyMixin, MiAIRR_Patien
 class Sample(MiAIRR_SampleMixin, Base):
     __tablename__ = "sample"
     annotation_path = Column(String(100))
+    annotation_method = Column(String(100))
+    annotation_reference = Column(String(100))
+    contig_bam_path = Column(String(100))
     reference_assembly = Column(String(100))
 
     ref_seq_id = Column(Integer, ForeignKey('ref_seq.id'))

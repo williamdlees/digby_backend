@@ -29,11 +29,25 @@ def write_postlude(fo):
 
 hidden_recs = []
 default_recs = {}
+omitted_recs = [        # these are AIRR-sec related columns we don't want to display in genomic
+    'complete_sequences',
+    'physical_linkage',
+    'forward_pcr_primer_target_location',
+    'reverse_pcr_primer_target_location',
+    'read_direction',
+    'read_length',
+    'paired_filename',
+    'paired_read_direction',
+    'paired_read_length',
+    'paired_reads_assembly',
+    'primer_match_cutoffs',
+    'collapsing_method',
+]
 
 
 def write_table(fo, table_name, items):
     for item in items:
-        if 'TRUE' in item['display'] and item['category'] != 'airrseq':
+        if 'TRUE' in item['display'] and item['category'] != 'airrseq' and item['simple_name'] not in omitted_recs:
             rec = []
             rec.append(f"id: '{item['simple_name'].replace('.', '_')}'")
 
@@ -47,7 +61,7 @@ def write_table(fo, table_name, items):
 
             section_name = table_name
 
-            # Use Subejct as section name rather than Patient
+            # Use Subject as section name rather than Patient
             # bit of a fudge but we don't want to rename the VDJbase table as it has lots of dependencies
 
             if section_name == 'Patient':
@@ -69,7 +83,7 @@ def write_table(fo, table_name, items):
             rec.append(f"example: '{example_text}'")
 
             if item['order']:
-                default_recs[item['order']] = rec
+                default_recs[int(item['order'])] = rec
             else:
                 hidden_recs.append(rec)
 

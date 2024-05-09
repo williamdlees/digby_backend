@@ -3,10 +3,11 @@ from hashlib import sha256
 import os.path
 import shutil
 import csv
+import glob
 
 from receptor_utils.simple_bio_seq import write_csv
 
-from db.genomic_db import Feature
+from db.genomic_db import Feature, SampleSequence
 from db.genomic_db_functions import save_novel_allele, add_feature_to_ref, find_feature_by_name, \
     find_sequence_by_sequence, save_genomic_sequence, link_sequence_to_feature, update_sample_sequence_link, find_allele_by_name
 
@@ -23,10 +24,32 @@ def read_csv(filename):
         return list(csv.DictReader(fi))
 
 
+def to_int(row, field):
+    if row[field]:
+        try:
+            return int(row[field])
+        except ValueError:
+            print(f"Error: {field} is not an integer in {row}")
+            return 0
+    else:
+        return 0
+
+
+def to_float(row, field):
+    if row[field]:
+        try:
+            return float(row[field])
+        except ValueError:
+            print(f"Error: {field} is not an float in {row}")
+            return 0
+    else:
+        return 0
+    
+
 # TODO - Simplify the schema by merging Feature and Sequence. See ../../notes on genomic schema.txt
 
 
-def process_igenotyper_record(session, dataset_dir, sample, annotation_file, reference_features):
+def process_igenotyper_record(session, dataset_dir, sample, annotation_file, reference_features, bam_path):
     global annotation_records
 
     print(f"Importing sample {sample.sample_name}")
@@ -39,17 +62,51 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
     if not rows:
         print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
 
+    # Make the samples directory and project subdirectory if they don't exist
+
+    study_name = sample.patient.study.study_name
+
+    if not os.path.isdir(os.path.join(dataset_dir, 'samples')):
+        os.mkdir(os.path.join(dataset_dir, 'samples'))
+    
+    study_path = os.path.join(dataset_dir, 'samples', study_name)
+
+    if not os.path.isdir(study_path):
+        os.mkdir(study_path)
+
+    sample_path = os.path.join(study_path, sample.sample_name)
+
+    if not os.path.isdir(sample_path):
+        os.mkdir(sample_path)
+
     # If the annotation file contains records for multiple samples, split into multiple files
 
+    sample_af_name = f"{sample.sample_name}.csv"
+
     if len(rows) < len(annotation_records[annotation_file]):
-        af_name, af_ext = os.path.splitext(os.path.basename(annotation_file))
-        sample_af_name = f"{af_name}_{sample.sample_name}{af_ext}"
-        write_csv(os.path.join(dataset_dir, 'samples', sample_af_name), rows)
-        sample.annotation_path = sample_af_name
+        write_csv(os.path.join(sample_path, sample_af_name), rows)
     else:
-        if not os.path.isfile(os.path.join(dataset_dir, 'samples')):
-            shutil.copy(annotation_file, os.path.join(dataset_dir, 'samples'))
-        sample.annotation_path = annotation_file
+        shutil.copy(annotation_file, os.path.join(sample_path, sample_af_name))
+    
+    sample.annotation_path = '/'.join((study_name, sample.sample_name, sample_af_name))
+
+    # Find the bam files for the sample
+
+    if bam_path:
+        bam_files = glob.glob(os.path.join(bam_path, "*.bam"))
+        if len(bam_files) == 1:
+            bamfile_path = bam_files[0]
+        else:
+            raise GeneParsingException(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name}")
+        
+    shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
+
+    if os.path.exists(bamfile_path + '.bai'):
+        shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
+    else:
+        raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
+
+    sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
 
     sense = '+'     # by + sense we mean 5' to 3'
     feature_id = 1
@@ -155,6 +212,19 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
                                                  f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
 
                 link_sequence_to_feature(seq, feature)
+
+            if 'Total_Positions' in row:
+                sf = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id, SampleSequence.sample_id == sample.id).first()
+                sf.total_pos = to_int(row, 'Total_Positions')
+                sf.av_coverage = to_float(row, 'Average_Coverage')
+                sf.mismatched_positions = to_int(row, 'Mismatched_Positions')
+                sf.matched_positions = to_int(row, 'Matched_Positions')
+                sf.position_mismatches = row['Position_Mismatches']
+                sf.position_matches = row['Position_Matches']
+                sf.percent_accuracy = to_float(row, 'Percent_Accuracy')
+                sf.positions_10x = to_int(row, 'Positions_With_At_Least_10x_Coverage')
+                sf.fully_spanning_reads = to_int(row, 'Fully_Spanning_Reads')
+                sf.fully_spanning_matches = to_int(row, 'Fully_Spanning_Reads_100%_Match')
 
         add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense)
     session.commit()

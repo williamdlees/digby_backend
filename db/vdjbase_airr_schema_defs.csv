@@ -3,7 +3,7 @@ Repertoire.repertoire_id,repertoire_id,mixin,Repertoire,Sample,,,string,TRUE,,TR
 ",,
 Repertoire.repertoire_name,repertoire_name,mixin,Repertoire,Sample,,,string,TRUE,,TRUE,long,FALSE,Repertoire name,,Short generic display name for the repertoire,,
 Repertoire.repertoire_description,repertoire_description,mixin,Repertoire,Sample,,,string,TRUE,,TRUE,long,FALSE,Repertoire description,,Generic repertoire description,,
-Repertoire.study.study_id,study_id,mixin,study,Study,Study.accession_id,Accession id,string,TRUE,4,FALSE,long,FALSE,Study ID,,Unique ID assigned by study registry,PRJNA001,
+Repertoire.study.study_id,study_id,mixin,study,Study,Study.accession_id,Accession id,string,TRUE,5,FALSE,long,FALSE,Study ID,,Unique ID assigned by study registry,PRJNA001,
 Repertoire.study.study_title,study_title,mixin,study,Study,,,string,TRUE,,TRUE,long,FALSE,Study title,,Descriptive study title,Effects of sun light exposure of the Treg repertoire,
 Repertoire.study.study_type.id,study_type.id,mixin,study,Study,,,string,TRUE,,TRUE,long,FALSE,Study type ID,,"CURIE of the concept, encoding the ontology and the local ID",,
 Repertoire.study.study_type.label,study_type.label,mixin,study,Study,,,string,TRUE,,TRUE,long,FALSE,Study type,,Label of the concept in the respective ontology,,
@@ -24,7 +24,7 @@ Repertoire.study.adc_publish_date,adc_publish_date,mixin,study,Study,,,string,TR
 ",02/02/2021,
 Repertoire.study.adc_update_date,adc_update_date,mixin,study,Study,,,string,TRUE,,TRUE,long,FALSE,ADC Update Date,,"Date the study data was updated in the AIRR Data Commons.
 ",02/02/2021,
-Repertoire.subject.subject_id,subject_id,mixin,subject,Patient,Patient.name_in_paper,Subjects.Original name,string,TRUE,,TRUE,short,FALSE,Subject ID,,"Subject ID assigned by submitter, unique within study",SUB856413,
+Repertoire.subject.subject_id,subject_id,mixin,subject,Patient,Patient.name_in_paper,Subjects.Original name,string,TRUE,2,TRUE,short,FALSE,Subject ID,,"Subject ID assigned by submitter, unique within study",SUB856413,
 Repertoire.subject.synthetic,synthetic,mixin,subject,Patient,,,boolean,TRUE,,TRUE,long,FALSE,Synthetic library,,TRUE for libraries in which the diversity has been synthetically generated (e.g. phage display),,
 Repertoire.subject.species.id,species.id,mixin,subject,Patient,,,string,TRUE,,TRUE,long,FALSE,Species ID,,"CURIE of the concept, encoding the ontology and the local ID",,
 Repertoire.subject.species.label,species.label,mixin,subject,Patient,,,string,TRUE,,TRUE,short,FALSE,Species,,Label of the concept in the respective ontology,,
@@ -39,9 +39,9 @@ Repertoire.subject.age_unit.label,age_unit.label,mixin,subject,Patient,,,string,
 Repertoire.subject.age_event,age_event,mixin,subject,Patient,,,string,TRUE,,TRUE,long,FALSE,Age event,,"Event in the study schedule to which `Age` refers. For NCBI BioSample this MUST be `sampling`. For other implementations submitters need to be aware that there is currently no mechanism to encode to potential delta between `Age event` and `Sample collection time`, hence the chosen events should be in temporal proximity.
 ",enrollment,
 Repertoire.subject.age,age,mixin,subject,Patient,Patient.age,Subjects.Age,string,TRUE,,TRUE,short,FALSE,Age,,,,
-Repertoire.subject.ancestry_population,ancestry_population,mixin,subject,Patient,Patient.country,Subjects.Country,string,TRUE,,TRUE,short,FALSE,Ancestry population,,Broad geographic origin of ancestry (continent),"list of continents, mixed or unknown",
-Repertoire.subject.ethnicity,ethnicity,mixin,subject,Patient,Patient.ethnic,Subjects.Ethnic,string,TRUE,,TRUE,short,FALSE,Ethnicity,,Ethnic group of subject (defined as cultural/language-based membership),"English, Kurds, Manchu, Yakuts (and other fields from Wikipedia)",
-Repertoire.subject.race,race,mixin,subject,Patient,,,string,TRUE,,TRUE,short,FALSE,Race,,Racial group of subject (as defined by NIH),"White, American Indian or Alaska Native, Black, Asian, Native Hawaiian or Other Pacific Islander, Other",
+Repertoire.subject.ancestry_population,ancestry_population,mixin,subject,Patient,Patient.country,Subjects.Country,string,TRUE,9,FALSE,short,FALSE,Ancestry population,,Broad geographic origin of ancestry (continent),"list of continents, mixed or unknown",
+Repertoire.subject.ethnicity,ethnicity,mixin,subject,Patient,Patient.ethnic,Subjects.Ethnic,string,TRUE,10,FALSE,short,FALSE,Ethnicity,,Ethnic group of subject (defined as cultural/language-based membership),"English, Kurds, Manchu, Yakuts (and other fields from Wikipedia)",
+Repertoire.subject.race,race,mixin,subject,Patient,,,string,TRUE,11,FALSE,short,FALSE,Race,,Racial group of subject (as defined by NIH),"White, American Indian or Alaska Native, Black, Asian, Native Hawaiian or Other Pacific Islander, Other",
 Repertoire.subject.strain_name,strain_name,mixin,subject,Patient,,,string,TRUE,,TRUE,long,FALSE,Strain name,,Non-human designation of the strain or breed of animal used,C57BL/6J,
 Repertoire.subject.linked_subjects,linked_subjects,mixin,subject,Patient,,,string,TRUE,,TRUE,long,FALSE,Relation to other subjects,,Subject ID to which `Relation type` refers,SUB1355648,
 Repertoire.subject.link_type,link_type,mixin,subject,Patient,,,string,TRUE,,TRUE,long,FALSE,Relation type,,"Relation between subject and `linked_subjects`, can be genetic or environmental (e.g.exposure)","father, daughter, household",
@@ -66,7 +66,7 @@ Repertoire.sample.SampleProcessing.sample_processing_id,sample_processing_id,mix
 Repertoire.sample.Sample.sample_id,sample_id,mixin,Sample,Sample,,,string,TRUE,,TRUE,long,TRUE,Biological sample ID,,"Sample ID assigned by submitter, unique within study",SUP52415,
 Repertoire.sample.Sample.sample_type,sample_type,mixin,Sample,Sample,,,string,TRUE,,TRUE,short,TRUE,Sample type,,"The way the sample was obtained, e.g. fine-needle aspirate, organ harvest, peripheral venous puncture",Biopsy,
 Repertoire.sample.Sample.tissue.id,tissue.id,mixin,Sample,Sample,,,string,TRUE,,TRUE,short,TRUE,Tissue ID,,"CURIE of the concept, encoding the ontology and the local ID",,
-Repertoire.sample.Sample.tissue.label,tissue.label,mixin,Sample,TissuePro,TissuePro.tissue,Tissue Processing.Tissue,string,TRUE,5,FALSE,short,TRUE,Tissue,,Label of the concept in the respective ontology,,
+Repertoire.sample.Sample.tissue.label,tissue.label,mixin,Sample,TissuePro,TissuePro.tissue,Tissue Processing.Tissue,string,TRUE,6,FALSE,short,TRUE,Tissue,,Label of the concept in the respective ontology,,
 Repertoire.sample.Sample.anatomic_site,anatomic_site,mixin,Sample,Sample,,,string,TRUE,,TRUE,long,TRUE,Anatomic site,,"The anatomic location of the tissue, e.g. Inguinal, femur",Iliac crest,
 Repertoire.sample.Sample.disease_state_sample,disease_state_sample,mixin,Sample,Sample,,,string,TRUE,,TRUE,long,TRUE,Disease state of sample,,Histopathologic evaluation of the sample,Tumor infiltration,
 Repertoire.sample.Sample.collection_time_point_relative,collection_time_point_relative,mixin,Sample,Sample,(Sample.date),,number,TRUE,,TRUE,long,TRUE,Sample collection time,,"Time point at which sample was taken, relative to `Collection time event`",14,
@@ -102,7 +102,7 @@ Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.pcr_target_locus,pc
 ",IGK,
 Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.forward_pcr_primer_target_location,forward_pcr_primer_target_location,mixin,NucleicAcidProcessing,SeqProtocol,SeqProtocol.primers_3_location,Sequence Protocol.Primer 3 location,string,TRUE,,TRUE,long,TRUE,Fwd PCR primer target,,Position of the most distal nucleotide templated by the forward primer or primer mix,"IGHV, +23",
 Repertoire.sample.NucleicAcidProcessing.pcr_target.PCRTarget.reverse_pcr_primer_target_location,reverse_pcr_primer_target_location,mixin,NucleicAcidProcessing,SeqProtocol,SeqProtocol.primers_5_location,Sequence Protocol.Primer 5 location,string,TRUE,,TRUE,long,TRUE,Rev PCR primer target,,Position of the most proximal nucleotide templated by the reverse primer or primer mix,"IGHG, +57",
-Repertoire.sample.NucleicAcidProcessing.complete_sequences,complete_sequences,mixin,NucleicAcidProcessing,SeqProtocol,SeqProtocol.sequencing_length,Sequence Protocol.Sequencing_length,string,TRUE,6,FALSE,short,TRUE,Complete sequences,,"To be considered `complete`, the procedure used for library construction MUST generate sequences that 1) include the first V gene codon that encodes the mature polypeptide chain (i.e. after the leader sequence) and 2) include the last complete codon of the J gene (i.e. 1 bp 5' of the J->C splice site) and 3) provide sequence information for all positions between 1) and 2). To be considered `complete & untemplated`, the sections of the sequences defined in points 1) to 3) of the previous sentence MUST be untemplated, i.e. MUST NOT overlap with the primers used in library preparation. `mixed` should only be used if the procedure used for library construction will likely produce multiple categories of sequences in the given experiment. It SHOULD NOT be used as a replacement of a NULL value.
+Repertoire.sample.NucleicAcidProcessing.complete_sequences,complete_sequences,mixin,NucleicAcidProcessing,SeqProtocol,SeqProtocol.sequencing_length,Sequence Protocol.Sequencing_length,string,TRUE,7,FALSE,short,TRUE,Complete sequences,,"To be considered `complete`, the procedure used for library construction MUST generate sequences that 1) include the first V gene codon that encodes the mature polypeptide chain (i.e. after the leader sequence) and 2) include the last complete codon of the J gene (i.e. 1 bp 5' of the J->C splice site) and 3) provide sequence information for all positions between 1) and 2). To be considered `complete & untemplated`, the sections of the sequences defined in points 1) to 3) of the previous sentence MUST be untemplated, i.e. MUST NOT overlap with the primers used in library preparation. `mixed` should only be used if the procedure used for library construction will likely produce multiple categories of sequences in the given experiment. It SHOULD NOT be used as a replacement of a NULL value.
 ",partial,
 Repertoire.sample.NucleicAcidProcessing.physical_linkage,physical_linkage,mixin,NucleicAcidProcessing,SeqProtocol,,,string,TRUE,,TRUE,long,TRUE,Physical linkage,,"In case an experimental setup is used that physically links nucleic acids derived from distinct `Rearrangements` before library preparation, this field describes the mode of that linkage. All `hetero_*` terms indicate that in case of paired-read sequencing, the two reads should be expected to map to distinct IG/TR loci. `*_head-head` refers to techniques that link the 5' ends of transcripts in a single-cell context. `*_tail-head` refers to techniques that link the 3' end of one transcript to the 5' end of another one in a single-cell context. This term does not provide any information whether a continuous reading-frame between the two is generated. `*_prelinked` refers to constructs in which the linkage was already present on the DNA level (e.g. scFv).
 ",hetero_head-head,
@@ -139,9 +139,9 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,patient_name,mixin,,Patient,name,Subjects.Name,string,TRUE,,TRUE,short,FALSE,Subject name,,Subject name as allocated by VDJbase,,Determined by pipeline
 ,igsnper_sample_id,airrseq,,Patient,igsnper_sample_id,,integer,FALSE,,TRUE,short,FALSE,Igsnper Sample ID,,Sample ID as allocated by IgSNPer,,Detemined at take-on
 ,sample_name,mixin,,Sample,name,Samples.Name,string,TRUE,1,FALSE,short,FALSE,Sample name,,Sample name as allocated by VDJbase,,Determined by pipeline
-,reads,airrseq,,Sample,reads,Samples.Reads,integer,TRUE,2,FALSE,short,FALSE,VDJbase reads,,Reads processed by VDJbase pipeline,,Determined by pipeline
-,genotype,airrseq,,Sample,genotype,,genotype,TRUE,7,FALSE,short,FALSE,Genotype report,,Links to genotype reports,,Derived at take-on
-,haplotypes,airrseq,,Sample,haplotype,,haplotype,TRUE,8,FALSE,long,FALSE,Haplotype reports,,Links to haplotype reports,,
+,reads,airrseq,,Sample,reads,Samples.Reads,integer,TRUE,3,FALSE,short,FALSE,VDJbase reads,,Reads processed by VDJbase pipeline,,Determined by pipeline
+,genotype,airrseq,,Sample,genotype,,genotype,FALSE,,TRUE,short,FALSE,Genotype report,,Links to genotype reports,,Derived at take-on
+,haplotypes,airrseq,,Sample,haplotype,,haplotype,FALSE,,TRUE,long,FALSE,Haplotype reports,,Links to haplotype reports,,
 ,igsnper_plot_path,airrseq,,Sample,igsnper_plot_path,,string,TRUE,,TRUE,long,FALSE,Igsnper plot path,,Path for igsnper plot,,
 ,sample_group,airrseq,,Sample,sample_group,Samples.Sample Group,string,TRUE,,TRUE,long,FALSE,Sample group,,Sample group,,? Possibly sample_processing_id
 ,genotype_stats,airrseq,,Sample,genotype_stats,,string,FALSE,,TRUE,long,FALSE,Genotype stats,,Path to genotype stats file,,
@@ -161,5 +161,8 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,sample_basis,airrseq,,GenoDetection,sample_basis,Genotype Detections.Repertoire or Germline,string,TRUE,,TRUE,short,FALSE,Sample basis,,Repertoire or germline,Germline,
 ,mother_in_study,genomic,,Patient,,,string,TRUE,,TRUE,short,FALSE,Mother in study,,"Accession number of mother, if included in this study",ABC123,
 ,father_in_study,genomic,,Patient,,,string,TRUE,,TRUE,short,FALSE,Father in study,,"Accession number of father, if included in this study",,
-,annotation_path,genomic,,Sample,,,string,TRUE,,TRUE,long,FALSE,Annotation path,,Path to annotation file,,
+,annotation_path,genomic,,Sample,,,string,TRUE,8,FALSE,short,FALSE,Annotation reports,,Reports produced during the annotation,,
+,annotation_method,genomic,,Sample,,,string,TRUE,,TRUE,short,FALSE,Annotation Method,,Name of the annotation method,Igenotyper,
+,annotation_reference,genomic,,Sample,,,string,TRUE,,TRUE,short,FALSE,Annotation Ref,,Citation for annotation method,https://www.frontiersin.org/article/10.3389/fimmu.2020.02136,
+,contig_bam_path,genomic,,Sample,,,string,TRUE,,TRUE,short,FALSE,Contig Path,,Path to the contig file on the server,,
 ,reference_assembly,genomic,,Sample,,,string,TRUE,,TRUE,short,FALSE,Reference assembly,,Name of reference assembly,,

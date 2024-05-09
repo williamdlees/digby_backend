@@ -13,7 +13,7 @@ import yaml
 from db.genomic_ref import update_genomic_ref, read_gene_order
 from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro
 from db.genomic_db import Base, RefSeq
-from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances
+from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances, calculate_max_cov_sample
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
 
@@ -40,19 +40,16 @@ def create_dataset(species, dataset):
         session = engine.session
         save_genomic_dataset_details(session, species, dataset)
 
+        for val in ('Reference_set_version', 'Reference_sets'):
+            if val not in study_data:
+                raise ImportException(f'Error - {val} is missing from the study metadata.')
+            
         read_gene_order(session, dataset_dir)
-        if 'Reference_sets' in study_data:
-            for file in study_data['Reference_sets']:
-                update_genomic_ref(session, os.path.join(dataset_dir, file))
-                print(f'Processed reference set {file} for species {species} dataset {dataset}')
-        else:
-            raise ImportException('Error - no reference sets were provided for the dataset.')
+        for file in study_data['Reference_sets']:
+            update_genomic_ref(session, os.path.join(dataset_dir, file))
+            print(f'Processed reference set {file} for species {species} dataset {dataset}')
 
-        reference_set_version = ''
-        if 'Reference_set_version' in study_data:
-            reference_set_version = study_data['Reference_set_version']
-        else:
-            raise ImportException('Error - no reference set version was provided for the dataset.')
+        reference_set_version = study_data['Reference_set_version']
 
         reference_features = None
         if 'Reference_assemblies' in study_data:
@@ -69,7 +66,7 @@ def create_dataset(species, dataset):
 
         session.commit()
         for study_name, study in study_data['Studies'].items():
-            process_study(dataset_dir, reference_features, session, study, study_name)
+            process_study(dataset_dir, reference_features, session, study, study_name, reference_set_version)
 
     except ImportException as e:
         print(e)
@@ -143,7 +140,7 @@ def check_required_fields(fields, row):
         raise ImportException(f'Error - metadata attributes missing: {",".join(list(required_fields[fields] - set(list(row.keys()))))}')
 
 
-def process_study(dataset_dir, reference_features, session, study, study_name):
+def process_study(dataset_dir, reference_features, session, study, study_name, reference_set_version):
     study_obj = None
     tissuepros = []
     seqprotocols = []
@@ -151,6 +148,13 @@ def process_study(dataset_dir, reference_features, session, study, study_name):
     subject_num = 1
     subjects = {}
     subject_samples = {}
+
+    for val in ('annotation_method', 'annotation_reference'):
+        if val not in study:
+            raise ImportException(f'Error - {val} is missing from the study metadata.')
+
+    annotation_method = study['annotation_method']
+    annotation_reference = study['annotation_reference']
 
     metadata = simple.read_csv(os.path.join(dataset_dir, study['metadata_file']))
 
@@ -173,17 +177,19 @@ def process_study(dataset_dir, reference_features, session, study, study_name):
             subject_object = subjects[row['subject_id']]
             subject_samples[row['subject_id']] += 1
 
-        sample_name = f'{study_name}_I{subject_num}_S{subject_samples[row["subject_id"]]}'
+        sample_name = f'{subject_object.patient_name}_S{subject_samples[row["subject_id"]]}'
 
         tissuepro_object = find_or_create_tissuepro(session, tissuepros, row)
         seqprotocol_object = find_or_create_seqprotocol(session, seqprotocols, row)
         datapro_object = find_or_create_datapro(session, datapros, row)
-        sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row)
+        sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row, annotation_method, annotation_reference)
 
-        process_igenotyper_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features)
+        bam_path = os.path.join(study['bam_dir'], row['sample_id'])
+        process_igenotyper_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, bam_path)
         
     session.commit()
     calculate_appearances(session)
+    calculate_max_cov_sample(session)
     session.commit()
 
 
@@ -475,7 +481,7 @@ def find_or_create_datapro(session, datapros, row):
     return datapro_obj
 
 
-def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, datapro, row):
+def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, datapro, row, annotation_method, annotation_reference):
     check_required_fields('sample', row)
 
     try:
@@ -512,6 +518,8 @@ def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, 
         tissue_pro_id=tissuepro.id,
         seq_protocol_id=seqprotocol.id,
         data_pro_id=datapro.id,
+        annotation_reference=annotation_reference,
+        annotation_method=annotation_method,
     )
     session.add(sample_obj)
     session.commit()

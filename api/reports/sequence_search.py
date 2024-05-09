@@ -6,7 +6,8 @@ from api.reports.reports import send_report
 
 from app import vdjbase_dbs, genomic_dbs
 from db.vdjbase_model import AllelesSample, Gene, Allele
-from db.genomic_db import Sequence as GenomicSequence, Subject as GenomicSubject, SampleSequence as GenomicSampleSequence, Gene as GenomicGene, Sample as GenomicSample
+from db.genomic_airr_model import Sample as GenomicSample
+from db.genomic_db import Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
 
 from db.vdjbase_airr_model import Patient, Sample
 from api.vdjbase.vdjbase import apply_rep_filter_params
@@ -75,7 +76,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         sequence_recs = []
 
         for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):
-            sample_list = session.query(GenomicSample.identifier).filter(GenomicSample.identifier.in_(sample_chunk)).all()
+            sample_list = session.query(GenomicSample.sample_name).filter(GenomicSample.sample_name.in_(sample_chunk)).all()
             sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
             sample_list = [s[0] for s in sample_list]
 
@@ -84,7 +85,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 .join(GenomicSample, GenomicSampleSequence.sample_id == GenomicSample.id)\
                 .join(GenomicGene, GenomicSequence.gene_id == GenomicGene.id)\
                 .filter(GenomicSequence.type.in_(['V-REGION', 'D-REGION', 'J-REGION'])) \
-                .filter(GenomicSample.identifier.in_(sample_list))\
+                .filter(GenomicSample.sample_name.in_(sample_list))\
                 .filter(GenomicGene.name.in_(wanted_genes))
 
             if params['novel_alleles'] == 'Exclude':

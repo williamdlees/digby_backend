@@ -159,7 +159,7 @@ def find_or_assign_allele(session, gene_sequence, v_gene, functional):
 
 def link_sequence_to_feature(sequence, feature):
     sequence.features.append(feature)
-
+    
 
 def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence):
     if not notes:
@@ -312,3 +312,13 @@ def calculate_appearances(session):
         seq.appearances = subject_count
 
 
+# Calculate the sample with the highest coverage for each sequence
+def calculate_max_cov_sample(session):
+    seqs = session.query(Sequence).all()
+    for seq in seqs:
+        ss = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id).order_by(SampleSequence.fully_spanning_matches.desc()).first()
+
+        if ss is not None:
+            seq.max_coverage = ss.fully_spanning_matches
+            seq.max_coverage_sample_id = ss.sample_id
+            seq.max_coverage_sample_name = ss.sample.sample_name
