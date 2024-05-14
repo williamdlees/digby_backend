@@ -100,9 +100,12 @@ class SubjectInfoApi(Resource):
                 attribute_query.append(genomic_sample_filters[col]['field'])
 
         info = db.session.query(*attribute_query)\
-            .join(Patient, Patient.id == Sample.patient_id)\
-            .join(Study, Study.id == Patient.study_id)\
             .filter(Sample.sample_name == sample_id)\
+            .join(Patient, Patient.id == Sample.patient_id)\
+            .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
+            .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
+            .join(DataPro, DataPro.id == Sample.data_pro_id) \
+            .join(Study, Sample.study_id == Study.id)\
             .one_or_none()
 
         if info is not None:
@@ -609,9 +612,10 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
             raise BadRequest('Bad species or dataset name')
 
         sample_query = db.session.query(*attribute_query)\
-            .select_from(Sample)\
             .join(Patient, Sample.patient_id == Patient.id)\
-            .join(Study, Study.id == Patient.study_id)
+            .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
+            .join(TissuePro, Sample.tissue_pro_id == TissuePro.id)\
+            .join(Study, Sample.study_id == Study.id)
 
         allele_filters = None
 
