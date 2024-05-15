@@ -27,7 +27,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         genotype = process_repseq_genotype(sample['sample_name'], [], session, False)
     else:
         sample = genomic_samples[0]
-        sample['sample_name'] = sample['identifier']        # kludge naming issues
         sample['pcr_target_locus'] = sample['dataset']
         session = genomic_dbs[species][sample['dataset']].session
         genotype = process_genomic_genotype(sample['sample_name'], [], session, True, False)
