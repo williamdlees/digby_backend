@@ -651,14 +651,14 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
             sample_query = apply_filters(sample_query, filter_spec)
 
         if allele_filters is not None:
-            samples_with_alleles = db.session.query(Sample.identifier)\
+            samples_with_alleles = db.session.query(Sample.sample_name)\
                 .join(Patient, Sample.patient_id == Patient.id)\
                 .join(SampleSequence, SampleSequence.sample_id == Sample.id)\
                 .join(Sequence, SampleSequence.sequence_id == Sequence.id)\
                 .filter(Sequence.name.in_(allele_filters['value']))\
                 .all()
             samples_with_alleles = [x[0] for x in samples_with_alleles]
-            sample_query = sample_query.filter(Sample.identifier.in_(samples_with_alleles))
+            sample_query = sample_query.filter(Sample.sample_name.in_(samples_with_alleles))
 
         samples = sample_query.all()
 
