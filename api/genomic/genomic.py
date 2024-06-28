@@ -670,7 +670,7 @@ def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_fil
                     r[k] = v.date().isoformat()
                 elif k == 'annotation_path' or k == 'contig_bam_path':
                     if v is None:
-                        app.logger.error('No annotation path for sample %s' % r['sample_identifier'])
+                        app.logger.error('No annotation path for sample %s' % r['sample_id'])
                         r[k] = ''
                     elif 'http' not in v:
                         r[k] = os.path.join(app.config['STATIC_LINK'], 'study_data/Genomic/samples', species, dataset, r[k])
