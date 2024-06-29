@@ -61,6 +61,7 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
 
     if not rows:
         print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
+        return
 
     # Make the samples directory and project subdirectory if they don't exist
 
@@ -93,11 +94,20 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
     # Find the bam files for the sample
 
     if bam_path:
+        bamfile_path = None
         bam_files = glob.glob(os.path.join(bam_path, "*.bam"))
         if len(bam_files) == 1:
             bamfile_path = bam_files[0]
-        else:
-            raise GeneParsingException(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name}")
+
+        elif len(bam_files) == 0:
+            sdir = glob.glob(os.path.join(bam_path, "*"))
+            if len(sdir) == 1 and os.path.isdir(sdir[0]):
+                bam_files = glob.glob(os.path.join(sdir[0], "*.bam"))
+                if len(bam_files) == 1:
+                    bamfile_path = bam_files[0]
+    
+        if not bamfile_path:
+            raise GeneParsingException(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
         
     shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
 
@@ -118,12 +128,17 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
         if not row['vdjbase_allele']:
             continue        # probably an incomplete/fragmentary row
 
+        # this field seems to have been changed recently and I don't want to break compatibility
+
+        if 'gene' not in row:
+            row['gene'] = row['genotyper_gene']
+        
         gene_type = row['gene'][3]
 
         # TODO: allow constant genes when bed files are fixed
 
-        if gene_type == 'C':
-            continue
+        #if gene_type == 'C':
+        #    continue
 
         if gene_type in ['V', 'D', 'J', 'C']:
             seq = find_allele_by_name(session, row['vdjbase_allele'])
@@ -210,8 +225,12 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
                     end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
                     feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
                                                  f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
+                    link_sequence_to_feature(seq, feature)
 
-                link_sequence_to_feature(seq, feature)
+                    for feature_name, rec in reference_features[sample.ref_seq.name][seq.gene.name].items():
+                        if feature_name != 'GENE':
+                            add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense)
+
 
             if 'Total_Positions' in row:
                 sf = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id, SampleSequence.sample_id == sample.id).first()
@@ -333,6 +352,8 @@ def add_gene_level_features(session, ref, reference_features):
                     add_feature_to_ref(feature['gene'], 'gene', 'C-GENE', feature['ref_seq'], '', 'gene', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", feature_id, ref)
                     feature_id += 1
                     add_feature_to_ref(feature['gene'], 'gene', 'C-GENE', feature['ref_seq'], '', 'mRNA', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", parent_id, ref)
+                else:
+                    add_gene_level_subfeature(locus, feature, feature_type, f'{locus}CRegion', feature_id, parent_id, ref)
             feature_id += 1
 
 
