@@ -1,12 +1,18 @@
-openapi: '3.1.0'
+openapi: 3.0.0
 
 info:
   title: VDJbase API
   version: 2.0.0
+  contact:
+    name: William Lees
+    email: william@lees.org.uk
   description: Public API for VDJbase holding AIRR-seq and Genomic data.
 servers:
-  - url: https://vdjbase.org/api_v1
-  - url: http://127.0.0.1/api_v1
+  - url: http://127.0.0.1:5000/api_v1
+    description: OGRDB API
+    variables:
+      basePath:
+        default: api_v1
 
 components:
   schemas:
@@ -17,9 +23,9 @@ components:
         species:
           type: array
           items:
-            $ref: 'https://raw.githubusercontent.com/airr-community/airr-standards/v1.4.1/specs/airr-schema-openapi3.yaml#/Ontology'
+            $ref: 'https://raw.githubusercontent.com/airr-community/airr-standards/release-1.5/specs/airr-schema-openapi3.yaml#/Ontology'
         
-    # The response object for germline set reference info
+    # The response object for datasets
     datasets_response:
       type: object
       properties:
@@ -35,24 +41,39 @@ components:
               type:
                 type: string
     
+    # the response object for subjects and samples within a dataset
     subject_dataset_response:
+          type: object
+          properties:
+            subject_datasets:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  study_name:
+                    type: string
+                  subject_identifier:
+                    type: string
+                  sample_identifier:
+                    type: string
+                  dataset:
+                    type: string
+            
+    # the response object for sample metadata
+    sample_genotype_response:
       type: object
       properties:
-        subject_datasets:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              study_name:
-                type: string
-              subject_identifier:
-                type: string
-              sample_identifier:
-                type: string
-              dataset:
-                type: string
+        Repertoire: 
+          $ref: './Genotype.yaml#/Genotype'
+
+    # the response object for sample metadata
+    sample_metadata_response:
+      type: object
+      properties:
+        Repertoire: 
+          $ref: './Repertoire.yaml#/Repertoire'
 
     # error response
     error_response:
@@ -75,8 +96,7 @@ paths:
             enum: [airrseq, genomic]
       responses:
         '200':
-          description: |
-            A successful call returns the repertoire data.
+          description: A list of the available species.
           content:
             application/json:
               schema:
@@ -105,7 +125,7 @@ paths:
             type: string
       responses:
         '200':
-          description: A list of datasets
+          description: A list of the available datasets
           content:
             application/json:
               schema:
@@ -139,9 +159,103 @@ paths:
             type: string
       responses:
         '200':
-          description: >
-            return a list of subjects in the specified dataset.
+          description: A list of subjects and samples in the specified dataset.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/subject_dataset'
+                $ref: '#/components/schemas/subject_dataset_response'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  /{type}/sample_genotype/{species}/{dataset}/{subject}/{sample}:
+    get:
+      summary: Return the genotype for the sample
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [airrseq, genomic]
+        - name: species
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dataset
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subject
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sample
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of subjects and samples in the specified dataset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sample_genotype_response'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  /{type}/sample_metadata/{species}/{dataset}/{subject}/{sample}:
+    get:
+      summary: Return the MiAIRR metadata for the sample
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [airrseq, genomic]
+        - name: species
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dataset
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subject
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sample
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of subjects and samples in the specified dataset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sample_metadata_response'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                

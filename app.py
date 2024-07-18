@@ -12,8 +12,8 @@ from db.vdjbase_db import study_data_db_init, manage_airrseq, airrseq_import, ai
 import yaml
 from flask_security.utils import hash_password
 from flask_sqlalchemy import SQLAlchemy
+from flask_swagger_ui import get_swaggerui_blueprint
 
-#from flask_swagger_ui import get_swaggerui_blueprint
 
 from extensions import celery
 
@@ -100,17 +100,23 @@ from api_v1.open_api import api_bp
 
 app.register_blueprint(api_bp, url_prefix='/api_v1')
 
-# SWAGGER_URL = '/swagger'
-# API_URL = '/schema/ogrdb-api-openapi3.yaml'
-# swaggerui_blueprint = get_swaggerui_blueprint(
-#     SWAGGER_URL,
-#     API_URL,
-#     config={
-#         'app_name': "My Flask API"
-#     }
-# )
+SWAGGER_URL = '/swagger'
+API_URL = '/schema/vdjbase-api-openapi3.yaml'
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "My Flask API"
+    }
+)
 
-# app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
+@app.route('/schema/<path:filename>')
+def serve_schema(filename):
+    return send_from_directory('schema', filename)
+
+
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 with open('schema/vdjbase-api-openapi3.yaml', 'r') as f:
     openapi_schema = yaml.safe_load(f)
