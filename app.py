@@ -64,8 +64,8 @@ else:
 mail = Mail(app)
 custom_logging.init_logging(app, mail)
 
-vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data\VDJbase\db'))
-genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data\Genomic\db'))
+vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data','VDJbase','db'))
+genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data', 'Genomic', 'db'))
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 
