@@ -233,7 +233,7 @@ class ReportsStatus(Resource):
 
 # R Script Runner
 def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
-    #current_task.update_state(state='PENDING', meta={'stage': 'running report'})
+    current_task.update_state(state='PENDING', meta={'stage': 'running report'})
     cmd_line = ['Rscript', os.path.join(app.config['R_SCRIPT_PATH'], script)]#
     cmd_line.extend(args)
     print("Running Rscript: '%s'\n" % ' '.join(cmd_line))

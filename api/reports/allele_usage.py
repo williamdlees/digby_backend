@@ -18,7 +18,6 @@ import json
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
-ALLELE_USAGE_SCRIPT = 'Alleles_Usage.R'
 SAMPLE_CHUNKS = 400
 
 
