@@ -1,7 +1,7 @@
 # Allele usage plot for AIRR-seq samples
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import run_rscript, send_report
+from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list, collate_gen_samples
 
 from app import vdjbase_dbs, genomic_dbs
@@ -17,6 +17,8 @@ from jinja2 import Template
 import json
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
+from io import StringIO
+
 
 SAMPLE_CHUNKS = 400
 
@@ -26,6 +28,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         raise BadRequest('Invalid format requested')
 
     kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
+    print(rep_samples)
+    print()
+    print(genomic_samples)
     chain, rep_samples_by_dataset = collate_samples(rep_samples)
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
 
@@ -170,6 +175,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     input_path = make_output_file('tab')
     df = pd.DataFrame(listed_allele_count, columns=labels)
     df.to_csv(input_path, sep='\t', index=False)
+    output = StringIO()
+    df.to_csv(output, sep='\t', index=False)
+    print(output.getvalue())
     output_path = make_output_file('html')
 
     cmd_line = ["-i", input_path,

@@ -3,7 +3,6 @@ import os
 
 from flask import request
 from flask_restx import Resource, reqparse
-
 from api.reports.genotypes import process_genomic_genotype
 from api.restx import api
 from sqlalchemy import inspect, func, distinct
