@@ -842,7 +842,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
 
 
 @ns.route('/genotype/<string:species>/<string:sample_name>')
-class SamplesApi(Resource):
+class GenotypeApi(Resource):
     @digby_protected()
     def get(self, species, sample_name):
         """ Returns the inferred genotype (in MiAIRR format) of the specified sample """

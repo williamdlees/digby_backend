@@ -1,24 +1,14 @@
 import json
-import decimal
-import os
-import datetime as dt
 from app import app
 from datetime import datetime
-from flask import Blueprint, request, jsonify, Response, send_from_directory
-from api.vdjbase.vdjbase import get_vdjbase_species, find_datasets, vdjbase_dbs, sample_info_filters, find_vdjbase_samples, rep_sample_bool_values, VDJBASE_SAMPLE_PATH
-from api.genomic.genomic import get_genomic_species, get_genomic_datasets, find_genomic_samples, ceil, genomic_sample_filters, get_genomic_db
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype
-from db.vdjbase_airr_model import Sample as Airr_Sample
+from flask import Blueprint, request, jsonify, Response
 from schema.models import *
-from db.genomic_airr_model import Patient, SeqProtocol, TissuePro, DataPro
-from db.vdjbase_airr_model import GenoDetection as Airr_GenoDetection, SeqProtocol as Airr_SeqProtocol, Study as Airr_Study, TissuePro as Airr_TissuePro, Patient as Airr_Patient, DataPro as Airr_DataPro
-from db.genomic_airr_model import Study as STD
-from db.genomic_airr_model import Sample as SAMPLE
-from sqlalchemy import func
-from os.path import isfile
 from pydantic.fields import FieldInfo
-from pydantic import BaseModel, ValidationError
-from typing import Any, Optional, Union, get_args, get_origin, List, get_type_hints
+from pydantic import BaseModel
+from typing import Any, Union, get_args, get_origin
+from api.genomic import genomic
+from api.vdjbase import vdjbase
+from flask_restx import Resource
 
 
 api_bp = Blueprint('api_v1', __name__)
@@ -50,13 +40,8 @@ def custom_jsonify(obj):
 @api_bp.route('/<type>/species', methods=['GET'])
 def get_species(type):
     """Get species list based on type."""
-    sp = None
-    if type == "genomic":
-        sp = get_genomic_species()
-    else:
-        sp = get_vdjbase_species()
-
-    species_list = list(set(sp))
+    species_api = genomic.SpeciesApi(Resource)
+    species_list = species_api.get()
     species_response_obj = []
     for item in species_list:
         ontology_obj = Ontology(label=item)
@@ -76,10 +61,12 @@ def get_species_datasets(type, species):
     """Get datasets for a species based on type."""
     data_sets = None
     if type == "genomic":
-        data_sets = get_genomic_datasets(species)
+        data_sets = genomic.DataSetAPI(Resource)
+        data_sets = data_sets.get(species)
 
     elif type == "airrseq":
-        data_sets = find_datasets(species)
+        data_sets = vdjbase.DataSetAPI(Resource)
+        data_sets = data_sets.get(species)
 
     else:
         error_response = ErrorResponse(message="type not exists")
@@ -103,12 +90,9 @@ def get_species_datasets(type, species):
 def get_subject_datasets(type, species, dataset):
     """Get subject datasets for a species and dataset based on type."""
     if type == "genomic":
-        subjects_list, is_currect = get_genomic_list_subjects(species, dataset)
-        if not is_currect:
-            error_response = ErrorResponse(message=str(subjects_list))
-            return jsonify(error_response.dict()), 500
-        
-        else:
+        try:
+            subjects_list = genomic.SubjectsAPI(Resource)
+            subjects_list = subjects_list.get(species, dataset)
             dataset_list = []
             for sample in subjects_list.get('samples'):
                 subject_identifier = sample['sample_name'].split('_')[0:1]
@@ -129,13 +113,14 @@ def get_subject_datasets(type, species, dataset):
                 error_response = ErrorResponse(message=str(e))
                 return jsonify(error_response.dict()), 500
 
-    elif type == "airrseq":
-        subjects_list, is_currect = get_airrseq_list_subjects(species, dataset)
-        if not is_currect:
-            error_response = ErrorResponse(message=str(subjects_list))
+        except Exception as e:
+            error_response = ErrorResponse(message=str(e))
             return jsonify(error_response.dict()), 500
-        
-        else:
+
+    elif type == "airrseq":
+        try:
+            subjects_list = vdjbase.SamplesApi(Resource)
+            subjects_list = subjects_list.get(species, dataset)
             dataset_list = []
             for sample in subjects_list.get('samples'):
                 subject_identifier = sample['sample_name'].split('_')[0:1]
@@ -155,315 +140,11 @@ def get_subject_datasets(type, species, dataset):
             except Exception as e:
                 error_response = ErrorResponse(message=str(e))
                 return jsonify(error_response.dict()), 500
+        
+        except Exception as e:
+            error_response = ErrorResponse(message=str(e))
+            return jsonify(error_response.dict()), 500
 
-
-def get_genomic_list_subjects(species, genomic_datasets):
-    """Get a list of genomic subjects for a species and datasets."""
-    args = {
-        "page_number": 0,
-        "page_size": 100,
-        "filter": None,
-        "sort_by": None,
-        "cols": '["sample_name","study_id"]'
-    }
-
-    required_cols = json.loads(args['cols']) if 'cols' in args and args['cols'] else list(genomic_sample_filters.keys())
-
-    for col in required_cols:
-        if col not in genomic_sample_filters.keys():
-            return 'Bad filter string %s' % args['filter'], False
-
-    if 'study_name' not in required_cols:
-        required_cols = ['study_name'] + required_cols
-    if 'dataset' not in required_cols:
-        required_cols.append('dataset')
-    if 'sample_id' not in required_cols:
-        required_cols.append('sample_id')
-    if 'annotation_path' in required_cols:
-        if 'annotation_reference' not in required_cols:
-            required_cols.append('annotation_reference')
-        if 'annotation_method' not in required_cols:
-            required_cols.append('annotation_method')
-        if 'contig_bam_path' not in required_cols:
-            required_cols.append('contig_bam_path')
-
-    attribute_query = [genomic_sample_filters['sample_id']['field']]        # the query requires the first field to be from Sample
-
-    for col in required_cols:
-        if col != 'sample_id' and genomic_sample_filters[col]['field'] is not None:
-            attribute_query.append(genomic_sample_filters[col]['field'])
-
-    filter = json.loads(args['filter']) if args['filter'] else []
-    datasets = genomic_datasets.split(',')
-    ret = find_genomic_samples(attribute_query, species, datasets, filter)
-
-    uniques = {}
-    for f in required_cols:
-        uniques[f] = []
-    uniques['dataset'] = datasets
-
-    # special column for names by dataset
-
-    uniques['names_by_dataset'] = {}
-    filter_applied = len(filter) > 0
-    if filter_applied:
-        for dataset in uniques['dataset']:
-            uniques['names_by_dataset'][dataset] = []
-
-    def num_sort_key(x):
-        if x is None or x == '':
-            return -1
-        else:
-            try:
-                return float(x)
-            except:
-                return 0
-
-    def name_sort_key(name):
-        name = name.split('_')
-        for i in range(len(name)):
-            name[i] = name[i][1:].zfill(4)
-        return name
-
-    for s in ret:
-        for f in required_cols:
-            if genomic_sample_filters[f]['field'] is not None and 'no_uniques' not in genomic_sample_filters[f]:
-                el = s[f]
-                if isinstance(el, datetime):
-                    el = el.date().isoformat()
-                elif isinstance(el, str) and len(el) == 0:
-                    el = '(blank)'
-                if el not in uniques[f]:
-                    uniques[f].append(el)
-        if filter_applied:
-            uniques['names_by_dataset'][s['dataset']].append(s['sample_id'])
-
-    for f in required_cols:
-        try:
-            if 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'numeric':
-                uniques[f].sort(key=num_sort_key)
-            elif 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'underscore':
-                uniques[f].sort(key=name_sort_key)
-            else:
-                uniques[f].sort(key=lambda x: (x is None or x == '', x))
-        except:
-            pass
-
-    sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else []
-    if len(sort_specs) == 0:
-        sort_specs = [{'field': 'sample_identifier', 'order': 'asc'}]
-
-    for spec in sort_specs:
-        f = spec['field']
-        if f in genomic_sample_filters.keys():
-            if 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'underscore':
-                ret = sorted(ret, key=lambda x: name_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
-            elif 'sort' in genomic_sample_filters[f] and genomic_sample_filters[f]['sort'] == 'numeric':
-                ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
-            else:
-                ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''),  x[f]), reverse=(spec['order'] == 'desc'))
-
-    total_size = len(ret)
-
-    if args['page_size']:
-        first = (args['page_number']) * args['page_size']
-        ret = ret[first : first + args['page_size']]
-
-    return {
-        'samples': ret,
-        'uniques': uniques,
-        'total_items': total_size,
-        'page_size': args['page_size'],
-        'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
-    }, True
-
-
-def get_airrseq_list_subjects(species, dataset):
-    """Get a list of AIRR-seq subjects for a species and dataset."""
-    if species not in vdjbase_dbs or set(dataset.split(',')).difference(set(vdjbase_dbs[species])):
-        return list()
-
-    args = {
-        "page_number": 0,
-        "page_size": 100,
-        "filter": None,
-        "sort_by": None,
-        "cols": '["sample_name","patient_name"]'
-    }
-
-    required_cols = json.loads(args['cols']) if args['cols'] else list(sample_info_filters.keys())
-    if 'sample_name' not in required_cols:
-        required_cols.append('sample_name')
-    if 'dataset' not in required_cols:
-        required_cols.append('dataset')
-
-    for col in required_cols:
-        if col not in sample_info_filters.keys():
-            return 'Bad filter string %s' % args['filter'], False
-
-    if 'genotype' in required_cols:                # needed to compose paths to files
-        for field in ('patient_name', 'study_name'):
-            if field not in required_cols:
-                required_cols.append(field)
-        required_cols.append('genotypes')
-        required_cols.append('genotype_stats')
-        required_cols.append('genotype_report')
-
-    attribute_query = [sample_info_filters['sample_id']['field']]        # the query requires the first field to be from Sample
-
-    for col in required_cols:
-        if col != 'sample_id' and sample_info_filters[col]['field'] is not None:
-            attribute_query.append(sample_info_filters[col]['field'])
-
-    attribute_query.append(Airr_Sample.id)
-
-    filter = json.loads(args['filter']) if args['filter'] else []
-    ret = find_vdjbase_samples(attribute_query, species, dataset.split(','), filter)
-
-    total_size = len(ret)
-
-    uniques = {}
-
-    for f in required_cols:
-        uniques[f] = []
-
-    uniques['dataset'] = dataset.split(',')
-
-    # special column for names by dataset
-
-    uniques['names_by_dataset'] = {}
-    filter_applied = len(filter) > 0
-    if filter_applied:
-        for dataset in uniques['dataset']:
-            uniques['names_by_dataset'][dataset] = []
-
-    for s in ret:
-        for f in required_cols:
-            if sample_info_filters[f]['field'] is not None and 'no_uniques' not in sample_info_filters[f]:
-                el = s[f]
-                if isinstance(el, (dt.datetime, dt.date)):
-                    el = el.date().isoformat()
-                elif isinstance(el, bool):
-                    if f in rep_sample_bool_values:
-                        el = rep_sample_bool_values[f][0 if el else 1]
-                if (not isinstance(el, str) or len(el) > 0) and el not in uniques[f]:
-                    uniques[f].append(el)
-                if (sample_info_filters[f]['field'].type.python_type is str) and len(el) == 0 and '(blank)' not in uniques[f]:
-                    uniques[f].append('(blank)')
-
-        if filter_applied:
-            uniques['names_by_dataset'][s['dataset']].append(s['sample_name'])
-
-    def name_sort_key(name):
-        name = name.split('_')
-        for i in range(len(name)):
-            name[i] = name[i][1:].zfill(4)
-        return name
-
-    def num_sort_key(x):
-        if x is None or x == '':
-            return -1
-        else:
-            try:
-                return float(x)
-            except:
-                return 0
-
-    for f in required_cols:
-        try:
-            if 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'underscore':
-                uniques[f].sort(key=name_sort_key)
-            elif 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'numeric':
-                uniques[f].sort(key=num_sort_key)
-            elif f != 'names_by_dataset':
-                uniques[f].sort(key=lambda x: (x is None or x == '', x))
-        except:
-            pass
-
-    if 'haplotypes' in required_cols:
-        uniques['haplotypes'] = []
-        for dset in dataset.split(','):
-            session = vdjbase_dbs[species][dset].session
-            haplotypes = session.query(HaplotypesFile.by_gene_s).distinct().order_by(HaplotypesFile.by_gene_s).all()
-            x = [(h[0]) for h in haplotypes]
-            uniques['haplotypes'].extend(x)
-        uniques['haplotypes'] = list(set(uniques['haplotypes']))
-
-    sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else []
-    if len(sort_specs) == 0:
-        sort_specs = [{'field': 'name', 'order': 'asc'}]
-
-    for spec in sort_specs:
-        f = spec['field']
-        if f in sample_info_filters.keys():
-            if 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'underscore':
-                ret = sorted(ret, key=lambda x: name_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
-            elif 'sort' in sample_info_filters[f] and sample_info_filters[f]['sort'] == 'numeric':
-                ret = sorted(ret, key=lambda x: num_sort_key(x[f]), reverse=(spec['order'] == 'desc'))
-            else:
-                ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''), x[f]), reverse=(spec['order'] == 'desc'))
-
-    if args['page_size']:
-        first = (args['page_number']) * args['page_size']
-        ret = ret[first:first + args['page_size']]
-
-    for rec in ret:
-        for k, v in rec.items():
-            if isinstance(v, (dt.datetime, dt.date)):
-                rec[k] = v.date().isoformat()
-            elif isinstance(v, decimal.Decimal):
-                rec[k] = '%0.2f' % v
-
-    if 'genotypes' in required_cols:
-        for r in ret:
-            r['genotypes'] = {}
-            r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'sort_order': 'Locus'})
-
-            r['genotypes']['path'] = app.config['BACKEND_LINK']
-            sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'
-            r['genotypes']['tigger'] = sp + r['genotype'].replace('samples', '') if r['genotype_stats'] else ''
-            r['genotypes']['ogrdbstats'] = sp + r['genotype_stats'].replace('samples', '') if r['genotype_stats'] else ''
-            r['genotypes']['ogrdbplot'] = sp + r['genotype_report'].replace('samples', '') if r['genotype_report'] else ''
-            del r['genotype_stats']
-            del r['genotype_report']
-
-            session = vdjbase_dbs[species][r['dataset']].session
-            igsnper_path = session.query(Airr_Sample.igsnper_plot_path, Airr_Sample.genotype_report).filter(Airr_Sample.sample_name == r['sample_name']).one_or_none()
-
-            if igsnper_path is not None and igsnper_path[0] is not None:
-                r['genotypes']['igsnper'] = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], igsnper_path[0]])
-            else:
-                r['genotypes']['igsnper'] = ''
-
-    if 'haplotypes' in required_cols:
-        for r in ret:
-            session = vdjbase_dbs[species][r['dataset']].session
-            haplotypes = session.query(Airr_Sample.sample_name, func.group_concat(HaplotypesFile.by_gene_s), func.group_concat(HaplotypesFile.file))
-            h = haplotypes.filter(Airr_Sample.sample_name == r['sample_name'])\
-                .join(SamplesHaplotype, SamplesHaplotype.samples_id == Airr_Sample.id)\
-                .join(HaplotypesFile, HaplotypesFile.id == SamplesHaplotype.haplotypes_file_id)\
-                .one_or_none()
-            if h is not None and h[1] is not None:
-                r['haplotypes'] = {}
-                r['haplotypes']['path'] = app.config['BACKEND_LINK']
-                for (hap, filename) in zip(h[1].split(','), h[2].split(',')):
-                    filename = filename.replace('samples/', '')
-                    fp = os.path.join(VDJBASE_SAMPLE_PATH, species, r['dataset'], filename)
-                    sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], filename])
-                    if isfile(fp):
-                        r['haplotypes'][hap] = {}
-                        r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'hap_gene': hap, 'sort_order' : 'Locus'})
-                        r['haplotypes'][hap]['rabhit'] = sp
-            else:
-                r['haplotypes'] = ''
-
-    return {
-        'samples': ret,
-        'uniques': uniques,
-        'total_items': total_size,
-        'page_size': args['page_size'],
-        'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
-    }, True
 
 @api_bp.route('/<type>/sample_genotype/<species>/<dataset>/<subject>/<sample>', methods=['GET'])
 def get_sample_genotype(type, species, dataset, subject, sample):
@@ -489,22 +170,24 @@ def get_sample_genotype(type, species, dataset, subject, sample):
 def get_sample_metadata(type, species, dataset, subject, sample):
     """Get metadata for a specific sample."""
     if type == "genomic":
-        subject_info, is_currect = get_genomic_subjet_info(species, dataset, sample)
-        if is_currect:
+        try:
+            subject_info = genomic.SubjectInfoApi(Resource)
+            subject_info = subject_info.get(species, dataset, sample)
             rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(subject_info))
             return custom_jsonify(rep_obj.dict()), 200
 
-        else:
+        except Exception as e:
             error_response = ErrorResponse(message=str(subject_info))
             return jsonify(error_response), 500
         
     elif type == "airrseq":
-        subject_info, is_currect = get_airr_subjet_info(species, dataset, sample)
-        if is_currect:
+        try:
+            subject_info = vdjbase.SampleInfoApi(Resource)
+            subject_info = subject_info.get(species, dataset, sample)
             rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(subject_info))
             return custom_jsonify(rep_obj.dict()), 200
 
-        else:
+        except Exception as e:
             error_response = ErrorResponse(message=str(subject_info))
             return jsonify(error_response), 500
     else:
@@ -741,82 +424,6 @@ def create_date(subject_info, field):
     else:
         return datetime.now()
 
-
-def get_genomic_subjet_info(species, dataset, sample_id):
-    """ Returns information on the selected sample """
-
-    db = get_genomic_db(species, dataset)
-
-    if db is None:
-        return 'Bad species or dataset name', False
-
-    sample = db.session.query(SAMPLE)\
-        .filter(SAMPLE.sample_name == sample_id)\
-        .one_or_none()
-
-    if sample is None:
-        return 'Bad sample name', False
-
-    attribute_query = []
-
-    for col in genomic_sample_filters.keys():
-        if genomic_sample_filters[col]['field'] is not None:
-            attribute_query.append(genomic_sample_filters[col]['field'])
-
-    info = db.session.query(*attribute_query)\
-        .filter(SAMPLE.sample_name == sample_id)\
-        .join(Patient, Patient.id == SAMPLE.patient_id)\
-        .join(SeqProtocol, SeqProtocol.id == SAMPLE.seq_protocol_id)\
-        .join(TissuePro, TissuePro.id == SAMPLE.tissue_pro_id)\
-        .join(DataPro, DataPro.id == SAMPLE.data_pro_id) \
-        .join(STD, SAMPLE.study_id == STD.id)\
-        .one_or_none()
-
-    if info is not None:
-        info = info._asdict()
-        for k, v in info.items():
-            if isinstance(v, datetime):
-                info[k] = v.date().isoformat()
-
-    return info, True
-
-
-def get_airr_subjet_info(species, dataset, sample):
-    """ Returns information on the selected sample """
-
-    if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
-        return 'Bad species or dataset name', False
-
-    session = vdjbase_dbs[species][dataset].session
-    attribute_query = []
-
-    for col in sample_info_filters.keys():
-        if sample_info_filters[col]['field'] is not None:
-            attribute_query.append(sample_info_filters[col]['field'])
-
-    info = session.query(*attribute_query)\
-        .join(Airr_GenoDetection, Airr_GenoDetection.id == Airr_Sample.geno_detection_id)\
-        .join(Airr_Patient, Airr_Patient.id == Airr_Sample.patient_id)\
-        .join(Airr_SeqProtocol, Airr_SeqProtocol.id == Airr_Sample.seq_protocol_id)\
-        .join(Airr_TissuePro, Airr_TissuePro.id == Airr_Sample.tissue_pro_id)\
-        .join(Airr_DataPro, Airr_DataPro.id == Airr_Sample.data_pro_id) \
-        .join(Airr_Study, Airr_Sample.study_id == Airr_Study.id)\
-        .filter(Airr_Sample.sample_name == sample).one_or_none()
-
-    if info:
-        info = info._asdict()
-
-        for k,v in info.items():
-            if v:
-                if isinstance(v, (dt.datetime, dt.date)):
-                    info[k] = v.isoformat()
-
-        haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Airr_Sample).filter(Airr_Sample.sample_name==sample).order_by(HaplotypesFile.by_gene_s).all()
-        info['haplotypes'] = [(h[0]) for h in haplotypes]
-
-    return info, True
-
-
 def get_default_value(field_type: Any) -> Any:
     """
     Get the default value for a given field type.
@@ -827,30 +434,36 @@ def get_default_value(field_type: Any) -> Any:
     Returns:
         The default value for the field type.
     """
-    if get_origin(field_type) is Union:
-        args = get_args(field_type)
-        field_type = args[0] if args[1] is type(None) else args[1]
+    try:
+        if get_origin(field_type) is Union:
+            args = get_args(field_type)
+            field_type = args[0] if args[1] is type(None) else args[1]
 
-    if field_type == 'int':
-        return 0
-    elif field_type == 'float':
-        return 0.0
-    elif field_type == 'str':
-        return ""
-    elif field_type == 'bool':
-        return False
-    elif field_type == 'list':
-        return []
-    elif field_type == 'dict':
-        return {}
-    elif field_type == 'datetime':
-        return datetime.now()
-    elif field_type == 'date':
-        return datetime.now()
-    else:
-        if issubclass(globals()[field_type] , Enum):
-            # Get the first value of the Enum
-            return next(iter(globals()[field_type])).value
+        if field_type == 'int':
+            return 0
+        elif field_type == 'float':
+            return 0.0
+        elif field_type == 'str':
+            return ""
+        elif field_type == 'bool':
+            return False
+        elif field_type == 'list':
+            return []
+        elif field_type == 'dict':
+            return {}
+        elif field_type == 'datetime':
+            return datetime.now()
+        elif field_type == 'date':
+            return datetime.now()
+        elif 'Optional' in field_type:
+            pass
+        else:
+            if issubclass(globals()[field_type] , Enum):
+                # Get the first value of the Enum
+                return next(iter(globals()[field_type])).value
+    
+    except:
+        pass
 
     return None
 
