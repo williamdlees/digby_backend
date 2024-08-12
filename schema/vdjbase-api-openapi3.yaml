@@ -1,5 +1,7 @@
 openapi: 3.0.0
 
+#    After generating the file from the schema, please replace all occurrences of __root__ with field_value to ensure the code runs correctly.
+
 info:
   title: VDJbase API
   version: 2.0.0
