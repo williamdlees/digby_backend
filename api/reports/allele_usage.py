@@ -4,7 +4,7 @@ from werkzeug.exceptions import BadRequest
 from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list, collate_gen_samples
 
-from app import vdjbase_dbs, genomic_dbs
+from app import vdjbase_dbs, genomic_dbs, app
 from db.vdjbase_model import AllelesSample, Gene, Allele, AllelesPattern
 from db.genomic_db import Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
 from db.genomic_airr_model import Sample as GenomicSample
@@ -18,19 +18,17 @@ import json
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from io import StringIO
-
+import time
 
 SAMPLE_CHUNKS = 400
 
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
+    start_time = time.time()
     if format != 'html':
         raise BadRequest('Invalid format requested')
 
     kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
-    print(rep_samples)
-    print()
-    print(genomic_samples)
     chain, rep_samples_by_dataset = collate_samples(rep_samples)
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
 
@@ -187,6 +185,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     generate_report(input_path, output_path, chain)
 
+    end_time = time.time()
+    execution_time = end_time - start_time
+    app.logger.info(f"The report creation took {execution_time:.6f} seconds")
     if os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format)
     else:
