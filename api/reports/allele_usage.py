@@ -172,10 +172,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     labels = ['GENE', 'COUNT']
     input_path = make_output_file('tab')
     df = pd.DataFrame(listed_allele_count, columns=labels)
-    df.to_csv(input_path, sep='\t', index=False)
     output = StringIO()
     df.to_csv(output, sep='\t', index=False)
-    print(output.getvalue())
     output_path = make_output_file('html')
 
     cmd_line = ["-i", input_path,
@@ -183,7 +181,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 "-c", chain
                 ]
 
-    generate_report(input_path, output_path, chain)
+    generate_report(df, output_path, chain)
 
     end_time = time.time()
     execution_time = end_time - start_time
@@ -195,8 +193,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
 def load_data(input_file):
     alleles_appearance = pd.read_csv(input_file, sep='\t')
-    print("Loaded data:")
-    print(alleles_appearance.head())
     return alleles_appearance
 
 def prepare_data(alleles_appearance, chain="IGH"):
@@ -206,9 +202,6 @@ def prepare_data(alleles_appearance, chain="IGH"):
     chain_prefix = chain[0]
     nth = 4 if alleles_appearance['GENE'].str.startswith(chain_prefix).any() else 1
     alleles_appearance['SEGMENT'] = alleles_appearance['GENE'].apply(lambda x: x[nth - 1])
-    
-    print("Data after adding SEGMENT column:")
-    print(alleles_appearance.head(10))  # Display more rows for better insight
     
     return alleles_appearance
 
@@ -226,15 +219,12 @@ def allele_usage_bar_html(gene_segment, chain="IGH"):
     gene_segment = prepare_data(gene_segment, chain)
     
     unique_segments = gene_segment['SEGMENT'].unique()
-    print("Unique segments:", unique_segments)
     
     fig = make_subplots(rows=1, cols=len(unique_segments), shared_xaxes=False, subplot_titles=[f"{chain}{seg}" for seg in unique_segments])
 
     for i, segment in enumerate(unique_segments):
         segment_data = gene_segment[gene_segment['SEGMENT'] == segment]
         segment_data = segment_data.sort_values(by='GENE', ascending=False)
-        print(f"Data for segment {segment}:")
-        print(segment_data.to_string(index=False))  # Display the full dataframe for the segment
         if not segment_data.empty:
             trace = plot_usage(segment_data, f"{chain}{segment}")
             fig.add_trace(trace, row=1, col=i+1)
@@ -244,9 +234,9 @@ def allele_usage_bar_html(gene_segment, chain="IGH"):
     fig.update_layout(height=1300, showlegend=False, title_text=f"Allele Usage for {chain}", barmode='stack')
     return fig
 
-def generate_report(input_file, output_file, chain="IGH"):
+def generate_report(df, output_file, chain="IGH"):
     # Load and prepare data
-    data = load_data(input_file)
+    data = df
     fig = allele_usage_bar_html(data, chain)
     
     # Save the plot to HTML
