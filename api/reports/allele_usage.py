@@ -179,3 +179,4 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         return send_report(output_path, format)
     else:
         raise BadRequest('No output from report')
+
