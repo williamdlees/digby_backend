@@ -36,3 +36,5 @@ Werkzeug==2.2.3
 WTForms==2.3.3
 xlwt==1.3.0
 mysqlclient
+flask_swagger_ui
+pydantic=2.8.2

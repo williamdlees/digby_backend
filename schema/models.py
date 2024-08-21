@@ -59,7 +59,7 @@ class InferenceProcessEnum(Enum):
 
 
 class InferenceProcess(BaseModel):
-    __root__: Optional[InferenceProcessEnum] = Field(
+    root: Optional[InferenceProcessEnum] = Field(
         None,
         description='Information on how the genotype was acquired. Controlled vocabulary.',
         example='repertoire_sequencing',
@@ -199,7 +199,7 @@ class SexEnum(Enum):
 
 
 class Sex(BaseModel):
-    __root__: Optional[SexEnum] = Field(
+    root: Optional[SexEnum] = Field(
         None, description='Biological sex of subject', example='female', title='Sex'
     )
 
@@ -307,7 +307,7 @@ class PcrTargetLocusEnum(Enum):
 
 
 class PcrTargetLocus(BaseModel):
-    __root__: Optional[PcrTargetLocusEnum] = Field(
+    root: Optional[PcrTargetLocusEnum] = Field(
         None,
         description='Designation of the target locus. Note that this field uses a controlled vocubulary that is meant to provide a generic classification of the locus, not necessarily the correct designation according to a specific nomenclature.\n',
         example='IGK',
@@ -342,7 +342,7 @@ class FileTypeEnum(Enum):
 
 
 class FileType(BaseModel):
-    __root__: Optional[FileTypeEnum] = Field(
+    root: Optional[FileTypeEnum] = Field(
         None,
         description='File format for the raw reads or sequences',
         title='Raw sequencing data file type',
@@ -356,7 +356,7 @@ class ReadDirectionEnum(Enum):
 
 
 class ReadDirection(BaseModel):
-    __root__: Optional[ReadDirectionEnum] = Field(
+    root: Optional[ReadDirectionEnum] = Field(
         None,
         description='Read direction for the raw reads or sequences. The first file in paired-read sequencing.',
         example='forward',
@@ -371,7 +371,7 @@ class PairedReadDirectionEnum(Enum):
 
 
 class PairedReadDirection(BaseModel):
-    __root__: Optional[PairedReadDirectionEnum] = Field(
+    root: Optional[PairedReadDirectionEnum] = Field(
         None,
         description='Read direction for the second file in paired-read sequencing',
         example='reverse',
@@ -447,7 +447,7 @@ class InferenceProcess1Enum(Enum):
 
 
 class InferenceProcess1(BaseModel):
-    __root__: Optional[InferenceProcess1Enum] = Field(
+    root: Optional[InferenceProcess1Enum] = Field(
         None,
         description='Information on how the genotype was acquired. Controlled vocabulary.',
         example='repertoire_sequencing',
@@ -813,7 +813,7 @@ class SequencingRun(BaseModel):
         example='Seqs-R-Us, Vancouver, BC, Canada',
         title='Sequencing facility',
     )
-    sequencing_run_date: date = Field(
+    sequencing_run_date: Optional[date] = Field(
         ...,
         description='Date of sequencing run',
         example='2016-12-16',

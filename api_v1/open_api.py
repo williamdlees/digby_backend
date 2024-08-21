@@ -47,8 +47,14 @@ def custom_jsonify(obj):
 
 """Get species list based on type."""
 
+from api.genomic.genomic import SpeciesApi
+from flask_restx import Resource
+
 @api_bp.route('/<type>/species', methods=['GET'])
 def get_species(type):
+    species_api = SpeciesApi(Resource)
+    species = species_api.get()
+    
     """Get species list based on type."""
     sp = None
     if type == "genomic":
@@ -870,6 +876,9 @@ def fill_missing_required_fields(model_cls: BaseModel, data: dict) -> dict:
 
     for field_name, field_info in model_cls.__fields__.items():
         if field_name in data:
+            print(field_name)
+            if field_name == 'sequencing_run_date':
+                breakpoint()
             if is_required(field_info):
                 field_type = model_cls.__annotations__[field_name]
                 if data[field_name] is None or (field_type != 'str' and data[field_name] == ''):
