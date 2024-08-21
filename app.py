@@ -9,11 +9,9 @@ import os
 import custom_logging
 from reverse_proxied import ReverseProxied
 from db.vdjbase_db import study_data_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
-import yaml
+
 from flask_security.utils import hash_password
 from flask_sqlalchemy import SQLAlchemy
-from flask_swagger_ui import get_swaggerui_blueprint
-
 
 from extensions import celery
 
@@ -47,7 +45,7 @@ if 'OUTPUT_PATH' not in app.config:
 if 'UPLOAD_PATH' not in app.config:
     app.config['UPLOAD_PATH'] = os.path.join(app.config['BASE_PATH'], 'uploads')
 
-app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api', 'reports', 'R_scripts')
+app.config['R_SCRIPT_PATH'] = os.path.join(app.config['BASE_PATH'], 'api/reports/R_scripts')
 
 if 'R_LIBS' not in os.environ or os.environ['R_LIBS'] is None or len(os.environ['R_LIBS']) < 1:
     os.environ['R_LIBS'] = app.config['R_SCRIPT_PATH']
@@ -64,8 +62,8 @@ else:
 mail = Mail(app)
 custom_logging.init_logging(app, mail)
 
-vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data','VDJbase','db'))
-genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data', 'Genomic', 'db'))
+vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
+genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/db'))
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 
@@ -95,31 +93,6 @@ api.add_namespace(vdjbase)
 api.add_namespace(reports)
 api.add_namespace(system)
 app.register_blueprint(blueprint)
-
-from api_v1.open_api import api_bp
-
-app.register_blueprint(api_bp, url_prefix='/api_v1')
-
-SWAGGER_URL = '/swagger'
-API_URL = '/schema/vdjbase-api-openapi3.yaml'
-swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_URL,
-    config={
-        'app_name': "My Flask API"
-    }
-)
-
-
-@app.route('/schema/<path:filename>')
-def serve_schema(filename):
-    return send_from_directory('schema', filename)
-
-
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-with open('schema/vdjbase-api-openapi3.yaml', 'r') as f:
-    openapi_schema = yaml.safe_load(f)
 
 from api.reports.reports import load_report_defs
 load_report_defs()
