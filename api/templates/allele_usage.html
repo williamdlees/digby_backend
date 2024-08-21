@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Allele Usage Bar Plot</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <div id="plotly-div"></div>
+    <script>
+        const data = {{ data }};
+        const layout = {
+            title: '{{ title }}',
+            xaxis: { title: '' },
+            yaxis: { title: '' },
+            hovermode: 'y'
+        };
+        Plotly.newPlot('plotly-div', data, layout);
+    </script>
+</body>
+
+</html>

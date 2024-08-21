@@ -100,7 +100,7 @@ def manage_airrseq(app):
         datafile = FileField(validators=[FileRequired()])
         submit = SubmitField('Add New Dataset')
 
-    vdjbase_db_path = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db')
+    vdjbase_db_path = os.path.join(app.config['STATIC_PATH'], 'study_data','VDJbase','db')
     items = []
 
     for species in listdir(vdjbase_db_path):
@@ -208,8 +208,8 @@ def do_airrseq_copy(species, dataset, description, app, vdjbase_dbs):
             vdjbase_dbs[species][dataset].close()
             del(vdjbase_dbs[species][dataset])
 
-        vdjbase_db_path = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db')
-        vdjbase_sample_path = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
+        vdjbase_db_path = os.path.join(app.config['STATIC_PATH'], 'study_data', 'VDJbase', 'db')
+        vdjbase_sample_path = os.path.join(app.config['STATIC_PATH'], 'study_data', 'VDJbase', 'samples')
         our_db_path = os.path.join(vdjbase_db_path, species, dataset)
         our_sample_path = os.path.join(vdjbase_sample_path, species, dataset)
 
@@ -248,8 +248,8 @@ def do_airrseq_copy(species, dataset, description, app, vdjbase_dbs):
 
 
 def airrseq_remove(species, dataset, app, vdjbase_dbs):
-    vdjbase_db_path = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db')
-    vdjbase_sample_path = os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/samples')
+    vdjbase_db_path = os.path.join(app.config['STATIC_PATH'], 'study_data', 'VDJbase', 'db')
+    vdjbase_sample_path = os.path.join(app.config['STATIC_PATH'], 'study_data', 'VDJbase','samples')
     our_db_path = os.path.join(vdjbase_db_path, species, dataset)
     our_sample_path = os.path.join(vdjbase_sample_path, species, dataset)
 

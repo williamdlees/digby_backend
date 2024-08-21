@@ -177,9 +177,9 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # IN THE IMPORT BELOW, CHOOSE THE REPORT YOU WISH TO DEBUG
-            #from api.reports.rep_single_genotype import run
-            #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
-            #raise BadRequest("we're debugging!")
+            # from api.reports.allele_usage import run
+            # run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
+            # raise BadRequest("we're debugging!")
 
             # Pass to Celery
 
@@ -234,7 +234,7 @@ class ReportsStatus(Resource):
 # R Script Runner
 def run_rscript(script, args, cwd=app.config['R_SCRIPT_PATH']):
     current_task.update_state(state='PENDING', meta={'stage': 'running report'})
-    cmd_line = ['Rscript', os.path.join(app.config['R_SCRIPT_PATH'], script)]
+    cmd_line = ['Rscript', os.path.join(app.config['R_SCRIPT_PATH'], script)]#
     cmd_line.extend(args)
     print("Running Rscript: '%s'\n" % ' '.join(cmd_line))
     proc = subprocess.Popen(cmd_line, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
