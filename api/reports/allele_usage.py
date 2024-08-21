@@ -1,10 +1,10 @@
 # Allele usage plot for AIRR-seq samples
 
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import send_report
+from api.reports.reports import run_rscript, send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list, collate_gen_samples
 
-from app import vdjbase_dbs, genomic_dbs, app
+from app import vdjbase_dbs, genomic_dbs
 from db.vdjbase_model import AllelesSample, Gene, Allele, AllelesPattern
 from db.genomic_db import Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
 from db.genomic_airr_model import Sample as GenomicSample
@@ -13,18 +13,13 @@ from db.vdjbase_airr_model import Patient, Sample
 import os
 from api.vdjbase.vdjbase import apply_rep_filter_params
 import pandas as pd
-from jinja2 import Template
-import json
-import plotly.graph_objs as go
-from plotly.subplots import make_subplots
-from io import StringIO
-import time
 
+ALLELE_USAGE_SCRIPT = 'Alleles_Usage.R'
 SAMPLE_CHUNKS = 400
 
 
+
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
-    start_time = time.time()
     if format != 'html':
         raise BadRequest('Invalid format requested')
 
@@ -172,8 +167,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     labels = ['GENE', 'COUNT']
     input_path = make_output_file('tab')
     df = pd.DataFrame(listed_allele_count, columns=labels)
-    output = StringIO()
-    df.to_csv(output, sep='\t', index=False)
+    df.to_csv(input_path, sep='\t', index=False)
     output_path = make_output_file('html')
 
     cmd_line = ["-i", input_path,
@@ -181,64 +175,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 "-c", chain
                 ]
 
-    generate_report(df, output_path, chain)
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    app.logger.info(f"The report creation took {execution_time:.6f} seconds")
-    if os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
+    if run_rscript(ALLELE_USAGE_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format)
     else:
         raise BadRequest('No output from report')
-
-def load_data(input_file):
-    alleles_appearance = pd.read_csv(input_file, sep='\t')
-    return alleles_appearance
-
-def prepare_data(alleles_appearance, chain="IGH"):
-    if chain not in ["IGH", "IGK", "IGL", "TRB", "TRA"]:
-        raise ValueError("Invalid chain value")
-
-    chain_prefix = chain[0]
-    nth = 4 if alleles_appearance['GENE'].str.startswith(chain_prefix).any() else 1
-    alleles_appearance['SEGMENT'] = alleles_appearance['GENE'].apply(lambda x: x[nth - 1])
-    
-    return alleles_appearance
-
-def plot_usage(gene_segment, title):
-    trace = go.Bar(
-        y=gene_segment['GENE'],
-        x=gene_segment['COUNT'],
-        orientation='h',
-        marker=dict(color='peru'),
-        name=title
-    )
-    return trace
-
-def allele_usage_bar_html(gene_segment, chain="IGH"):
-    gene_segment = prepare_data(gene_segment, chain)
-    
-    unique_segments = gene_segment['SEGMENT'].unique()
-    
-    fig = make_subplots(rows=1, cols=len(unique_segments), shared_xaxes=False, subplot_titles=[f"{chain}{seg}" for seg in unique_segments])
-
-    for i, segment in enumerate(unique_segments):
-        segment_data = gene_segment[gene_segment['SEGMENT'] == segment]
-        segment_data = segment_data.sort_values(by='GENE', ascending=False)
-        if not segment_data.empty:
-            trace = plot_usage(segment_data, f"{chain}{segment}")
-            fig.add_trace(trace, row=1, col=i+1)
-        else:
-            print(f"No data available for segment {segment}")
-
-    fig.update_layout(height=1300, showlegend=False, title_text=f"Allele Usage for {chain}", barmode='stack')
-    return fig
-
-def generate_report(df, output_file, chain="IGH"):
-    # Load and prepare data
-    data = df
-    fig = allele_usage_bar_html(data, chain)
-    
-    # Save the plot to HTML
-    fig.write_html(output_file)
-
