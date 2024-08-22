@@ -19,7 +19,7 @@
                 "--no-reload"
             ],
             "jinja": true,
-            "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "make_genomic_db - digby_private_data/IGK",

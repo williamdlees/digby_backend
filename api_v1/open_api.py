@@ -120,16 +120,14 @@ def get_subject_datasets(type, species, dataset):
     elif type == "airrseq":
         try:
             subjects_list = vdjbase.SamplesApi(Resource)
+            request.args = {'cols': '["sample_name", "study_id", "subject_id"]'}
             subjects_list = subjects_list.get(species, dataset)
             dataset_list = []
             for sample in subjects_list.get('samples'):
-                subject_identifier = sample['sample_name'].split('_')[0:1]
-                subject_identifier = '_'.join(sample['sample_name'].rsplit('_', 1)[:-1])
-
                 subject_dataset_obj = SubjectDataset(id=sample['sample_name'], 
-                                                     study_name=sample['sample_name'].split('_')[0], 
-                                                     subject_identifier=sample['patient_name'], 
-                                                     sample_identifier=sample['sample_name'],
+                                                     study_name=sample['study_id'], 
+                                                     subject_identifier=sample['subject_id'], 
+                                                     sample_identifier=sample['sample_id'],
                                                      dataset=sample['dataset'])
                 dataset_list.append(subject_dataset_obj)
             subject_dataset_response_obj = SubjectDatasetResponse(subject_datasets=dataset_list)

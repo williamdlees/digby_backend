@@ -37,11 +37,11 @@ components:
             type: object
             properties:
               dataset:
-                type: string
+                type: string        # Name of the dataset in VDJbase
               locus:
-                type: string
+                type: string        # The locus it represents (todo: should be an enum)
               type:
-                type: string
+                type: string        # Genomic or AIRRseq (todo: should be an enum)
     
     # the response object for subjects and samples within a dataset
     subject_dataset_response:
@@ -53,15 +53,15 @@ components:
                 type: object
                 properties:
                   id:
-                    type: string
+                    type: string        # The sample ID within VDJbase
                   study_name:
-                    type: string
-                  subject_identifier:
-                    type: string
+                    type: string        # The study name, eg PRJEB26509 (MiAIRR study.study_id)
+                  subject_identifier:  
+                    type: string        # The subject ID as defined by the submitter of the study, unique within the study (MiAIRR subhect.subject_id)
                   sample_identifier:
-                    type: string
+                    type: string        # Sample ID assigned by submitter, unique within study. (MiAIRR sample.sample_id)
                   dataset:
-                    type: string
+                    type: string        # The VDJbase dataset (e.g. IGH)
             
     # the response object for sample metadata
     sample_genotype_response:
@@ -84,6 +84,10 @@ components:
         message:
           type: string
           description: Detail about the error
+
+# todo: add two additional routes for AKC:
+# - list all datasets in VDJbase (together with species, locus and revision date)
+# - provide metadata and genotypes for all samples included in a set of datasets (specify dataset as species, locus, dataset name)
 
 paths:
   /{type}/species:
@@ -124,7 +128,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: string            # todo: should be ontology
       responses:
         '200':
           description: A list of the available datasets
@@ -153,12 +157,13 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: string            # todo: should be ontology
         - name: dataset
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase dataset name
       responses:
         '200':
           description: A list of subjects and samples in the specified dataset.
@@ -187,22 +192,25 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: string         # todo: should be ontology
         - name: dataset
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase dataset name
         - name: subject
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase subject name
         - name: sample
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase sample name
       responses:
         '200':
           description: A list of subjects and samples in the specified dataset.
@@ -231,22 +239,25 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: string         # todo: should be ontology
         - name: dataset
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase dataset name
         - name: subject
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase subject name
         - name: sample
           in: path
           required: true
           schema:
             type: string
+          description: The VDJbase sample name
       responses:
         '200':
           description: A list of subjects and samples in the specified dataset.
