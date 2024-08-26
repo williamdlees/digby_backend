@@ -345,7 +345,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
                 try:
                     if 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_count':
                         sample_count_filters.append(f)
-                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_identifier':
+                    elif 'fieldname' in genomic_sequence_filters[f['field']] and genomic_sequence_filters[f['field']]['fieldname'] == 'sample_id':
                         sample_id_filter = f
                     elif f['field'] == 'dataset':
                         if f['op'] == 'in' and dataset not in f['value']:
@@ -387,7 +387,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
             filtered_sample_ids = []
 
             names_to_ids = {}
-            for name, id in db.session.query(Sample.identifier, Sample.id).all():
+            for name, id in db.session.query(Sample.sample_id, Sample.id).all():
                 names_to_ids[name] = id
 
             for names in sample_id_filter['value'].items():
@@ -576,7 +576,7 @@ class SubjectsAPI(Resource):
 
         sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else []
         if len(sort_specs) == 0:
-            sort_specs = [{'field': 'sample_identifier', 'order': 'asc'}]
+            sort_specs = [{'field': 'sample_id', 'order': 'asc'}]
 
         for spec in sort_specs:
             f = spec['field']
