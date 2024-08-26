@@ -107,16 +107,17 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
                     bamfile_path = bam_files[0]
     
         if not bamfile_path:
-            raise GeneParsingException(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
-        
-    shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
+            sample.contig_bam_path = ''
+            print(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
+        else:
+            shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
 
-    if os.path.exists(bamfile_path + '.bai'):
-        shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
-    else:
-        raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
+            if os.path.exists(bamfile_path + '.bai'):
+                shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
+            else:
+                raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
 
-    sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
+            sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
 
     sense = '+'     # by + sense we mean 5' to 3'
     feature_id = 1
