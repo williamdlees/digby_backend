@@ -59,21 +59,24 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
 
     rows = [x for x in annotation_records[annotation_file] if str(x['sample_name']) == str(sample.sample_id) and str(x['subject']) == str(sample.patient.subject_id) and x['project'] == sample.patient.study.study_id]
 
-    if not rows:
-        print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
-        return
-
-    # Make the samples directory and project subdirectory if they don't exist
-
-    study_name = sample.patient.study.study_name
-
     if not os.path.isdir(os.path.join(dataset_dir, 'samples')):
         os.mkdir(os.path.join(dataset_dir, 'samples'))
     
+    study_name = sample.patient.study.study_name
     study_path = os.path.join(dataset_dir, 'samples', study_name)
 
     if not os.path.isdir(study_path):
         os.mkdir(study_path)
+        with open(os.path.join(dataset_dir, study_path, 'missing.html'), 'w') as fi:
+            fi.write('<html><body><h2>Missing File</h2><p>The file you requested cannot be found. This is likely to be because the annotation pipeline produced no results for this sample.</p></body></html>')
+
+    if not rows:
+        print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
+        sample.annotation_path = '/'.join((study_name, 'missing.html'))
+        sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
+        return
+
+    # Make the samples directory and project subdirectory if they don't exist
 
     sample_path = os.path.join(study_path, sample.sample_name)
 
@@ -107,16 +110,17 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
                     bamfile_path = bam_files[0]
     
         if not bamfile_path:
-            raise GeneParsingException(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
-        
-    shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
+            sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
+            print(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
+        else:
+            shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
 
-    if os.path.exists(bamfile_path + '.bai'):
-        shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
-    else:
-        raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
+            if os.path.exists(bamfile_path + '.bai'):
+                shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
+            else:
+                raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
 
-    sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
+            sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
 
     sense = '+'     # by + sense we mean 5' to 3'
     feature_id = 1

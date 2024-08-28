@@ -2,8 +2,6 @@ from db.genomic_db import RefSeq, Feature, Sequence, SequenceFeature, Details
 from sqlalchemy import or_, and_
 import os
 
-from db.genomic_db_functions import add_feature_to_ref
-
 from receptor_utils import simple_bio_seq as simple
 from db.cigar import Cigar
 
@@ -89,7 +87,7 @@ def all_imgt_and_novel_v_region_alignment(dataset_dir, name_prefix, ref_seq, ses
                 if imgt.type in ('V-REGION', 'D-REGION', 'J-REGION'):
                     legend = ('*' + imgt.name.split('*')[1]) if '*' in imgt.name else imgt.name
                     fo.write('%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\tNM:Z:%s\n' % (
-                    imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order, legend))
+                        imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order, legend))
                 else:
                     fo.write(
                         '%s\t0\t%s\t%d\t255\t%dM\t*\t0\t0\t%s\t*\tOD:i:%d\n' % (imgt.name, ref_seq.name, feature.start, len(nt_sequence), nt_sequence, order))
@@ -108,7 +106,9 @@ def unphased_feature_alignment(dataset_dir, name_prefix, ref_seq, session):
             if feature.feature_level == 'allele' and feature.feature_type != 'gene_sequence':
                 for sequence in feature.sequences:
                     feature_name = ('*' + sequence.name.split('*')[1].replace('_phased', '') if '*' in sequence.name else sequence.name)
-                    fo.write(feature_gff_rec(feature, feature_name, ref_seq, sequence, session))
+                    rec = feature_gff_rec(feature, feature_name, ref_seq, sequence, session)
+                    if rec:
+                        fo.write(rec)
 
 
 # Alignment file of all alleles and other annotated regions within samples aligned to this reference (SAM, needs external conversion to BAM)
@@ -128,7 +128,9 @@ def phased_feature_alignment(dataset_dir, name_prefix, ref_seq, session):
             if feature.feature_level == 'allele':
                 for sequence in feature.sequences:
                     feature_name = '*' + sequence.name.split('*')[1]
-                    fo.write(feature_gff_rec(feature, feature_name, ref_seq, sequence, session))
+                    rec = feature_gff_rec(feature, feature_name, ref_seq, sequence, session)
+                    if rec:
+                        fo.write(rec)
 
 
 def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
@@ -140,7 +142,8 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
     # IGenotyper records will always have a cigar string
     
     cigar_string = feature.feature_cigar
-    if len(sequence.sequence) > 0:
+
+    if len(sequence.sequence) > 0 and cigar_string and cigar_string != '':
         if 'D' in cigar_string:
             sequence.sequence = sequence.sequence.replace('-', '')
         
@@ -153,6 +156,9 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
 
         return '%s\t0\t%s\t%d\t255\t%s\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (
             sequence.name, ref_seq.name, feature.start, cigar_string, seq, legend)
+    else:
+        return None
+
 
 def build_fake_ref(session, dataset_dir):
     details = session.query(Details).one_or_none()
