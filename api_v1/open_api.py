@@ -11,6 +11,7 @@ from typing import Any, Union, get_args, get_origin
 from api.genomic import genomic
 from api.vdjbase import vdjbase
 from flask_restx import Resource
+from app import vdjbase_dbs, genomic_dbs
 
 
 api_bp = Blueprint('api_v1', __name__)
@@ -38,20 +39,37 @@ def custom_jsonify(obj):
     )
 
 
+def common_lookup(binomial):
+    for lookup_db in [genomic_dbs, vdjbase_dbs]:
+        for species, datasets in lookup_db.items():
+            for ds_name, ds_data in datasets.items():
+                if 'description' in ds_name and ds_data['binomial'] == binomial:
+                    return species
+    return None
+
+
 @api_bp.route('/<type>/species', methods=['GET'])
 def get_species(type):
     """Get species list based on type."""
-    species_api = genomic.SpeciesApi(Resource)
-    species_list = species_api.get()
-    species_response_obj = []
-    for item in species_list:
-        ontology_obj = Ontology(label=item)
-        species_response_obj.append(ontology_obj)
+    if type not in ['genomic', 'airrseq']:
+        error_response = ErrorResponse(message="dataset type not valid")
+        return error_response.model_dump_json(), 500
 
-    species_response_obj = SpeciesResponse(species=species_response_obj)
+    species_list = []
+    ontology_list = []
+
+    lookup_dbs = genomic_dbs if type == "genomic" else vdjbase_dbs
+    for sp, datasets in lookup_dbs.items():
+        for ds_name, ds_data in datasets.items():
+            if 'description' in ds_name and sp not in species_list:
+                species_list.append(sp)
+                ontology_obj = Ontology(id=ds_data['taxid'], label=ds_data['binomial'])
+                ontology_list.append(ontology_obj)
+
+    species_response_obj = SpeciesResponse(species=ontology_list)
+
     try:
         return species_response_obj.model_dump_json(), 200
-
     except Exception as e:
         error_response = ErrorResponse(message=str(e))
         return error_response.model_dump_json(), 500
@@ -60,27 +78,23 @@ def get_species(type):
 @api_bp.route('/<type>/datasets/<species>', methods=['GET'])
 def get_species_datasets(type, species):
     """Get datasets for a species based on type."""
-    data_sets = None
-    if type == "genomic":
-        data_sets = genomic.DataSetAPI(Resource)
-        data_sets = data_sets.get(species)
-
-    elif type == "airrseq":
-        data_sets = vdjbase.DataSetAPI(Resource)
-        data_sets = data_sets.get(species)
-
-    else:
-        error_response = ErrorResponse(message="type not exists")
+    if type not in ['genomic', 'airrseq']:
+        error_response = ErrorResponse(message="dataset type not valid")
         return error_response.model_dump_json(), 500
 
-    data_set_list = []
-    for data_set in data_sets:
-        data_set_obj = Dataset(dataset=data_set["dataset"], locus=data_set["locus"] if type == "genomic" else None, type=type)
-        data_set_list.append(data_set_obj)
+    dataset_list = []
+    lookup_dbs = genomic_dbs if type == "genomic" else vdjbase_dbs
 
-    data_set_response = DatasetsResponse(datasets=data_set_list)
+    for sp, datasets in lookup_dbs.items():
+        for ds_name, ds_data in datasets.items():
+            if 'description' in ds_name and ds_data['binomial'] == species:
+                locus = ds_name.replace('_description', '') 
+                dataset_obj = Dataset(dataset=locus, locus=locus, type=type)
+                dataset_list.append(dataset_obj)
+
+    dataset_response = DatasetsResponse(datasets=dataset_list)
     try:
-        return data_set_response.model_dump_json(), 200
+        return dataset_response.model_dump_json(), 200
 
     except Exception as e:
         error_response = ErrorResponse(message=str(e))
@@ -89,6 +103,12 @@ def get_species_datasets(type, species):
 
 @api_bp.route('/<type>/subjects/<species>/<dataset>', methods=['GET'])
 def get_subject_datasets(type, species, dataset):
+    species = common_lookup(species)
+
+    if not species:
+        error_response = ErrorResponse(message="species not found")
+        return error_response.model_dump_json(), 500
+
     """Get subject datasets for a species and dataset based on type."""
     if type == "genomic":
         try:
@@ -165,30 +185,41 @@ def get_sample_genotype(type, species, dataset, subject, sample):
         return error_response.model_dump_json(), 500
     
 
-@api_bp.route('/<type>/sample_metadata/<species>/<dataset>/<subject>/<sample>', methods=['GET'])
-def get_sample_metadata(type, species, dataset, subject, sample):
+@api_bp.route('/<type>/sample_metadata/<species>/<dataset>/<sample>', methods=['GET'])
+def get_sample_metadata(type, species, dataset, sample):
     """Get metadata for a specific sample."""
+    species = common_lookup(species)
+
+    if not species:
+        error_response = ErrorResponse(message="species not found")
+        return error_response.model_dump_json(), 500
+
     if type == "genomic":
         try:
-            subject_info = genomic.SubjectInfoApi(Resource)
-            subject_info = subject_info.get(species, dataset, sample)
-            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(subject_info))
+            sample_info = genomic.SubjectInfoApi(Resource)
+            sample_info = sample_info.get(species, dataset, sample)
+
+            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(sample_info))
             return custom_jsonify(rep_obj.model_dump()), 200
 
-        except Exception:
-            error_response = ErrorResponse(message=str(subject_info))
-            return jsonify(error_response), 500
+        except Exception as e:
+            error_response = ErrorResponse(message=str(e))
+            return error_response.model_dump_json(), 500
         
     elif type == "airrseq":
         try:
-            subject_info = vdjbase.SampleInfoApi(Resource)
-            subject_info = subject_info.get(species, dataset, sample)
-            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(subject_info))
+            sample_info = vdjbase.SampleInfoApi(Resource)
+            sample_info = sample_info.get(species, dataset, sample)
+            if not sample_info or (len(sample_info) == 2 and not sample_info[0]):
+                error_response = ErrorResponse(message="Sample not found")
+                return error_response.model_dump_json(), 500
+
+            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(sample_info))
             return custom_jsonify(rep_obj.model_dump()), 200
 
-        except Exception:
-            error_response = ErrorResponse(message=str(subject_info))
-            return jsonify(error_response), 500
+        except Exception as e:
+            error_response = ErrorResponse(message=str(e))
+            return error_response.model_dump_json(), 500
     else:
         error_response = ErrorResponse(message=str("type not  exists"))
         return error_response.model_dump_json(), 500
@@ -215,14 +246,15 @@ def create_data_processing_list(subject_info):
 
     data_processing_list = []
     data_processing_obj = DataProcessing(data_processing_id=subject_info.get("data_processing_id"),
-                                         primary_annotation=subject_info.get("primary_annotation"),
+                                         # primary_annotation is not required but is not nullable ... feels like a bug in the schema
+                                         primary_annotation=subject_info.get("primary_annotation") if subject_info.get("primary_annotation") else False,
                                          software_versions=subject_info.get("software_versions"),
                                          paired_reads_assembly=subject_info.get("paired_reads_assembly"),
                                          quality_thresholds=subject_info.get("quality_thresholds"),
                                          primer_match_cutoffs=subject_info.get("primer_match_cutoffs"),
                                          collapsing_method=subject_info.get("collapsing_method"),
                                          data_processing_protocols=subject_info.get("data_processing_protocols"),
-                                         data_processing_files=[subject_info.get("data_processing_files")] if subject_info.get("data_processing_files") is not None else None,
+                                         data_processing_files=[subject_info.get("data_processing_files")] if subject_info.get("data_processing_files") else None,
                                          germline_database=subject_info.get("germline_database"),
                                          germline_set_ref=subject_info.get("germline_set_ref"),
                                          analysis_provenance_id=subject_info.get("analysis_provenance_id"))
@@ -247,11 +279,11 @@ def create_sample_processing_list(subject_info):
     sample_processing_obj = SampleProcessing(sample_processing_id=subject_info.get("sample_processing_id", None),
                                              sample_id=subject_info.get("sample_id"),
                                              sample_type=subject_info.get("sample_type"),
-                                             tissue=Ontology(id=subject_info.get("tissue_id", ""), lable=subject_info.get("tissue_label", "")),
+                                             tissue=Ontology(id=subject_info.get("tissue_id", ""), label=subject_info.get("tissue_label", "")),
                                              anatomic_site=subject_info.get("anatomic_site"),
                                              disease_state_sample=subject_info.get("disease_state_sample"),
-                                             collection_time_point_relative=subject_info.get("collection_time_point_relative"),
-                                             collection_time_point_relative_unit=Ontology(id=subject_info.get("collection_time_point_relative_unit_id", ""), lable=subject_info.get("collection_time_point_relative_unit_label", "")),
+                                             collection_time_point_relative=int(subject_info.get("collection_time_point_relative")) if subject_info.get("collection_time_point_relative") else 0,
+                                             collection_time_point_relative_unit=Ontology(id=subject_info.get("collection_time_point_relative_unit_id", ""), label=subject_info.get("collection_time_point_relative_unit_label", "")),
                                              collection_time_point_reference=subject_info.get("collection_time_point_reference"),
                                              biomaterial_provider=subject_info.get("biomaterial_provider"),
                                              tissue_processing=subject_info.get("tissue_processing"),
@@ -259,16 +291,16 @@ def create_sample_processing_list(subject_info):
                                              cell_phenotype=subject_info.get("cell_phenotype"),
                                              cell_species=Ontology(id=subject_info.get("cell_species_id", ""), lable=subject_info.get("cell_species_label", "")),
                                              single_cell=str_to_bool((subject_info.get("single_cell"))),
-                                             cell_number=subject_info.get("cell_number") if subject_info.get("cell_number") != '' else 0,
-                                             cells_per_reaction=subject_info.get("cells_per_reaction") if subject_info.get("cells_per_reaction") != '' else 0,
+                                             cell_number=subject_info.get("cell_number") if subject_info.get("cell_number") else 0,
+                                             cells_per_reaction=subject_info.get("cells_per_reaction") if subject_info.get("cells_per_reaction") else 0,
                                              cell_storage=str_to_bool(subject_info.get("cell_storage")),
                                              cell_quality=subject_info.get("cell_quality"),
                                              cell_isolation=subject_info.get("cell_isolation"),
                                              cell_processing_protocol=subject_info.get("cell_processing_protocol"),
                                              template_class=TemplateClass(subject_info.get("template_class").upper()),
                                              template_quality=subject_info.get("template_quality"),
-                                             template_amount=subject_info.get("template_amount"),
-                                             template_amount_unit=Ontology(id=subject_info.get("template_amount_unit_id", ""), lable=subject_info.get("template_amount_unit_label", "")),
+                                             template_amount=int(subject_info.get("template_amount")) if subject_info.get("template_amount") else 0,
+                                             template_amount_unit=Ontology(id=subject_info.get("template_amount_unit_id", ""), label=subject_info.get("template_amount_unit_label", "")),
                                              library_generation_method=library_generation_method,
                                              library_generation_protocol=subject_info.get("library_generation_protocol"),
                                              library_generation_kit_version=subject_info.get("library_generation_kit_version"),
@@ -305,10 +337,10 @@ def create_sequencing_data_object(subject_info):
                                          file_type=FileType(field_value=None),
                                          filename=subject_info.get("filename"),
                                          read_direction=ReadDirection(field_value=None),
-                                         read_length=subject_info.get("read_length"),
+                                         read_length=int(subject_info.get("read_length")) if subject_info.get("read_length") else None,
                                          paired_filename=subject_info.get("paired_filename"),
                                          paired_read_direction=PairedReadDirection(field_value=None),
-                                         paired_read_length=subject_info.get("paired_read_length"),
+                                         paired_read_length=int(subject_info.get("paired_read_length")) if subject_info.get("paired_read_length") else None,
                                          index_filename=subject_info.get("index_filename"),
                                          index_length=subject_info.get("index_length"),
                                          )

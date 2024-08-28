@@ -2,6 +2,10 @@
 #   filename:  vdjbase-api-openapi3.yaml
 #   timestamp: 2024-08-12T08:22:21+00:00
 
+# post-generation fixes:
+# - change all occurrences of __root__: to field_value:
+# remove Null default where indicated (issue with  the code generator creating name clashes: https://github.com/pydantic/pydantic/issues/7871)
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -1034,4 +1038,4 @@ class Repertoire(BaseModel):
 
 
 class SampleMetadataResponse(BaseModel):
-    Repertoire: Optional[Repertoire] = None
+    Repertoire: Optional[Repertoire]        # remove Null default once the schema is generated

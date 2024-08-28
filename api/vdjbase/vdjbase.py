@@ -59,7 +59,7 @@ def find_datasets(species):
     datasets = []
     for name in vdjbase_dbs[species].keys():
         if '_description' not in name:
-            datasets.append({'dataset': name, 'description': vdjbase_dbs[species][name + '_description']})
+            datasets.append({'dataset': name, 'description': vdjbase_dbs[species][name + '_description']['description_text']})
     return datasets
 
 

@@ -37,6 +37,14 @@ class ContentProvider():
         self.db.dispose()
 
 
+# TODO: when we change to biomial species names, update this lookup and corresponding code
+species_lookup = {
+    'Human': ('Homo sapiens', 'NCBITAXON: 9606'),
+    'Rhesus Macaque': ('Macaca mulatta', 'NCBITAXON: 9544'),
+    'Crab-eating Macaque': ('Macaca fascicularis', 'NCBITAXON: 9541'),
+}
+
+
 def study_data_db_init(vdjbase_db_path):
     sqlite_dbs = {}
 
@@ -52,7 +60,15 @@ def study_data_db_init(vdjbase_db_path):
                     if species not in sqlite_dbs:
                         sqlite_dbs[species] = {}
                     sqlite_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
-                    sqlite_dbs[species][name + '_description'] = description
+                    sqlite_dbs[species][name + '_description'] = {'description_text': description}
+
+                    if species in species_lookup:
+                        sqlite_dbs[species][name + '_description']['binomial'] = species_lookup[species][0]
+                        sqlite_dbs[species][name + '_description']['taxid'] = species_lookup[species][1]
+                    else:
+                        sqlite_dbs[species][name + '_description']['binomial'] = species
+                        sqlite_dbs[species][name + '_description']['taxid'] = ''
+                        print('Species %s not found in species lookup' % species)
 
     # temp fix: add asc_genotype column to sample table if not there already
 

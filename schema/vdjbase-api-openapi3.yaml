@@ -1,20 +1,31 @@
 openapi: 3.0.0
 
-#    After generating the file from the schema, please replace all occurrences of __root__ with field_value to ensure the code runs correctly.
+# After generating model.py from the schema, please replace all occurrences of __root__ with field_value to ensure the code runs correctly.
+# Check the existing model.py for other fixups that may be required
 
 info:
   title: VDJbase API
-  version: 2.0.0
+  version: 1.0.0
   contact:
     name: William Lees
     email: william@lees.org.uk
   description: Public API for VDJbase holding AIRR-seq and Genomic data.
 servers:
   - url: http://127.0.0.1:5000/api_v1
-    description: OGRDB API
+    description: VDJbase local development
     variables:
       basePath:
         default: api_v1
+  - url: https://vdjbase.org/admin/api_v1
+    description: VDJbase production
+    variables:
+      basePath:
+        default: admin/api_v1
+  - url: https://vdjbase.uat.vdjbase.org/admin/api_v1
+    description: VDJbase UAT
+    variables:
+      basePath:
+        default: admin/api_v1
 
 components:
   schemas:
@@ -128,7 +139,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string            # todo: should be ontology
+            type: string            # binomial name of species
       responses:
         '200':
           description: A list of the available datasets
@@ -157,7 +168,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string            # todo: should be ontology
+            type: string            # binomial name of species
         - name: dataset
           in: path
           required: true
@@ -192,7 +203,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string         # todo: should be ontology
+            type: string         # binomial name of species
         - name: dataset
           in: path
           required: true
@@ -225,7 +236,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/error_response'
                 
-  /{type}/sample_metadata/{species}/{dataset}/{subject}/{sample}:
+  /{type}/sample_metadata/{species}/{dataset}/{sample}:
     get:
       summary: Return the MiAIRR metadata for the sample
       parameters:
@@ -239,19 +250,13 @@ paths:
           in: path
           required: true
           schema:
-            type: string         # todo: should be ontology
+            type: string         # binomial name of species
         - name: dataset
           in: path
           required: true
           schema:
             type: string
           description: The VDJbase dataset name
-        - name: subject
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The VDJbase subject name
         - name: sample
           in: path
           required: true
