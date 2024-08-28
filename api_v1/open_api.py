@@ -1,8 +1,10 @@
 import json
-from app import app
 from datetime import datetime
 from flask import Blueprint, request, jsonify, Response
-from schema.models import *
+from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Genotype, Locus, Sample, \
+    SampleMetadataResponse, Repertoire, DataProcessing, SampleProcessing, CellProcessing, NucleicAcidProcessing, SequencingRun, LibraryGenerationMethod, TemplateClass, \
+    CompleteSequences, PhysicalLinkage, SequencingData, FileType, ReadDirection, PairedReadDirection, Subject, Sex, SexEnum, SubjectGenotype, GenotypeSet, Diagnosis, \
+    Study, KeywordsStudyEnum
 from pydantic.fields import FieldInfo
 from pydantic import BaseModel
 from typing import Any, Union, get_args, get_origin
@@ -13,6 +15,7 @@ from flask_restx import Resource
 
 api_bp = Blueprint('api_v1', __name__)
 
+
 def custom_jsonify(obj):
     """Custom JSON encoder for special object types."""
 
@@ -20,7 +23,7 @@ def custom_jsonify(obj):
         if isinstance(o, Enum):
             return o.value
         if isinstance(o, BaseModel):
-            return o.dict()
+            return o.model_dump()
         if isinstance(o, date):
             return o.isoformat()
         if isinstance(o, dict):
@@ -35,8 +38,6 @@ def custom_jsonify(obj):
     )
 
 
-"""Get species list based on type."""
-
 @api_bp.route('/<type>/species', methods=['GET'])
 def get_species(type):
     """Get species list based on type."""
@@ -49,11 +50,11 @@ def get_species(type):
 
     species_response_obj = SpeciesResponse(species=species_response_obj)
     try:
-        return jsonify(species_response_obj.dict()), 200
+        return species_response_obj.model_dump_json(), 200
 
     except Exception as e:
         error_response = ErrorResponse(message=str(e))
-        return jsonify(error_response.dict()), 500
+        return error_response.model_dump_json(), 500
 
 
 @api_bp.route('/<type>/datasets/<species>', methods=['GET'])
@@ -70,7 +71,7 @@ def get_species_datasets(type, species):
 
     else:
         error_response = ErrorResponse(message="type not exists")
-        return jsonify(error_response.dict()), 500
+        return error_response.model_dump_json(), 500
 
     data_set_list = []
     for data_set in data_sets:
@@ -79,11 +80,11 @@ def get_species_datasets(type, species):
 
     data_set_response = DatasetsResponse(datasets=data_set_list)
     try:
-        return jsonify(data_set_response.dict()), 200
+        return data_set_response.model_dump_json(), 200
 
     except Exception as e:
         error_response = ErrorResponse(message=str(e))
-        return jsonify(error_response.dict()), 500
+        return error_response.model_dump_json(), 500
 
 
 @api_bp.route('/<type>/subjects/<species>/<dataset>', methods=['GET'])
@@ -107,15 +108,15 @@ def get_subject_datasets(type, species, dataset):
             subject_dataset_response_obj = SubjectDatasetResponse(subject_datasets=dataset_list)
           
             try:
-                return jsonify(subject_dataset_response_obj.dict()), 200
+                return subject_dataset_response_obj.model_dump_json(), 200
 
             except Exception as e:
                 error_response = ErrorResponse(message=str(e))
-                return jsonify(error_response.dict()), 500
+                return error_response.model_dump_json(), 500
 
         except Exception as e:
             error_response = ErrorResponse(message=str(e))
-            return jsonify(error_response.dict()), 500
+            return error_response.model_dump_json(), 500
 
     elif type == "airrseq":
         try:
@@ -133,35 +134,35 @@ def get_subject_datasets(type, species, dataset):
             subject_dataset_response_obj = SubjectDatasetResponse(subject_datasets=dataset_list)
           
             try:
-                return jsonify(subject_dataset_response_obj.dict()), 200
+                return subject_dataset_response_obj.model_dump_json(), 200
 
             except Exception as e:
                 error_response = ErrorResponse(message=str(e))
-                return jsonify(error_response.dict()), 500
+                return error_response.model_dump_json(), 500
         
         except Exception as e:
             error_response = ErrorResponse(message=str(e))
-            return jsonify(error_response.dict()), 500
+            return error_response.model_dump_json(), 500
 
 
 @api_bp.route('/<type>/sample_genotype/<species>/<dataset>/<subject>/<sample>', methods=['GET'])
 def get_sample_genotype(type, species, dataset, subject, sample):
     genotype_object = Genotype(receptor_genotype_id='',
-                                   locus=Locus('IGH'),
-                                   documented_alleles=None,
-                                   undocumented_alleles=None,
-                                   deleted_genes=None,
-                                   inference_process=None)
+                               locus=Locus('IGH'),
+                               documented_alleles=None,
+                               undocumented_alleles=None,
+                               deleted_genes=None,
+                               inference_process=None)
     
     if type == "genomic":
-        return custom_jsonify(genotype_object.dict()), 200
+        return custom_jsonify(genotype_object.model_dump()), 200
 
     elif type == "airrseq":
-        return custom_jsonify(genotype_object.dict()), 200
+        return custom_jsonify(genotype_object.model_dump()), 200
 
     else:
         error_response = ErrorResponse(message=str("type not  exists"))
-        return jsonify(error_response.dict()), 500
+        return error_response.model_dump_json(), 500
     
 
 @api_bp.route('/<type>/sample_metadata/<species>/<dataset>/<subject>/<sample>', methods=['GET'])
@@ -172,9 +173,9 @@ def get_sample_metadata(type, species, dataset, subject, sample):
             subject_info = genomic.SubjectInfoApi(Resource)
             subject_info = subject_info.get(species, dataset, sample)
             rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(subject_info))
-            return custom_jsonify(rep_obj.dict()), 200
+            return custom_jsonify(rep_obj.model_dump()), 200
 
-        except Exception as e:
+        except Exception:
             error_response = ErrorResponse(message=str(subject_info))
             return jsonify(error_response), 500
         
@@ -183,14 +184,14 @@ def get_sample_metadata(type, species, dataset, subject, sample):
             subject_info = vdjbase.SampleInfoApi(Resource)
             subject_info = subject_info.get(species, dataset, sample)
             rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(subject_info))
-            return custom_jsonify(rep_obj.dict()), 200
+            return custom_jsonify(rep_obj.model_dump()), 200
 
-        except Exception as e:
+        except Exception:
             error_response = ErrorResponse(message=str(subject_info))
             return jsonify(error_response), 500
     else:
         error_response = ErrorResponse(message=str("type not  exists"))
-        return jsonify(error_response.dict()), 500
+        return error_response.model_dump_json(), 500
 
 
 def create_repertoire_obj(subject_info):
@@ -239,7 +240,7 @@ def create_sample_processing_list(subject_info):
 
     try:
         library_generation_method = LibraryGenerationMethod(subject_info.get("library_generation_method"))
-    except:
+    except Exception:
         library_generation_method = LibraryGenerationMethod("other")
 
     sample_processing_list = []
@@ -287,11 +288,12 @@ def create_sample_processing_list(subject_info):
 
     return sample_processing_list
 
+
 def create_complete_sequences_enum(subject_info):
     """Create a CompleteSequences enum from subject information."""
     try:
         return CompleteSequences(subject_info.get("complete_sequences"))
-    except:
+    except Exception:
         return CompleteSequences("partial")
 
 
@@ -301,15 +303,15 @@ def create_sequencing_data_object(subject_info):
 
     sequencing_data_obj = SequencingData(sequencing_data_id=subject_info.get("sequencing_data_id") if subject_info.get("sequencing_data_id") is not None else "",
                                          file_type=FileType(field_value=None),
-                                         filename = subject_info.get("filename"),
-                                         read_direction = ReadDirection(field_value=None),
-                                         read_length = subject_info.get("read_length"),
-                                         paired_filename = subject_info.get("paired_filename"),
-                                         paired_read_direction = PairedReadDirection(field_value=None),
-                                         paired_read_length = subject_info.get("paired_read_length"),
-                                         index_filename = subject_info.get("index_filename"),
-                                         index_length = subject_info.get("index_length"),
-                                        )
+                                         filename=subject_info.get("filename"),
+                                         read_direction=ReadDirection(field_value=None),
+                                         read_length=subject_info.get("read_length"),
+                                         paired_filename=subject_info.get("paired_filename"),
+                                         paired_read_direction=PairedReadDirection(field_value=None),
+                                         paired_read_length=subject_info.get("paired_read_length"),
+                                         index_filename=subject_info.get("index_filename"),
+                                         index_length=subject_info.get("index_length"),
+                                         )
     
     return sequencing_data_obj
 
@@ -351,7 +353,7 @@ def create_Sex_Enum(subject_info):
     """Create a Sex enum from subject information."""
     try:
         return SexEnum(subject_info.get("sex"))
-    except:
+    except Exception:
         return None
 
 
@@ -402,7 +404,7 @@ def create_study_object(subject_info):
                          lab_address=subject_info.get("lab_address", ""),
                          submitted_by=subject_info.get("submitted_by", ""),
                          pub_ids=subject_info.get("pub_ids", ""),
-                         keywords_study=create_keyword_study_list(subject_info), ###
+                         keywords_study=create_keyword_study_list(subject_info),
                          adc_publish_date=create_date(subject_info, "adc_publish_date"),
                          adc_update_date=create_date(subject_info, "adc_update_date"),
                          )
@@ -421,6 +423,7 @@ def create_date(subject_info, field):
     
     else:
         return datetime.now()
+
 
 def get_default_value(field_type: Any) -> Any:
     """
@@ -456,11 +459,11 @@ def get_default_value(field_type: Any) -> Any:
         elif 'Optional' in field_type:
             pass
         else:
-            if issubclass(globals()[field_type] , Enum):
+            if issubclass(globals()[field_type], Enum):
                 # Get the first value of the Enum
                 return next(iter(globals()[field_type])).value
     
-    except:
+    except Exception:
         pass
 
     return None
@@ -490,6 +493,7 @@ def fill_missing_required_fields(model_cls: BaseModel, data: dict) -> dict:
                         filled_data[field_name] = default_value
 
     return filled_data
+
 
 def is_required(field_info: FieldInfo) -> bool:
     """
