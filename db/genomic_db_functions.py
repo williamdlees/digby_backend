@@ -321,4 +321,5 @@ def calculate_max_cov_sample(session):
         if ss is not None:
             seq.max_coverage = ss.fully_spanning_matches
             seq.max_coverage_sample_id = ss.sample_id
-            seq.max_coverage_sample_name = ss.sample.sample_name
+            if ss.fully_spanning_matches:
+                    seq.max_coverage_sample_name = ss.sample.sample_name
