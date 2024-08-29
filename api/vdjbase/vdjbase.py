@@ -863,13 +863,13 @@ class GenotypeApi(Resource):
 
         ret = {
             'GenotypeSet': {
-                'receptor_genotype_id': 'Tigger_genotype_set_' + subject_name,
+                'receptor_genotype_set_id': 'Tigger_genotype_set_' + subject_name,
                 'genotype_class_list': genotypes
             }
 
         }
 
-        return ret
+        return ret, 400
 
     def single_genotype(self, species, dataset, subject_name):
         session = vdjbase_dbs[species][dataset].session
@@ -906,7 +906,7 @@ class GenotypeApi(Resource):
                     if novel:
                         undocumented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'sequence': seq, 'phasing': 0})
                     else:
-                        documented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
+                        documented.append({'label': allele_name, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
         ret = {
             'receptor_genotype_id': 'Tigger_genotype_' + sample.sample_name + '_' + dataset,
             'locus': dataset,

@@ -743,7 +743,7 @@ class AssemblyAPI(Resource):
 
 
 @ns.route('/genotype/<string:species>/<string:patient_name>')
-class SamplesApi(Resource):
+class GenotypeApi(Resource):
     @digby_protected()
     def get(self, species, patient_name):
         """ Returns the inferred genotype (in MiAIRR format) of the specified patient """
@@ -764,13 +764,13 @@ class SamplesApi(Resource):
 
         ret = {
             'GenotypeSet': {
-                'receptor_genotype_id': 'Genomic_genotype_set_' + patient_name,
+                'receptor_genotype_set_id': 'Genomic_genotype_set_' + patient_name,
                 'genotype_class_list': genotypes
             }
 
         }
 
-        return ret
+        return ret, 400
 
     def single_genotype(self, species, dataset, patient_name):
         session = genomic_dbs[species][dataset].session
@@ -806,7 +806,7 @@ class SamplesApi(Resource):
                     if novel:
                         undocumented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'sequence': seq, 'phasing': 0})
                     else:
-                        documented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
+                        documented.append({'label': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
         ret = {
             'receptor_genotype_id': 'IGenotyper_genotype_' + patient_name + '_' + dataset,
             'locus': dataset,

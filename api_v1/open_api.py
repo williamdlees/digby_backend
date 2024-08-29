@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, Response
 from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Genotype, Locus, Sample, \
     SampleMetadataResponse, Repertoire, DataProcessing, SampleProcessing, CellProcessing, NucleicAcidProcessing, SequencingRun, LibraryGenerationMethod, TemplateClass, \
-    CompleteSequences, PhysicalLinkage, SequencingData, FileType, ReadDirection, PairedReadDirection, Subject, Sex, SexEnum, SubjectGenotype, GenotypeSet, Diagnosis, \
+    CompleteSequences, PhysicalLinkage, SequencingData, FileTypeEnum, ReadDirectionEnum, PairedReadDirectionEnum, Subject, SexEnum, SubjectGenotype, GenotypeSet, Diagnosis, \
     Study, KeywordsStudyEnum
 from pydantic.fields import FieldInfo
 from pydantic import BaseModel
@@ -165,25 +165,42 @@ def get_subject_datasets(type, species, dataset):
             return error_response.model_dump_json(), 500
 
 
-@api_bp.route('/<type>/sample_genotype/<species>/<dataset>/<subject>/<sample>', methods=['GET'])
-def get_sample_genotype(type, species, dataset, subject, sample):
-    genotype_object = Genotype(receptor_genotype_id='',
-                               locus=Locus('IGH'),
-                               documented_alleles=None,
-                               undocumented_alleles=None,
-                               deleted_genes=None,
-                               inference_process=None)
+@api_bp.route('/<type>/subject_genotype/<species>/<subject>', methods=['GET'])
+def get_sample_genotype(type, species, subject):
+    #genotype_object = Genotype(receptor_genotype_id='',
+    #                           locus=Locus('IGH'),
+    #                           documented_alleles=None,
+    #                           undocumented_alleles=None,
+    #                           deleted_genes=None,
+    #                           inference_process=None)
     
+    species = common_lookup(species)
+
+    if not species:
+        error_response = ErrorResponse(message="species not found")
+        return error_response.model_dump_json(), 404
+
+    if type not in ['genomic', 'airrseq']:
+        error_response = ErrorResponse(message="dataset type not valid")
+        return error_response.model_dump_json(), 404
+
     if type == "genomic":
-        return custom_jsonify(genotype_object.model_dump()), 200
+        genotype_list = genomic.GenotypeApi(Resource)
+        genotype_list = genotype_list.get(species, subject)
 
     elif type == "airrseq":
-        return custom_jsonify(genotype_object.model_dump()), 200
-
-    else:
-        error_response = ErrorResponse(message=str("type not  exists"))
-        return error_response.model_dump_json(), 500
+        genotype_list = vdjbase.GenotypeApi(Resource)
+        genotype_list = genotype_list.get(species, subject)
     
+    if not genotype_list or not genotype_list[0]:
+        error_response = ErrorResponse(message="Subject not found")
+        return error_response.model_dump_json(), 404
+    
+    set = genotype_list[0]['GenotypeSet']
+
+    genotype_set = GenotypeSet(**set)
+    return genotype_set.model_dump_json(), 200
+
 
 @api_bp.route('/<type>/sample_metadata/<species>/<dataset>/<sample>', methods=['GET'])
 def get_sample_metadata(type, species, dataset, sample):
@@ -334,12 +351,12 @@ def create_sequencing_data_object(subject_info):
     subject_info = fill_missing_required_fields(SequencingData,  subject_info)
 
     sequencing_data_obj = SequencingData(sequencing_data_id=subject_info.get("sequencing_data_id") if subject_info.get("sequencing_data_id") is not None else "",
-                                         file_type=FileType(field_value=None),
+                                         file_type=FileTypeEnum(subject_info.get("file_type")) if subject_info.get("file_type") else None,
                                          filename=subject_info.get("filename"),
-                                         read_direction=ReadDirection(field_value=None),
+                                         read_direction=ReadDirectionEnum(subject_info.get("read_direction")) if subject_info.get("read_direction") else None,
                                          read_length=int(subject_info.get("read_length")) if subject_info.get("read_length") else None,
                                          paired_filename=subject_info.get("paired_filename"),
-                                         paired_read_direction=PairedReadDirection(field_value=None),
+                                         paired_read_direction=PairedReadDirectionEnum(subject_info.get("paired_read_direction")) if subject_info.get("paired_read_direction") else None,
                                          paired_read_length=int(subject_info.get("paired_read_length")) if subject_info.get("paired_read_length") else None,
                                          index_filename=subject_info.get("index_filename"),
                                          index_length=subject_info.get("index_length"),
@@ -361,12 +378,12 @@ def create_subject_objects(subject_info):
 
     subject_object = Subject(subject_id=subject_info.get("subject_id"),
                              synthetic=subject_info.get("synthetic"),
-                             species=Ontology(id=subject_info.get("species_id", ""), lable=subject_info.get("species_label", "")),
-                             organism=Ontology(id=subject_info.get("organism_id", ""), lable=subject_info.get("organism_label", "")), 
-                             sex=Sex(field_value=create_Sex_Enum(subject_info)),
+                             species=Ontology(id=subject_info.get("species_id", ""), label=subject_info.get("species_label", "")),
+                             organism=Ontology(id=subject_info.get("organism_id", ""), label=subject_info.get("organism_label", "")), 
+                             sex=create_Sex_Enum(subject_info),
                              age_min=subject_info.get("age_min"),
                              age_max=subject_info.get("age_max"),
-                             age_unit=Ontology(id=subject_info.get("age_unit_id", ""), lable=subject_info.get("age_unit_label", "")),
+                             age_unit=Ontology(id=subject_info.get("age_unit_id", ""), label=subject_info.get("age_unit_label", "")),
                              age_event=subject_info.get("age_event"),
                              age=subject_info.get("age"),
                              ancestry_population=subject_info.get("ancestry_population"),

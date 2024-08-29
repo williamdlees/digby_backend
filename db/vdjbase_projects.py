@@ -411,11 +411,11 @@ def commit_database(meta_records, vdjbase_name, session):
     session.commit()
 
 
-
 # enumerate dirs and paths under the specified directory
 def listdp(dir):
     dirs = [os.path.split(name)[0] for name in glob(os.path.join(dir, '*/'))]
     return zip([os.path.split(name)[1] for name in dirs], dirs)
+
 
 # Consolidate metadata from yml files in each sample directory
 def consolidate_metadata(export_dir):
