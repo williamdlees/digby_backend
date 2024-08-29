@@ -79,7 +79,7 @@ components:
       type: object
       properties:
         Repertoire: 
-          $ref: './Genotype.yaml#/Genotype'
+          $ref: './Repertoire.yaml#/GenotypeSet'
 
     # the response object for sample metadata
     sample_metadata_response:

@@ -229,7 +229,7 @@ def create_repertoire_obj(subject_info):
     """Create a Repertoire object from subject information."""
     subject_info = fill_missing_required_fields(Repertoire,  subject_info)
 
-    rep_object = Repertoire(repertoire_id=subject_info.get("repertoire_id", None),
+    rep_object = Repertoire(repertoire_id=subject_info.get("sample_name"),
                             repertoire_name=subject_info.get("repertoire_name", None),
                             repertoire_description=subject_info.get("repertoire_description", None),
                             study=create_study_object(subject_info),

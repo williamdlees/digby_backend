@@ -773,20 +773,29 @@ class SamplesApi(Resource):
         return ret
 
     def single_genotype(self, species, dataset, patient_name):
-        print(dataset)
         session = genomic_dbs[species][dataset].session
-        sample = session.query(Patient).filter(Patient.identifier == patient_name).one_or_none()
+        samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == patient_name).all()
 
-        if not sample:
+        if len(samples) == 0:
             return None
 
-        reference_set_version = sample.reference_set_version
-        genotype = process_genomic_genotype(patient_name, [], session, True, False)
+        sample = samples[0]     # TODO more intelligent way to select sample??
+
+        reference_set_version = sample.data_pro.germline_database
+        genotype = process_genomic_genotype(sample.sample_name, [], session, True, False)
+        germline_set = {
+            'V': sample.data_pro.germline_database,
+            'D': sample.data_pro.germline_database,
+            'J': sample.data_pro.germline_database,
+        }
         documented = []
         undocumented = []
         deleted = []
         for row in genotype.itertuples():
             gene_type = row.gene[3]
+
+            if gene_type not in germline_set.keys():
+                continue
 
             for allele in row.GENOTYPED_ALLELES.split(','):
                 allele_name = row.gene + '*' + allele
@@ -799,7 +808,7 @@ class SamplesApi(Resource):
                     else:
                         documented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
         ret = {
-            'receptor_genotype_id': 'Tigger_genotype_' + patient_name + '_' + dataset,
+            'receptor_genotype_id': 'IGenotyper_genotype_' + patient_name + '_' + dataset,
             'locus': dataset,
             'documented_alleles': documented,
             'undocumented_alleles': undocumented,

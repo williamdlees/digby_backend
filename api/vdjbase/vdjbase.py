@@ -841,10 +841,10 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
     return ret
 
 
-@ns.route('/genotype/<string:species>/<string:sample_name>')
+@ns.route('/genotype/<string:species>/<string:subject_name>')
 class GenotypeApi(Resource):
     @digby_protected()
-    def get(self, species, sample_name):
+    def get(self, species, subject_name):
         """ Returns the inferred genotype (in MiAIRR format) of the specified sample """
 
         if species not in vdjbase_dbs:
@@ -854,7 +854,7 @@ class GenotypeApi(Resource):
 
         for dataset in vdjbase_dbs[species].keys():
             if '_description' not in dataset:
-                genotype = self.single_genotype(species, dataset, sample_name)
+                genotype = self.single_genotype(species, dataset, subject_name)
                 if genotype:
                     genotypes.append(genotype)
 
@@ -863,7 +863,7 @@ class GenotypeApi(Resource):
 
         ret = {
             'GenotypeSet': {
-                'receptor_genotype_id': 'Tigger_genotype_set_' + sample_name,
+                'receptor_genotype_id': 'Tigger_genotype_set_' + subject_name,
                 'genotype_class_list': genotypes
             }
 
@@ -871,19 +871,20 @@ class GenotypeApi(Resource):
 
         return ret
 
-    def single_genotype(self, species, dataset, sample_name):
-        print(dataset)
+    def single_genotype(self, species, dataset, subject_name):
         session = vdjbase_dbs[species][dataset].session
-        sample = session.query(Sample).filter(Sample.sample_name == sample_name).one_or_none()
+        samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == subject_name).all()
 
-        if not sample:
+        if len(samples) == 0:
             return None
 
-        genotype = process_repseq_genotype(sample_name, [], session, False)
+        sample = samples[0]     # TODO more intelligent way to select sample??
+
+        genotype = process_repseq_genotype(sample.sample_name, [], session, False)
         germline_set = {
             'V': sample.geno_detection.aligner_reference_v,
-            'D': sample.geno_detection.aligner_reference_v,
-            'J': sample.geno_detection.aligner_reference_v,
+            'D': sample.geno_detection.aligner_reference_d,
+            'J': sample.geno_detection.aligner_reference_j,
         }
         documented = []
         undocumented = []
@@ -907,7 +908,7 @@ class GenotypeApi(Resource):
                     else:
                         documented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
         ret = {
-            'receptor_genotype_id': 'Tigger_genotype_' + sample_name + '_' + dataset,
+            'receptor_genotype_id': 'Tigger_genotype_' + sample.sample_name + '_' + dataset,
             'locus': dataset,
             'documented_alleles': documented,
             'undocumented_alleles': undocumented,
