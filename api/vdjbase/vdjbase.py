@@ -273,34 +273,61 @@ class SampleInfoApi(Resource):
         if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
             return None, 404
 
-        session = vdjbase_dbs[species][dataset].session
-        attribute_query = []
+        return get_sample_info(species, dataset, sample)
 
-        for col in sample_info_filters.keys():
-            if sample_info_filters[col]['field'] is not None:
-                attribute_query.append(sample_info_filters[col]['field'])
 
-        info = session.query(*attribute_query)\
-            .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
-            .join(Patient, Patient.id == Sample.patient_id)\
-            .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
-            .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
-            .join(DataPro, DataPro.id == Sample.data_pro_id) \
-            .join(Study, Sample.study_id == Study.id)\
-            .filter(Sample.sample_name==sample).one_or_none()
+@ns.route('/all_samples_info/<string:species>/<string:dataset>')
+class AllSamplesInfoApi(Resource):
+    @digby_protected()
+    def get(self, species, dataset):
+        """ Returns information on all samples """
+        if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
+            return None, 404
 
-        if info:
-            info = info._asdict()
+        metadata_list = []
 
-            for k,v in info.items():
-                if v:
-                    if isinstance(v, (datetime.datetime, datetime.date)):
-                        info[k] = v.isoformat()
+        for dataset in vdjbase_dbs[species].keys():
+            if '_description' not in dataset:
+                session = vdjbase_dbs[species][dataset].session
+                samples = session.query(Sample.sample_name).all()
+                for sample in samples:
+                    metadata_list.append(get_sample_info(species, dataset, sample[0]))
 
-            haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Sample).filter(Sample.sample_name==sample).order_by(HaplotypesFile.by_gene_s).all()
-            info['haplotypes'] = [(h[0]) for h in haplotypes]
+        if not metadata_list:
+            return None, 404
 
-        return info
+        return metadata_list, 200
+
+
+def get_sample_info(species, dataset, sample):
+    session = vdjbase_dbs[species][dataset].session
+    attribute_query = []
+
+    for col in sample_info_filters.keys():
+        if sample_info_filters[col]['field'] is not None:
+            attribute_query.append(sample_info_filters[col]['field'])
+
+    info = session.query(*attribute_query)\
+        .join(GenoDetection, GenoDetection.id == Sample.geno_detection_id)\
+        .join(Patient, Patient.id == Sample.patient_id)\
+        .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
+        .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
+        .join(DataPro, DataPro.id == Sample.data_pro_id) \
+        .join(Study, Sample.study_id == Study.id)\
+        .filter(Sample.sample_name == sample).one_or_none()
+
+    if info:
+        info = info._asdict()
+
+        for k,v in info.items():
+            if v:
+                if isinstance(v, (datetime.datetime, datetime.date)):
+                    info[k] = v.isoformat()
+
+        haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Sample).filter(Sample.sample_name==sample).order_by(HaplotypesFile.by_gene_s).all()
+        info['haplotypes'] = [(h[0]) for h in haplotypes]
+
+    return info
 
 
 
@@ -841,6 +868,48 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
     return ret
 
 
+@ns.route('/all_subjects_genotype/<string:species>')
+class AllSubjectsGenotypeApi(Resource):
+    @digby_protected()
+    def get(self, species):
+        """ Return genotypes for all subjects of the specified species in the specified data type """
+
+        if species not in vdjbase_dbs:
+            return None, 404
+          
+        all_subjects = []
+        for dataset in vdjbase_dbs[species].keys():
+            if '_description' not in dataset:
+                session = vdjbase_dbs[species][dataset].session
+                subjects = session.query(Patient.patient_name).all()
+                all_subjects.extend(subjects)
+
+        all_subjects = sorted(list(set([s[0] for s in all_subjects])))[:3]
+
+        genotype_sets = []
+
+        for subject_name in all_subjects:
+            genotypes = []
+            for dataset in vdjbase_dbs[species].keys():
+                if '_description' not in dataset:
+                    genotype = single_genotype(species, dataset, subject_name)
+                    if genotype:
+                        genotypes.append(genotype)
+            if genotypes:
+                genotype_sets.append({
+                    'subject_name': subject_name,
+                    'GenotypeSet': {
+                        'receptor_genotype_set_id': 'Genomic_genotype_set_' + subject_name,
+                        'genotype_class_list': genotypes
+                    }
+                })
+
+        if not genotype_sets:
+            return None, 404
+
+        return genotype_sets, 200
+
+
 @ns.route('/genotype/<string:species>/<string:subject_name>')
 class GenotypeApi(Resource):
     @digby_protected()
@@ -854,7 +923,7 @@ class GenotypeApi(Resource):
 
         for dataset in vdjbase_dbs[species].keys():
             if '_description' not in dataset:
-                genotype = self.single_genotype(species, dataset, subject_name)
+                genotype = single_genotype(species, dataset, subject_name)
                 if genotype:
                     genotypes.append(genotype)
 
@@ -871,53 +940,54 @@ class GenotypeApi(Resource):
 
         return ret, 400
 
-    def single_genotype(self, species, dataset, subject_name):
-        session = vdjbase_dbs[species][dataset].session
-        samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == subject_name).all()
 
-        if len(samples) == 0:
-            return None
+def single_genotype(species, dataset, subject_name):
+    session = vdjbase_dbs[species][dataset].session
+    samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == subject_name).all()
 
-        sample = samples[0]     # TODO more intelligent way to select sample??
+    if len(samples) == 0:
+        return None
 
-        genotype = process_repseq_genotype(sample.sample_name, [], session, False)
-        germline_set = {
-            'V': sample.geno_detection.aligner_reference_v,
-            'D': sample.geno_detection.aligner_reference_d,
-            'J': sample.geno_detection.aligner_reference_j,
-        }
-        documented = []
-        undocumented = []
-        deleted = []
-        for row in genotype.itertuples():
-            gene_type = row.gene[3]
+    sample = samples[0]     # TODO more intelligent way to select sample??
 
-            if gene_type not in germline_set.keys():
-                continue
+    genotype = process_repseq_genotype(sample.sample_name, [], session, False)
+    germline_set = {
+        'V': sample.geno_detection.aligner_reference_v,
+        'D': sample.geno_detection.aligner_reference_d,
+        'J': sample.geno_detection.aligner_reference_j,
+    }
+    documented = []
+    undocumented = []
+    deleted = []
+    for row in genotype.itertuples():
+        gene_type = row.gene[3]
 
-            if row.alleles == 'Del':
-                deleted.append({'label': row.gene, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
-            for allele in row.GENOTYPED_ALLELES.split(','):
-                allele_name = row.gene + '*' + allele
-                res = session.query(Allele.seq, Allele.novel).filter(Allele.name == allele_name).one_or_none()
-                if res:
-                    seq, novel = res
+        if gene_type not in germline_set.keys():
+            continue
 
-                    if novel:
-                        undocumented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'sequence': seq, 'phasing': 0})
-                    else:
-                        documented.append({'label': allele_name, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
-        ret = {
-            'receptor_genotype_id': 'Tigger_genotype_' + sample.sample_name + '_' + dataset,
-            'locus': dataset,
-            'documented_alleles': documented,
-            'undocumented_alleles': undocumented,
-            'deleted_genes': deleted,
-            'inference_process': 'repertoire_sequencing',
-            'genotyping_tool': sample.geno_detection.geno_tool,
-            'genotyping_tool_version': sample.geno_detection.geno_ver,
-        }
-        return ret
+        if row.alleles == 'Del':
+            deleted.append({'label': row.gene, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
+        for allele in row.GENOTYPED_ALLELES.split(','):
+            allele_name = row.gene + '*' + allele
+            res = session.query(Allele.seq, Allele.novel).filter(Allele.name == allele_name).one_or_none()
+            if res:
+                seq, novel = res
+
+                if novel:
+                    undocumented.append({'allele_name': allele_name, 'germline_set_ref': germline_set[gene_type], 'sequence': seq, 'phasing': 0})
+                else:
+                    documented.append({'label': allele_name, 'germline_set_ref': germline_set[gene_type], 'phasing': 0})
+    ret = {
+        'receptor_genotype_id': 'Tigger_genotype_' + sample.sample_name + '_' + dataset,
+        'locus': dataset,
+        'documented_alleles': documented,
+        'undocumented_alleles': undocumented,
+        'deleted_genes': deleted,
+        'inference_process': 'repertoire_sequencing',
+        'genotyping_tool': sample.geno_detection.geno_tool,
+        'genotyping_tool_version': sample.geno_detection.geno_ver,
+    }
+    return ret
 
 
 def find_rep_filter_params(species, datasets):

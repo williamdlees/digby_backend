@@ -75,45 +75,72 @@ def get_genomic_db(species, dataset):
 
 
 @ns.route('/subject_info/<string:species>/<string:dataset>/<string:sample_id>')
-class SubjectInfoApi(Resource):
+class SampleInfoApi(Resource):
     @digby_protected()
     def get(self, species, dataset, sample_id):
         """ Returns information on the selected sample """
 
-        db = get_genomic_db(species, dataset)
+        return get_sample_info(species, dataset, sample_id)
+ 
 
-        if db is None:
-            raise BadRequest('Bad species or dataset name')
+@ns.route('/all_samples_info/<string:species>/<string:dataset>')
+class AllSamplesInfoApi(Resource):
+    @digby_protected()
+    def get(self, species, dataset):
+        """ Returns information on all samples """
+        if species not in genomic_dbs or dataset not in genomic_dbs[species]:
+            return None, 404
 
-        sample = db.session.query(Sample)\
-            .filter(Sample.sample_name == sample_id)\
-            .one_or_none()
+        metadata_list = []
 
-        if sample is None:
-            raise BadRequest('Bad sample name')
+        for dataset in genomic_dbs[species].keys():
+            if '_description' not in dataset:
+                session = genomic_dbs[species][dataset].session
+                samples = session.query(Sample.sample_name).all()
+                for sample in samples:
+                    metadata_list.append(get_sample_info(species, dataset, sample[0]))
 
-        attribute_query = []
+        if not metadata_list:
+            return None, 404
 
-        for col in genomic_sample_filters.keys():
-            if genomic_sample_filters[col]['field'] is not None:
-                attribute_query.append(genomic_sample_filters[col]['field'])
+        return metadata_list, 200
 
-        info = db.session.query(*attribute_query)\
-            .filter(Sample.sample_name == sample_id)\
-            .join(Patient, Patient.id == Sample.patient_id)\
-            .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
-            .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
-            .join(DataPro, DataPro.id == Sample.data_pro_id) \
-            .join(Study, Sample.study_id == Study.id)\
-            .one_or_none()
 
-        if info is not None:
-            info = info._asdict()
-            for k, v in info.items():
-                if isinstance(v, datetime):
-                    info[k] = v.date().isoformat()
+def get_sample_info(species, dataset, sample_id):
+    db = get_genomic_db(species, dataset)
 
-        return info
+    if db is None:
+        raise BadRequest('Bad species or dataset name')
+
+    sample = db.session.query(Sample)\
+        .filter(Sample.sample_name == sample_id)\
+        .one_or_none()
+
+    if sample is None:
+        raise BadRequest('Bad sample name')
+
+    attribute_query = []
+
+    for col in genomic_sample_filters.keys():
+        if genomic_sample_filters[col]['field'] is not None:
+            attribute_query.append(genomic_sample_filters[col]['field'])
+
+    info = db.session.query(*attribute_query)\
+        .filter(Sample.sample_name == sample_id)\
+        .join(Patient, Patient.id == Sample.patient_id)\
+        .join(SeqProtocol, SeqProtocol.id == Sample.seq_protocol_id)\
+        .join(TissuePro, TissuePro.id == Sample.tissue_pro_id)\
+        .join(DataPro, DataPro.id == Sample.data_pro_id) \
+        .join(Study, Sample.study_id == Study.id)\
+        .one_or_none()
+
+    if info is not None:
+        info = info._asdict()
+        for k, v in info.items():
+            if isinstance(v, datetime):
+                info[k] = v.date().isoformat()
+
+    return info
 
 
 range_arguments = reqparse.RequestParser()
@@ -755,7 +782,7 @@ class GenotypeApi(Resource):
 
         for dataset in genomic_dbs[species].keys():
             if '_description' not in dataset:
-                genotype = self.single_genotype(species, dataset, patient_name)
+                genotype = single_genotype(species, dataset, patient_name)
                 if genotype:
                     genotypes.append(genotype)
 
@@ -770,50 +797,93 @@ class GenotypeApi(Resource):
 
         }
 
-        return ret, 400
+        return ret, 200
 
-    def single_genotype(self, species, dataset, patient_name):
-        session = genomic_dbs[species][dataset].session
-        samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == patient_name).all()
 
-        if len(samples) == 0:
-            return None
+@ns.route('/all_subjects_genotype/<string:species>')
+class AllSubjectsGenotypeApi(Resource):
+    @digby_protected()
+    def get(self, species):
+        """ Return genotypes for all subjects of the specified species in the specified data type """
 
-        sample = samples[0]     # TODO more intelligent way to select sample??
+        if species not in genomic_dbs:
+            return None, 404
+          
+        all_subjects = []
+        for dataset in genomic_dbs[species].keys():
+            if '_description' not in dataset:
+                session = genomic_dbs[species][dataset].session
+                subjects = session.query(Patient.patient_name).all()
+                all_subjects.extend(subjects)
 
-        reference_set_version = sample.data_pro.germline_database
-        genotype = process_genomic_genotype(sample.sample_name, [], session, True, False)
-        germline_set = {
-            'V': sample.data_pro.germline_database,
-            'D': sample.data_pro.germline_database,
-            'J': sample.data_pro.germline_database,
-        }
-        documented = []
-        undocumented = []
-        deleted = []
-        for row in genotype.itertuples():
-            gene_type = row.gene[3]
+        all_subjects = sorted(list(set([s[0] for s in all_subjects])))
 
-            if gene_type not in germline_set.keys():
-                continue
+        genotype_sets = []
 
-            for allele in row.GENOTYPED_ALLELES.split(','):
-                allele_name = row.gene + '*' + allele
-                res = session.query(Sequence.sequence, Sequence.novel).filter(Sequence.name == allele_name).one_or_none()
-                if res:
-                    seq, novel = res
+        for subject_name in all_subjects:
+            genotypes = []
+            for dataset in genomic_dbs[species].keys():
+                if '_description' not in dataset:
+                    genotype = single_genotype(species, dataset, subject_name)
+                    if genotype:
+                        genotypes.append(genotype)
+            if genotypes:
+                genotype_sets.append({
+                    'subject_name': subject_name,
+                    'GenotypeSet': {
+                        'receptor_genotype_set_id': 'Genomic_genotype_set_' + subject_name,
+                        'genotype_class_list': genotypes
+                    }
+                })
 
-                    if novel:
-                        undocumented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'sequence': seq, 'phasing': 0})
-                    else:
-                        documented.append({'label': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
-        ret = {
-            'receptor_genotype_id': 'IGenotyper_genotype_' + patient_name + '_' + dataset,
-            'locus': dataset,
-            'documented_alleles': documented,
-            'undocumented_alleles': undocumented,
-            'deleted_genes': deleted,
-            'inference_process': 'genomic_sequencing',
-            'genotyping_tool': 'IGenotyper',
-        }
-        return ret
+        if not genotype_sets:
+            return None, 404
+
+        return genotype_sets, 200
+
+
+def single_genotype(species, dataset, patient_name):
+    session = genomic_dbs[species][dataset].session
+    samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == patient_name).all()
+
+    if len(samples) == 0:
+        return None
+
+    sample = samples[0]     # TODO more intelligent way to select sample??
+
+    reference_set_version = sample.data_pro.germline_database
+    genotype = process_genomic_genotype(sample.sample_name, [], session, True, False)
+    germline_set = {
+        'V': sample.data_pro.germline_database,
+        'D': sample.data_pro.germline_database,
+        'J': sample.data_pro.germline_database,
+    }
+    documented = []
+    undocumented = []
+    deleted = []
+    for row in genotype.itertuples():
+        gene_type = row.gene[3]
+
+        if gene_type not in germline_set.keys():
+            continue
+
+        for allele in row.GENOTYPED_ALLELES.split(','):
+            allele_name = row.gene + '*' + allele
+            res = session.query(Sequence.sequence, Sequence.novel).filter(Sequence.name == allele_name).one_or_none()
+            if res:
+                seq, novel = res
+
+                if novel:
+                    undocumented.append({'allele_name': allele_name, 'germline_set_ref': reference_set_version, 'sequence': seq, 'phasing': 0})
+                else:
+                    documented.append({'label': allele_name, 'germline_set_ref': reference_set_version, 'phasing': 0})
+    ret = {
+        'receptor_genotype_id': 'IGenotyper_genotype_' + patient_name + '_' + dataset,
+        'locus': dataset,
+        'documented_alleles': documented,
+        'undocumented_alleles': undocumented,
+        'deleted_genes': deleted,
+        'inference_process': 'genomic_sequencing',
+        'genotyping_tool': 'IGenotyper',
+    }
+    return ret

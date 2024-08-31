@@ -1,7 +1,7 @@
 openapi: 3.0.0
 
 # to generate: datamodel-codegen  --input vdjbase-api-openapi3.yaml --input-file-type openapi --output new_model.py --output-model-type pydantic_v2.BaseModel --strict-nullable --use-subclass-enum
-# After generating model.py from the schema, please replace all occurrences of AwareDateTime with NaiveDateTime
+# After generating model.py from the schema, please replace all occurrences of AwareDatetime with NaiveDatetime
 # Check the existing model.py for other fixups that may be required
 
 info:
@@ -49,11 +49,20 @@ components:
             type: object
             properties:
               dataset:
-                type: string        # Name of the dataset in VDJbase
+                type: string
+                description: Name of the dataset in VDJbase
               locus:
-                type: string        # The locus it represents (todo: should be an enum)
-              type:
-                type: string        # Genomic or AIRRseq (todo: should be an enum)
+                type: string
+                description: Gene locus it represents
+                enum:
+                    - IGH
+                    - IGI
+                    - IGK
+                    - IGL
+                    - TRA
+                    - TRB
+                    - TRG
+                    - TRD
     
     # the response object for subjects and samples within a dataset
     subject_dataset_response:
@@ -65,29 +74,64 @@ components:
                 type: object
                 properties:
                   id:
-                    type: string        # The sample ID within VDJbase
+                    type: string        
+                    description: The sample ID within VDJbase
                   study_name:
-                    type: string        # The study name, eg PRJEB26509 (MiAIRR study.study_id)
+                    type: string        
+                    description: The study name (MiAIRR study.study_id)
                   subject_identifier:  
-                    type: string        # The subject ID as defined by the submitter of the study, unique within the study (MiAIRR subhect.subject_id)
+                    type: string        
+                    description: The subject ID as defined by the submitter of the study, unique within the study (MiAIRR subhect.subject_id)
                   sample_identifier:
-                    type: string        # Sample ID assigned by submitter, unique within study. (MiAIRR sample.sample_id)
+                    type: string
+                    description: Sample ID assigned by submitter, unique within study. (MiAIRR sample.sample_id)
                   dataset:
-                    type: string        # The VDJbase dataset (e.g. IGH)
+                    type: string
+                    description: The VDJbase dataset
+                    example: IGH
             
-    # the response object for sample metadata
+    # the response object for subject genotype
     subject_genotype_response:
       type: object
       properties:
-        Repertoire: 
+        GenotypeSet: 
           $ref: './Repertoire.yaml#/GenotypeSet'
+
+    # the response object for all subjects genotypes
+    all_subjects_genotype_response:
+      type: object
+      properties:
+        genotype_class_list: 
+          description: List of Genotypes for all subjects included in this data type.
+          type: array
+          nullable: true
+          items:
+              type: object
+              properties:
+                subject_name: 
+                  type: string
+                  description: The VDJbase subject name
+                genotypeSet:  
+                  $ref: './Repertoire.yaml#/GenotypeSet'
+
 
     # the response object for sample metadata
     sample_metadata_response:
       type: object
       properties:
-        Repertoire: 
+        repertoire: 
           $ref: './Repertoire.yaml#/Repertoire'
+
+    # the response object for all samples metadata
+    all_samples_metadata_response:
+      type: object
+      properties:
+        repertoire_class_list:
+            description: List of Repertoire metadata for samples included in this dataset.
+            type: array
+            nullable: true
+            items:
+              $ref: './Repertoire.yaml#/Repertoire'
 
     # error response
     error_response:
@@ -140,7 +184,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string            # binomial name of species
+            type: string
+            description: binomial name of species
       responses:
         '200':
           description: A list of the available datasets
@@ -150,6 +195,12 @@ paths:
                 $ref: '#/components/schemas/datasets_response'
         '500':
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Item not found
           content:
             application/json:
               schema:
@@ -169,7 +220,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string            # binomial name of species
+            type: string
+            description: binomial name of species
         - name: dataset
           in: path
           required: true
@@ -189,6 +241,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error_response'
+        '400':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
                 
   /{type}/subject_genotype/{species}/{subject}:
     get:
@@ -204,7 +262,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string         # binomial name of species
+            type: string
+            description: binomial name of species
         - name: subject
           in: path
           required: true
@@ -213,13 +272,55 @@ paths:
           description: The VDJbase subject name
       responses:
         '200':
-          description: A list of subjects and samples in the specified dataset.
+          description: The requested genotype.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/subject_genotype_response'
         '500':
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '400':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  /{type}/all_subjects_genotype/{species}:
+    get:
+      summary: Return genotypes for all subjects of the specified species in the specified data type
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [airrseq, genomic]
+        - name: species
+          in: path
+          required: true
+          schema:
+            type: string
+            description: binomial name of species
+      responses:
+        '200':
+          description: A list of genotypes for the requested subjects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subject_genotype_response'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'                
+        '400':
+          description: Item not found
           content:
             application/json:
               schema:
@@ -239,7 +340,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string         # binomial name of species
+            type: string
+            description: binomial name of species
         - name: dataset
           in: path
           required: true
@@ -261,6 +363,54 @@ paths:
                 $ref: '#/components/schemas/sample_metadata_response'
         '500':
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '400':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  /{type}/all_samples_metadata/{species}/{dataset}:
+    get:
+      summary: Return the MiAIRR metadata for all samples in the specified dataset
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [airrseq, genomic]
+        - name: species
+          in: path
+          required: true
+          schema:
+            type: string
+            description: binomial name of species
+        - name: dataset
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The VDJbase dataset name
+      responses:
+        '200':
+          description: A list of subjects and samples in the specified dataset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/all_samples_metadata_response'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '400':
+          description: Item not found
           content:
             application/json:
               schema:

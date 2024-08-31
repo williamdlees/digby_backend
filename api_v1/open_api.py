@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, Response
 from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Genotype, Locus, Sample, \
     SampleMetadataResponse, Repertoire, DataProcessing, SampleProcessing, CellProcessing, NucleicAcidProcessing, SequencingRun, LibraryGenerationMethod, TemplateClass, \
     CompleteSequences, PhysicalLinkage, SequencingData, FileTypeEnum, ReadDirectionEnum, PairedReadDirectionEnum, Subject, SexEnum, SubjectGenotype, GenotypeSet, Diagnosis, \
-    Study, KeywordsStudyEnum
+    Study, KeywordsStudyEnum, GenotypeClassListItem, AllSubjectsGenotypeResponse, AllSamplesMetadataResponse
 from pydantic.fields import FieldInfo
 from pydantic import BaseModel
 from typing import Any, Union, get_args, get_origin
@@ -167,22 +167,15 @@ def get_subject_datasets(type, species, dataset):
 
 @api_bp.route('/<type>/subject_genotype/<species>/<subject>', methods=['GET'])
 def get_sample_genotype(type, species, subject):
-    #genotype_object = Genotype(receptor_genotype_id='',
-    #                           locus=Locus('IGH'),
-    #                           documented_alleles=None,
-    #                           undocumented_alleles=None,
-    #                           deleted_genes=None,
-    #                           inference_process=None)
-    
     species = common_lookup(species)
 
     if not species:
         error_response = ErrorResponse(message="species not found")
-        return error_response.model_dump_json(), 404
+        return error_response.model_dump_json(), 400
 
     if type not in ['genomic', 'airrseq']:
         error_response = ErrorResponse(message="dataset type not valid")
-        return error_response.model_dump_json(), 404
+        return error_response.model_dump_json(), 400
 
     if type == "genomic":
         genotype_list = genomic.GenotypeApi(Resource)
@@ -194,12 +187,42 @@ def get_sample_genotype(type, species, subject):
     
     if not genotype_list or not genotype_list[0]:
         error_response = ErrorResponse(message="Subject not found")
-        return error_response.model_dump_json(), 404
+        return error_response.model_dump_json(), 400
     
     set = genotype_list[0]['GenotypeSet']
 
     genotype_set = GenotypeSet(**set)
     return genotype_set.model_dump_json(), 200
+
+
+@api_bp.route('/<type>/all_subjects_genotype/<species>', methods=['GET'])
+def get_all_subjects_genotype(type, species):
+    species = common_lookup(species)
+
+    if not species:
+        error_response = ErrorResponse(message="species not found")
+        return error_response.model_dump_json(), 400
+
+    if type not in ['genomic', 'airrseq']:
+        error_response = ErrorResponse(message="dataset type not valid")
+        return error_response.model_dump_json(), 400
+
+    if type == "genomic":
+        genotype_list = genomic.AllSubjectsGenotypeApi(Resource)
+        genotype_list = genotype_list.get(species)
+
+    elif type == "airrseq":
+        genotype_list = vdjbase.AllSubjectsGenotypeApi(Resource)
+        genotype_list = genotype_list.get(species)
+    
+    if not genotype_list or not genotype_list[0]:
+        error_response = ErrorResponse(message="Subject not found")
+        return error_response.model_dump_json(), 400
+    
+    sets = genotype_list[0]
+    sets = [GenotypeClassListItem(subject_name=s['subject_name'], genotypeSet=s['GenotypeSet']) for s in sets]
+
+    return AllSubjectsGenotypeResponse(genotype_class_list=sets).model_dump_json(), 200
 
 
 @api_bp.route('/<type>/sample_metadata/<species>/<dataset>/<sample>', methods=['GET'])
@@ -209,29 +232,32 @@ def get_sample_metadata(type, species, dataset, sample):
 
     if not species:
         error_response = ErrorResponse(message="species not found")
-        return error_response.model_dump_json(), 500
+        return error_response.model_dump_json(), 400
 
     if type == "genomic":
         try:
-            sample_info = genomic.SubjectInfoApi(Resource)
+            sample_info = genomic.SampleInfoApi(Resource)
             sample_info = sample_info.get(species, dataset, sample)
+            if not sample_info or not sample_info[0]:
+                error_response = ErrorResponse(message="Sample not found")
+                return error_response.model_dump_json(), 400
 
-            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(sample_info))
+            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info))
             return custom_jsonify(rep_obj.model_dump()), 200
 
         except Exception as e:
             error_response = ErrorResponse(message=str(e))
             return error_response.model_dump_json(), 500
-        
+
     elif type == "airrseq":
         try:
             sample_info = vdjbase.SampleInfoApi(Resource)
             sample_info = sample_info.get(species, dataset, sample)
-            if not sample_info or (len(sample_info) == 2 and not sample_info[0]):
+            if not sample_info or not sample_info[0]:
                 error_response = ErrorResponse(message="Sample not found")
-                return error_response.model_dump_json(), 500
+                return error_response.model_dump_json(), 400
 
-            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(sample_info))
+            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info))
             return custom_jsonify(rep_obj.model_dump()), 200
 
         except Exception as e:
@@ -240,6 +266,47 @@ def get_sample_metadata(type, species, dataset, sample):
     else:
         error_response = ErrorResponse(message=str("type not  exists"))
         return error_response.model_dump_json(), 500
+
+
+@api_bp.route('/<type>/all_samples_metadata/<species>/<dataset>', methods=['GET'])
+def get_all_samples_metadata(type, species, dataset):
+    """Get metadata for a specific sample."""
+    species = common_lookup(species)
+
+    if not species:
+        error_response = ErrorResponse(message="species not found")
+        return error_response.model_dump_json(), 400
+
+    if type == "genomic":
+        try:
+            sample_info = genomic.AllSamplesInfoApi(Resource)
+            sample_info = sample_info.get(species, dataset)
+            if not sample_info or not sample_info[0]:
+                error_response = ErrorResponse(message="Sample not found")
+                return error_response.model_dump_json(), 400
+
+        except Exception as e:
+            error_response = ErrorResponse(message=str(e))
+            return error_response.model_dump_json(), 500
+
+    elif type == "airrseq":
+        try:
+            sample_info = vdjbase.AllSamplesInfoApi(Resource)
+            sample_info = sample_info.get(species, dataset)
+            if not sample_info or not sample_info[0]:
+                error_response = ErrorResponse(message="Sample not found")
+                return error_response.model_dump_json(), 400
+
+        except Exception as e:
+            error_response = ErrorResponse(message=str(e))
+            return error_response.model_dump_json(), 500
+    else:
+        error_response = ErrorResponse(message=str("type not  exists"))
+        return error_response.model_dump_json(), 500
+
+    repertoires = [create_repertoire_obj(s) for s in sample_info[0]]
+    rep_obj = AllSamplesMetadataResponse(repertoire_class_list=repertoires)
+    return custom_jsonify(rep_obj.model_dump()), 200
 
 
 def create_repertoire_obj(subject_info):
