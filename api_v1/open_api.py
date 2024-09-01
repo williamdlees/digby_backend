@@ -85,10 +85,10 @@ def get_species_datasets(type, species):
     dataset_list = []
     lookup_dbs = genomic_dbs if type == "genomic" else vdjbase_dbs
 
-    for sp, datasets in lookup_dbs.items():
+    for _, datasets in lookup_dbs.items():
         for ds_name, ds_data in datasets.items():
-            if 'description' in ds_name and ds_data['binomial'] == species:
-                locus = ds_name.replace('_description', '') 
+            if ds_data.binomial == species:
+                locus = ds_name
                 dataset_obj = Dataset(dataset=locus, locus=locus, type=type)
                 dataset_list.append(dataset_obj)
 

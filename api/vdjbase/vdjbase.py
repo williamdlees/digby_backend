@@ -58,8 +58,7 @@ class SpeciesApi(Resource):
 def find_datasets(species):
     datasets = []
     for name in vdjbase_dbs[species].keys():
-        if '_description' not in name:
-            datasets.append({'dataset': name, 'description': vdjbase_dbs[species][name + '_description']['description_text']})
+        datasets.append({'dataset': name, 'description': vdjbase_dbs[species][name].description})
     return datasets
 
 
@@ -73,17 +72,16 @@ class NovelsApi(Resource):
         for sp in species:
             if sp in vdjbase_dbs:
                 for ds_name, ds in vdjbase_dbs[sp].items():
-                    if '_description' not in ds_name:
-                        session = ds.session
-                        novels = session.query(Allele).filter(Allele.novel == 1).all()
+                    session = ds.session
+                    novels = session.query(Allele).filter(Allele.novel == 1).all()
 
-                        if novels:
-                            if sp not in ret:
-                                ret[sp] = {}
-                            if ds_name not in ret[sp]:
-                                ret[sp][ds_name] = {}
-                            for novel in novels:
-                                ret[sp][ds_name][novel.name] = (novel.seq.replace('.', ''), novel.appears)
+                    if novels:
+                        if sp not in ret:
+                            ret[sp] = {}
+                        if ds_name not in ret[sp]:
+                            ret[sp][ds_name] = {}
+                        for novel in novels:
+                            ret[sp][ds_name][novel.name] = (novel.seq.replace('.', ''), novel.appears)
 
         return ret
 
@@ -193,7 +191,7 @@ class DataSetInfoAPI(Resource):
         session = vdjbase_dbs[species][dataset].session
         stats = {}
 
-        stats['description'] = vdjbase_dbs[species][dataset + '_description']
+        stats['description'] = vdjbase_dbs[species][dataset].description
         stats['total_subjects'] = session.query(Patient.id).count()
         stats['total_samples'] = session.query(Sample.id).count()
         stats['sex_count'] = session.query(Patient.sex, func.count(Patient.sex)).group_by(Patient.sex).order_by(func.count(Patient.sex).desc()).all()
@@ -287,11 +285,10 @@ class AllSamplesInfoApi(Resource):
         metadata_list = []
 
         for dataset in vdjbase_dbs[species].keys():
-            if '_description' not in dataset:
-                session = vdjbase_dbs[species][dataset].session
-                samples = session.query(Sample.sample_name).all()
-                for sample in samples:
-                    metadata_list.append(get_sample_info(species, dataset, sample[0]))
+            session = vdjbase_dbs[species][dataset].session
+            samples = session.query(Sample.sample_name).all()
+            for sample in samples:
+                metadata_list.append(get_sample_info(species, dataset, sample[0]))
 
         if not metadata_list:
             return None, 404
@@ -879,10 +876,9 @@ class AllSubjectsGenotypeApi(Resource):
           
         all_subjects = []
         for dataset in vdjbase_dbs[species].keys():
-            if '_description' not in dataset:
-                session = vdjbase_dbs[species][dataset].session
-                subjects = session.query(Patient.patient_name).all()
-                all_subjects.extend(subjects)
+            session = vdjbase_dbs[species][dataset].session
+            subjects = session.query(Patient.patient_name).all()
+            all_subjects.extend(subjects)
 
         all_subjects = sorted(list(set([s[0] for s in all_subjects])))[:3]
 
@@ -891,10 +887,9 @@ class AllSubjectsGenotypeApi(Resource):
         for subject_name in all_subjects:
             genotypes = []
             for dataset in vdjbase_dbs[species].keys():
-                if '_description' not in dataset:
-                    genotype = single_genotype(species, dataset, subject_name)
-                    if genotype:
-                        genotypes.append(genotype)
+                genotype = single_genotype(species, dataset, subject_name)
+                if genotype:
+                    genotypes.append(genotype)
             if genotypes:
                 genotype_sets.append({
                     'subject_name': subject_name,
@@ -922,10 +917,9 @@ class GenotypeApi(Resource):
         genotypes = []
 
         for dataset in vdjbase_dbs[species].keys():
-            if '_description' not in dataset:
-                genotype = single_genotype(species, dataset, subject_name)
-                if genotype:
-                    genotypes.append(genotype)
+            genotype = single_genotype(species, dataset, subject_name)
+            if genotype:
+                genotypes.append(genotype)
 
         if not genotypes:
             return None, 404

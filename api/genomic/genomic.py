@@ -94,11 +94,10 @@ class AllSamplesInfoApi(Resource):
         metadata_list = []
 
         for dataset in genomic_dbs[species].keys():
-            if '_description' not in dataset:
-                session = genomic_dbs[species][dataset].session
-                samples = session.query(Sample.sample_name).all()
-                for sample in samples:
-                    metadata_list.append(get_sample_info(species, dataset, sample[0]))
+            session = genomic_dbs[species][dataset].session
+            samples = session.query(Sample.sample_name).all()
+            for sample in samples:
+                metadata_list.append(get_sample_info(species, dataset, sample[0]))
 
         if not metadata_list:
             return None, 404
@@ -781,10 +780,9 @@ class GenotypeApi(Resource):
         genotypes = []
 
         for dataset in genomic_dbs[species].keys():
-            if '_description' not in dataset:
-                genotype = single_genotype(species, dataset, patient_name)
-                if genotype:
-                    genotypes.append(genotype)
+            genotype = single_genotype(species, dataset, patient_name)
+            if genotype:
+                genotypes.append(genotype)
 
         if not genotypes:
             return None, 404
@@ -811,10 +809,9 @@ class AllSubjectsGenotypeApi(Resource):
           
         all_subjects = []
         for dataset in genomic_dbs[species].keys():
-            if '_description' not in dataset:
-                session = genomic_dbs[species][dataset].session
-                subjects = session.query(Patient.patient_name).all()
-                all_subjects.extend(subjects)
+            session = genomic_dbs[species][dataset].session
+            subjects = session.query(Patient.patient_name).all()
+            all_subjects.extend(subjects)
 
         all_subjects = sorted(list(set([s[0] for s in all_subjects])))
 
@@ -823,10 +820,9 @@ class AllSubjectsGenotypeApi(Resource):
         for subject_name in all_subjects:
             genotypes = []
             for dataset in genomic_dbs[species].keys():
-                if '_description' not in dataset:
-                    genotype = single_genotype(species, dataset, subject_name)
-                    if genotype:
-                        genotypes.append(genotype)
+                genotype = single_genotype(species, dataset, subject_name)
+                if genotype:
+                    genotypes.append(genotype)
             if genotypes:
                 genotype_sets.append({
                     'subject_name': subject_name,

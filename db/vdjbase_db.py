@@ -22,15 +22,21 @@ import traceback
 
 Session = sessionmaker()
 
+
 class ContentProvider():
     db = None
     connection = None
     session = None
+    description = None
+    binomial = None
+    taxid = None
+    created = None
 
-    def __init__(self, path):
+    def __init__(self, path, description):
         self.db = create_engine('sqlite:///' + path + '?check_same_thread=false', echo=False)
         self.connection = self.db.connect()
         self.session = Session(bind=self.connection)
+        self.description = description
 
     def close(self):
         self.connection.close()
@@ -59,15 +65,14 @@ def study_data_db_init(vdjbase_db_path):
                             description = ' '.join(fi.readlines())
                     if species not in sqlite_dbs:
                         sqlite_dbs[species] = {}
-                    sqlite_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'))
-                    sqlite_dbs[species][name + '_description'] = {'description_text': description}
+                    sqlite_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'), description)
 
                     if species in species_lookup:
-                        sqlite_dbs[species][name + '_description']['binomial'] = species_lookup[species][0]
-                        sqlite_dbs[species][name + '_description']['taxid'] = species_lookup[species][1]
+                        sqlite_dbs[species][name].binomial = species_lookup[species][0]
+                        sqlite_dbs[species][name].taxid = species_lookup[species][1]
                     else:
-                        sqlite_dbs[species][name + '_description']['binomial'] = species
-                        sqlite_dbs[species][name + '_description']['taxid'] = ''
+                        sqlite_dbs[species][name].binomial = species
+                        sqlite_dbs[species][name].taxid = ''
                         print('Species %s not found in species lookup' % species)
 
     # temp fix: add asc_genotype column to sample table if not there already
@@ -75,13 +80,12 @@ def study_data_db_init(vdjbase_db_path):
     if 'genomic' not in vdjbase_db_path.lower():
         for species in sqlite_dbs:
             for locus in sqlite_dbs[species]:
-                if 'description' not in locus:
-                    inspector = inspect(sqlite_dbs[species][locus].db)
-                    cols = inspector.get_columns('Sample')
-                    if 'asc_genotype' not in [col['name'] for col in cols]:
-                        with sqlite_dbs[species][locus].connection as con:
-                            con.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
-                            sqlite_dbs[species][locus].session.commit()
+                inspector = inspect(sqlite_dbs[species][locus].db)
+                cols = inspector.get_columns('Sample')
+                if 'asc_genotype' not in [col['name'] for col in cols]:
+                    with sqlite_dbs[species][locus].connection as con:
+                        con.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
+                        sqlite_dbs[species][locus].session.commit()
 
 
     # sort datasets of each species
@@ -256,8 +260,7 @@ def do_airrseq_copy(species, dataset, description, app, vdjbase_dbs):
         if species not in vdjbase_dbs:
             vdjbase_dbs[species] = {}
 
-        vdjbase_dbs[species][dataset] = ContentProvider(os.path.join(our_db_path, 'db.sqlite3'))
-        vdjbase_dbs[species][dataset + '_description'] = description
+        vdjbase_dbs[species][dataset] = ContentProvider(os.path.join(our_db_path, 'db.sqlite3'), description)
 
     except Exception as e:
         raise DbCreationError(str(e))
