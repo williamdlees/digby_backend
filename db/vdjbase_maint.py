@@ -6,6 +6,7 @@ import os
 import sys
 import traceback
 import zipfile
+import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
@@ -19,6 +20,7 @@ from db.vdjbase_reference import import_reference_alleles
 from db.vdjbase_projects import import_studies
 from db.vdjbase_genotypes import process_genotypes, add_deleted_alleles, process_haplotypes_and_stats
 from db.vdjbase_exceptions import *
+from db.source_details import db_source_details
 
 
 Session = sessionmaker()
@@ -51,6 +53,20 @@ def create_single_database(job, species, dataset, upload_path, in_situ=False):
     db_connection = engine.connect()
     engine.session = Session(bind=db_connection)
     session = engine.session
+
+    commit_id, branch = db_source_details()
+    details = session.query(Details).one_or_none()
+    if not details:
+        details = Details(
+            dbtype='genomic',
+            species=species, 
+            locus=dataset, 
+            created_on=datetime.datetime.now(),
+            created_by='digby_backend',
+            software_commit_id=commit_id,
+            software_branch=branch
+            )
+        session.add(details)
 
     success = True
 

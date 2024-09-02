@@ -43,7 +43,7 @@ def common_lookup(binomial):
     for lookup_db in [genomic_dbs, vdjbase_dbs]:
         for species, datasets in lookup_db.items():
             for ds_name, ds_data in datasets.items():
-                if 'description' in ds_name and ds_data['binomial'] == binomial:
+                if ds_data.binomial == binomial:
                     return species
     return None
 
@@ -89,7 +89,7 @@ def get_species_datasets(type, species):
         for ds_name, ds_data in datasets.items():
             if ds_data.binomial == species:
                 locus = ds_name
-                dataset_obj = Dataset(dataset=locus, locus=locus, type=type)
+                dataset_obj = Dataset(dataset=locus, locus=locus, type=type, revision_date=ds_data.created)
                 dataset_list.append(dataset_obj)
 
     dataset_response = DatasetsResponse(datasets=dataset_list)
@@ -119,9 +119,9 @@ def get_subject_datasets(type, species, dataset):
                 subject_identifier = sample['sample_name'].split('_')[0:1]
                 subject_identifier = '_'.join(sample['sample_name'].rsplit('_', 1)[:-1])
 
-                subject_dataset_obj = SubjectDataset(id=sample['sample_id'], 
-                                                     study_name=sample['study_name'], 
-                                                     subject_identifier=subject_identifier, 
+                subject_dataset_obj = SubjectDataset(id=sample['sample_id'],
+                                                     study_name=sample['study_name'],
+                                                     subject_identifier=subject_identifier,
                                                      sample_identifier=sample['sample_name'],
                                                      dataset=sample['dataset'])
                 dataset_list.append(subject_dataset_obj)
@@ -242,7 +242,7 @@ def get_sample_metadata(type, species, dataset, sample):
                 error_response = ErrorResponse(message="Sample not found")
                 return error_response.model_dump_json(), 400
 
-            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info))
+            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info[0]))
             return custom_jsonify(rep_obj.model_dump()), 200
 
         except Exception as e:
@@ -257,7 +257,7 @@ def get_sample_metadata(type, species, dataset, sample):
                 error_response = ErrorResponse(message="Sample not found")
                 return error_response.model_dump_json(), 400
 
-            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info))
+            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info[0]))
             return custom_jsonify(rep_obj.model_dump()), 200
 
         except Exception as e:
@@ -270,7 +270,7 @@ def get_sample_metadata(type, species, dataset, sample):
 
 @api_bp.route('/<type>/all_samples_metadata/<species>/<dataset>', methods=['GET'])
 def get_all_samples_metadata(type, species, dataset):
-    """Get metadata for a specific sample."""
+    """Get metadata all samples in a dataset."""
     species = common_lookup(species)
 
     if not species:

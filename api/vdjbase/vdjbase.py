@@ -1,5 +1,13 @@
 # Services related to vdjbase repseq-based data sets
 
+import datetime
+import decimal
+import os.path
+from os.path import isfile
+import json
+from math import ceil
+import pickle
+
 from flask import request
 from flask_restx import Resource, reqparse
 
@@ -7,14 +15,8 @@ from api.reports.report_utils import make_output_file
 from api.restx import api
 from sqlalchemy import inspect, func, or_
 from sqlalchemy import null as sa_null
-from math import ceil
-import json
 from sqlalchemy_filters import apply_filters
 from werkzeug.exceptions import BadRequest
-import datetime
-import decimal
-import os.path
-from os.path import isfile
 from db.filter_list import apply_filter_to_list
 from api.system.system import digby_protected
 
@@ -271,7 +273,7 @@ class SampleInfoApi(Resource):
         if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
             return None, 404
 
-        return get_sample_info(species, dataset, sample)
+        return get_sample_info(species, dataset, sample), 200
 
 
 @ns.route('/all_samples_info/<string:species>/<string:dataset>')
@@ -281,6 +283,20 @@ class AllSamplesInfoApi(Resource):
         """ Returns information on all samples """
         if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
             return None, 404
+
+        cache_filename = f"{app.config['OUTPUT_PATH']}/airrseq_all_samples_info_{species}_{dataset}.pickle"
+        if os.path.isfile(cache_filename):
+            # check that the file is newer than the last revision dates of the databases
+            last_revision_time = max([genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys()])
+            if datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time:
+                try:
+                    with open(cache_filename, 'rb') as f:
+                        return pickle.load(f), 200
+                except Exception as e:
+                    app.logger.error(f"Error loading cache file {cache_filename}: {e}")
+                    os.remove(cache_filename)
+            else:
+                os.remove(cache_filename)
 
         metadata_list = []
 
@@ -292,6 +308,9 @@ class AllSamplesInfoApi(Resource):
 
         if not metadata_list:
             return None, 404
+
+        with open(cache_filename, 'wb') as f:
+            pickle.dump(metadata_list, f, pickle.HIGHEST_PROTOCOL)
 
         return metadata_list, 200
 
@@ -325,7 +344,6 @@ def get_sample_info(species, dataset, sample):
         info['haplotypes'] = [(h[0]) for h in haplotypes]
 
     return info
-
 
 
 filter_arguments = reqparse.RequestParser()
@@ -874,13 +892,27 @@ class AllSubjectsGenotypeApi(Resource):
         if species not in vdjbase_dbs:
             return None, 404
           
+        cache_filename = f"{app.config['OUTPUT_PATH']}/airrseq_all_subjects_genotype_{species}.pickle"
+        if os.path.isfile(cache_filename):
+            # check that the file is newer than the last revision dates of the databases
+            last_revision_time = max([genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys()])
+            if datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time:
+                try:
+                    with open(cache_filename, 'rb') as f:
+                        return pickle.load(f), 200
+                except Exception as e:
+                    app.logger.error(f"Error loading cache file {cache_filename}: {e}")
+                    os.remove(cache_filename)
+            else:
+                os.remove(cache_filename)
+
         all_subjects = []
         for dataset in vdjbase_dbs[species].keys():
             session = vdjbase_dbs[species][dataset].session
             subjects = session.query(Patient.patient_name).all()
             all_subjects.extend(subjects)
 
-        all_subjects = sorted(list(set([s[0] for s in all_subjects])))[:3]
+        all_subjects = sorted(list(set([s[0] for s in all_subjects])))
 
         genotype_sets = []
 
@@ -901,6 +933,9 @@ class AllSubjectsGenotypeApi(Resource):
 
         if not genotype_sets:
             return None, 404
+
+        with open(cache_filename, 'wb') as f:
+            pickle.dump(genotype_sets, f, pickle.HIGHEST_PROTOCOL)
 
         return genotype_sets, 200
 

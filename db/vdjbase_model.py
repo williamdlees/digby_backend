@@ -3,9 +3,14 @@ from sqlalchemy import Boolean, Column, DECIMAL, ForeignKey, Index, Integer, Str
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
+from db.db_propertymixin import Details_Mixin
 
 Base = declarative_base()
 metadata = Base.metadata
+
+
+class Details(Details_Mixin, Base):
+    __tablename__ = "details"
 
 
 class Gene(Base):

@@ -51,6 +51,10 @@ components:
               dataset:
                 type: string
                 description: Name of the dataset in VDJbase
+              revision_date:
+                type: string
+                format: date-time
+                description: Date of the current revision of the dataset
               locus:
                 type: string
                 description: Gene locus it represents

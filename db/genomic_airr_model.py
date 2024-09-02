@@ -7,12 +7,6 @@ from sqlalchemy.orm import relationship
 
 from db.genomic_db import Base
 from db.miairr_mixin import MiAIRR_SampleMixin, MiAIRR_StudyMixin, MiAIRR_PatientMixin, MiAIRR_SeqProtocolMixin, MiAIRR_TissueProMixin, MiAIRR_DataProMixin, MiAIRR_GenoDetectionMixin
-from db.db_propertymixin import DB_PropertyMixin
-
-
-class DB_Properties(DB_PropertyMixin, Base):
-    __tablename__ = "db_properties"
-
 
 class Sample(MiAIRR_SampleMixin, Base):
     __tablename__ = "sample"

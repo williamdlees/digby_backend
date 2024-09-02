@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 
 from db.vdjbase_exceptions import DbCreationError
 from db.vdjbase_maint import create_single_database
+from db.vdjbase_model import Details
 from extensions import celery
 import traceback
 
@@ -66,6 +67,12 @@ def study_data_db_init(vdjbase_db_path):
                     if species not in sqlite_dbs:
                         sqlite_dbs[species] = {}
                     sqlite_dbs[species][name] = ContentProvider(join(p, name, 'db.sqlite3'), description)
+
+                    session = sqlite_dbs[species][name].session
+                    try:
+                        sqlite_dbs[species][name].created = session.query(Details.created_on).one_or_none()[0]
+                    except Exception as e:
+                        print('Error querying Details table for %s/%s: %s' % (species, name, e))
 
                     if species in species_lookup:
                         sqlite_dbs[species][name].binomial = species_lookup[species][0]

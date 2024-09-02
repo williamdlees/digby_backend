@@ -29,10 +29,18 @@ gff_feature_type = {
 }
 
 
-def save_genomic_dataset_details(session, species, locus):
+def save_genomic_dataset_details(session, species, locus, commit_id, branch):
     details = session.query(Details).one_or_none()
     if not details:
-        details = Details(species=species, locus=locus, date=datetime.datetime.now())
+        details = Details(
+            dbtype='genomic',
+            species=species, 
+            locus=locus, 
+            created_on=datetime.datetime.now(),
+            created_by='digby_backend',
+            software_commit_id=commit_id,
+            software_branch=branch
+            )
         session.add(details)
 
 

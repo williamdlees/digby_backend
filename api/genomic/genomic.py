@@ -1,5 +1,6 @@
 # Services related to genomic sequences and features
 import os
+import pickle
 
 from flask import request
 from flask_restx import Resource, reqparse
@@ -80,8 +81,8 @@ class SampleInfoApi(Resource):
     def get(self, species, dataset, sample_id):
         """ Returns information on the selected sample """
 
-        return get_sample_info(species, dataset, sample_id)
- 
+        return get_sample_info(species, dataset, sample_id), 200
+
 
 @ns.route('/all_samples_info/<string:species>/<string:dataset>')
 class AllSamplesInfoApi(Resource):
@@ -90,6 +91,20 @@ class AllSamplesInfoApi(Resource):
         """ Returns information on all samples """
         if species not in genomic_dbs or dataset not in genomic_dbs[species]:
             return None, 404
+
+        cache_filename = f"{app.config['OUTPUT_PATH']}/genomic_all_samples_info_{species}_{dataset}.pickle"
+        if os.path.isfile(cache_filename):
+            # check that the file is newer than the last revision dates of the databases
+            last_revision_time = max([genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys()])
+            if datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time:
+                try:
+                    with open(cache_filename, 'rb') as f:
+                        return pickle.load(f), 200
+                except Exception as e:
+                    app.logger.error(f"Error loading cache file {cache_filename}: {e}")
+                    os.remove(cache_filename)
+            else:
+                os.remove(cache_filename)
 
         metadata_list = []
 
@@ -101,6 +116,9 @@ class AllSamplesInfoApi(Resource):
 
         if not metadata_list:
             return None, 404
+
+        with open(cache_filename, 'wb') as f:
+            pickle.dump(metadata_list, f, pickle.HIGHEST_PROTOCOL)
 
         return metadata_list, 200
 
@@ -806,7 +824,21 @@ class AllSubjectsGenotypeApi(Resource):
 
         if species not in genomic_dbs:
             return None, 404
-          
+        
+        cache_filename = f"{app.config['OUTPUT_PATH']}/genomic_all_subjects_genotype_{species}.pickle"
+        if os.path.isfile(cache_filename):
+            # check that the file is newer than the last revision dates of the databases
+            last_revision_time = max([genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys()])
+            if datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time:
+                try:
+                    with open(cache_filename, 'rb') as f:
+                        return pickle.load(f), 200
+                except Exception as e:
+                    app.logger.error(f"Error loading cache file {cache_filename}: {e}")
+                    os.remove(cache_filename)
+            else:
+                os.remove(cache_filename)
+
         all_subjects = []
         for dataset in genomic_dbs[species].keys():
             session = genomic_dbs[species][dataset].session
@@ -834,6 +866,9 @@ class AllSubjectsGenotypeApi(Resource):
 
         if not genotype_sets:
             return None, 404
+
+        with open(cache_filename, 'wb') as f:
+            pickle.dump(genotype_sets, f, pickle.HIGHEST_PROTOCOL)
 
         return genotype_sets, 200
 

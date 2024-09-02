@@ -16,6 +16,7 @@ from db.genomic_db import Base, RefSeq
 from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances, calculate_max_cov_sample
 from db.igenotyper import process_igenotyper_record, add_gene_level_features
 from db.bed_file import read_bed_files
+from db.source_details import db_source_details
 
 
 Session = sessionmaker()
@@ -38,7 +39,8 @@ def create_dataset(species, dataset):
         study_data = read_yml_file(dataset_dir)
         engine = create_database(dataset_dir)
         session = engine.session
-        save_genomic_dataset_details(session, species, dataset)
+        commit_id, branch = db_source_details()
+        save_genomic_dataset_details(session, species, dataset, commit_id, branch)
 
         for val in ('Reference_set_version', 'Reference_sets'):
             if val not in study_data:

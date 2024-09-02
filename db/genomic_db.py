@@ -1,17 +1,14 @@
 from sqlalchemy import Boolean, Column, DECIMAL, DateTime, ForeignKey, Index, Integer, String, Table, Text, func, BigInteger, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from db.db_propertymixin import Details_Mixin
 
 Base = declarative_base()
 metadata = Base.metadata
 
 
-class Details(Base):
-    __tablename__ = 'details'
-    id = Column(Integer, primary_key=True)
-    species = Column(String(100))
-    locus = Column(String(100))
-    date = Column(DateTime())
+class Details(Details_Mixin, Base):
+    __tablename__ = "details"
 
 
 class RefSeq(Base):

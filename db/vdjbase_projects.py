@@ -138,20 +138,132 @@ def fixup_fields(meta_records):
         elif disc == 'M':
             meta_records['Patient']['sex'] = 'male'
         else:
-            meta_records['Patient']['sex'] = 'not collected'
+            meta_records['Patient']['sex'] = None
 
     if 'tissue_label' in meta_records['TissuePro'] and meta_records['TissuePro']['tissue_label']:
         meta_records['TissuePro']['tissue_label'] = meta_records['TissuePro']['tissue_label'].lower()
 
     if 'complete_sequences' in meta_records['SeqProtocol']:
-        val = meta_records['SeqProtocol']['complete_sequences'].lower()
+        val = str(meta_records['SeqProtocol']['complete_sequences']).lower()
         if 'full' in val or ('complete' in val and 'incomplete' not in val):
-            meta_records['SeqProtocol']['complete_sequences'] = 'Full'
+            meta_records['SeqProtocol']['complete_sequences'] = 'complete'
         elif 'partial' in val or 'biomed' in val or 'short' in val:
-            meta_records['SeqProtocol']['complete_sequences'] = 'Partial'
+            meta_records['SeqProtocol']['complete_sequences'] = 'partial'
+
+    if 'template_class' in meta_records['SeqProtocol']:
+        val = str(meta_records['SeqProtocol']['template_class']).upper()
+        if val not in ['RNA', 'DNA']:
+            meta_records['SeqProtocol']['template_class'] = None
+        else:
+            meta_records['SeqProtocol']['template_class'] = val
+
+    if 'library_generation_method' in meta_records['SeqProtocol']:
+        val = str(meta_records['SeqProtocol']['library_generation_method']).lower()
+        if val not in enum_fields['library_generation_method']:
+            meta_records['SeqProtocol']['library_generation_method'] = 'other'
 
 
-    # Commit data for one sample, creating other associated rows as needed
+# check that fields that are supposed to be enums are actually in the enum list
+
+enum_fields = {
+    "keywords_study": [
+                "contains_ig",
+                "contains_tr",
+                "contains_paired_chain",
+                "contains_schema_rearrangement",
+                "contains_schema_clone",
+                "contains_schema_cell",
+                "contains_schema_receptor",
+                ],
+
+    "sex": [
+            "male",
+            "female",
+            "pooled",
+            "hermaphrodite",
+            "intersex",
+            "null",
+            ],
+
+    "pcr_target_locus": [
+            "IGH",
+            "IGI",
+            "IGK",
+            "IGL",
+            "TRA",
+            "TRB",
+            "TRD",
+            "TRG",
+            ],
+
+    "template_class": [
+            "DNA",
+            "RNA",
+            ],
+
+    "library_generation_method": [
+            "PCR",
+            "RT(RHP)+PCR",
+            "RT(oligo-dT)+PCR",
+            "RT(oligo-dT)+TS+PCR",
+            "RT(oligo-dT)+TS(UMI)+PCR",
+            "RT(specific)+PCR",
+            "RT(specific)+TS+PCR",
+            "RT(specific)+TS(UMI)+PCR",
+            "RT(specific+UMI)+PCR",
+            "RT(specific+UMI)+TS+PCR",
+            "RT(specific)+TS",
+            "other",
+            ],
+            
+    "read_direction": [
+            "forward",
+            "reverse",
+            "mixed",
+            "null",
+            ],
+            
+    "complete_sequences": [
+            "partial",
+            "complete",
+            "complete+untemplated",
+            "mixed",
+            ],
+
+    "physical_linkage": [
+            "none",
+            "hetero_head-head",
+            "hetero_tail-head",
+            "hetero_prelinked",
+            ],
+
+    "file_type": [
+            "fasta",
+            "fastq",
+            "null",
+            ],
+
+    "paired_read_direction": [
+            "forward",
+            "reverse",
+            "mixed",
+            "null",
+            ],
+}
+
+
+def check_enums(meta_records):
+    for table, fields in meta_records.items():
+        for field, value in fields.items():
+            if field == 'keywords_study':
+                for kw in value.split(','):
+                    if kw not in enum_fields['keywords_study']:
+                        print(f"Warning: keyword {kw} in {table} not in enum list")
+            elif field in enum_fields and value and value not in enum_fields[field]:
+                print(f"Warning: {field} in {table} has value {value} not in enum list")
+
+
+# Commit data for one sample, creating other associated rows as needed
 def build_yml_metadata(sample_name, table_fields, project_data, meta_records, yml_full):
     desired_attributes = {}
 
@@ -340,6 +452,7 @@ def find_repertoire(miairr_file, rep_id):
 # Commit the records for a single repertoire
 def commit_database(meta_records, vdjbase_name, session):
     fixup_fields(meta_records)
+    check_enums(meta_records)
 
     row_ids = {}
     (p_n, i_n, s_n) = vdjbase_name.split('_')
