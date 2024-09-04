@@ -12,21 +12,21 @@ info:
     email: william@lees.org.uk
   description: Public API for VDJbase holding AIRR-seq and Genomic data.
 servers:
-  - url: http://127.0.0.1:5000/api_v1
+  - url: http://127.0.0.1:5000/api/v1
     description: VDJbase local development
     variables:
       basePath:
         default: api_v1
-  - url: https://vdjbase.org/admin/api_v1
+  - url: https://vdjbase.org/api/v1
     description: VDJbase production
     variables:
       basePath:
-        default: admin/api_v1
-  - url: https://vdjbase.uat.vdjbase.org/admin/api_v1
+        default: api/v1
+  - url: https://vdjbase.uat.vdjbase.org/api/v1
     description: VDJbase UAT
     variables:
       basePath:
-        default: admin/api_v1
+        default: api/v1
 
 components:
   schemas:

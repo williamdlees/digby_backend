@@ -98,9 +98,9 @@ from api_v1.open_api import api_bp
 # PROXY_PREFIX is needed to get around a bug in swagger_ui: https://github.com/PWZER/swagger-ui-py/issues/34
 # When this is fixed, ProxyFix will take care of things and the special location for /admin/api_v1 in nginix confs can be removed
 
-app.register_blueprint(api_bp, url_prefix=f"{app.config['PROXY_PREFIX']}/api_v1")
+app.register_blueprint(api_bp, url_prefix="/api/v1")
 
-SWAGGER_URL = f"{app.config['PROXY_PREFIX']}/api_v1"
+SWAGGER_URL = "/api/v1"
 API_URL = '/static/vdjbase-api-openapi3.yaml'
 swaggerui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
