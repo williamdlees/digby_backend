@@ -61,9 +61,9 @@ def get_species(type):
     lookup_dbs = genomic_dbs if type == "genomic" else vdjbase_dbs
     for sp, datasets in lookup_dbs.items():
         for ds_name, ds_data in datasets.items():
-            if 'description' in ds_name and sp not in species_list:
+            if sp not in species_list:
                 species_list.append(sp)
-                ontology_obj = Ontology(id=ds_data['taxid'], label=ds_data['binomial'])
+                ontology_obj = Ontology(id=ds_data.taxid, label=ds_data.binomial)
                 ontology_list.append(ontology_obj)
 
     species_response_obj = SpeciesResponse(species=ontology_list)

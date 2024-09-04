@@ -1,3 +1,8 @@
+import os
+import custom_logging
+import yaml
+
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template, request, flash, Blueprint, redirect, url_for, send_from_directory
 from flask_migrate import Migrate
 from flask_security import Security, SQLAlchemyUserDatastore, login_required
@@ -5,20 +10,13 @@ from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_admin import Admin
 from flask_cors import CORS
-import os
-import custom_logging
-from reverse_proxied import ReverseProxied
-from db.vdjbase_db import study_data_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
-import yaml
-
 from flask_security.utils import hash_password
-from flask_sqlalchemy import SQLAlchemy
 from flask_swagger_ui import get_swaggerui_blueprint
-
 from extensions import celery
 
-sql_db = None
+from db.vdjbase_db import study_data_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
 
+sql_db = None
 
 app = Flask(__name__, static_folder=None)
 app.static_url_path = '/static'
@@ -31,10 +29,9 @@ app.config.from_pyfile('secret.cfg')
 
 sql_db = celery.init_app(app)
 
-app.wsgi_app = ReverseProxied(app.wsgi_app)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 CORS(app)
-
 
 app.config['BASE_PATH'] = os.getcwd()
 
@@ -98,15 +95,18 @@ app.register_blueprint(blueprint)
 
 from api_v1.open_api import api_bp
 
-app.register_blueprint(api_bp, url_prefix='/api_v1')
+# PROXY_PREFIX is needed to get around a bug in swagger_ui: https://github.com/PWZER/swagger-ui-py/issues/34
+# When this is fixed, ProxyFix will take care of things and the special location for /admin/api_v1 in nginix confs can be removed
 
-SWAGGER_URL = '/api_v1'
-API_URL = '/schema/vdjbase-api-openapi3.yaml'
+app.register_blueprint(api_bp, url_prefix=f"{app.config['PROXY_PREFIX']}/api_v1")
+
+SWAGGER_URL = f"{app.config['PROXY_PREFIX']}/api_v1"
+API_URL = '/static/vdjbase-api-openapi3.yaml'
 swaggerui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
     API_URL,
     config={
-        'app_name': "VDJbase API"
+        'app_name': "VDJbase Open API v1"
     }
 )
 
