@@ -8,6 +8,7 @@ from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, 
 from pydantic.fields import FieldInfo
 from pydantic import BaseModel
 from typing import Any, Union, get_args, get_origin
+from api.system.system import digby_protected
 from api.genomic import genomic
 from api.vdjbase import vdjbase
 from flask_restx import Resource
@@ -49,6 +50,7 @@ def common_lookup(binomial):
 
 
 @api_bp.route('/<type>/species', methods=['GET'])
+@digby_protected()
 def get_species(type):
     """Get species list based on type."""
     if type not in ['genomic', 'airrseq']:
@@ -76,6 +78,7 @@ def get_species(type):
 
 
 @api_bp.route('/<type>/datasets/<species>', methods=['GET'])
+@digby_protected()
 def get_species_datasets(type, species):
     """Get datasets for a species based on type."""
     if type not in ['genomic', 'airrseq']:
@@ -102,6 +105,7 @@ def get_species_datasets(type, species):
 
 
 @api_bp.route('/<type>/subjects/<species>/<dataset>', methods=['GET'])
+@digby_protected()
 def get_subject_datasets(type, species, dataset):
     species = common_lookup(species)
 
@@ -166,6 +170,7 @@ def get_subject_datasets(type, species, dataset):
 
 
 @api_bp.route('/<type>/subject_genotype/<species>/<subject>', methods=['GET'])
+@digby_protected()
 def get_sample_genotype(type, species, subject):
     species = common_lookup(species)
 
@@ -196,6 +201,7 @@ def get_sample_genotype(type, species, subject):
 
 
 @api_bp.route('/<type>/all_subjects_genotype/<species>', methods=['GET'])
+@digby_protected()
 def get_all_subjects_genotype(type, species):
     species = common_lookup(species)
 
@@ -226,6 +232,7 @@ def get_all_subjects_genotype(type, species):
 
 
 @api_bp.route('/<type>/sample_metadata/<species>/<dataset>/<sample>', methods=['GET'])
+@digby_protected()
 def get_sample_metadata(type, species, dataset, sample):
     """Get metadata for a specific sample."""
     species = common_lookup(species)
@@ -269,6 +276,7 @@ def get_sample_metadata(type, species, dataset, sample):
 
 
 @api_bp.route('/<type>/all_samples_metadata/<species>/<dataset>', methods=['GET'])
+@digby_protected()
 def get_all_samples_metadata(type, species, dataset):
     """Get metadata all samples in a dataset."""
     species = common_lookup(species)
