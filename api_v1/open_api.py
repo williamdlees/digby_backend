@@ -113,7 +113,7 @@ def get_subject_datasets(type, species, dataset):
     if type == "genomic":
         try:
             subjects_list = genomic.SubjectsAPI(Resource)
-            subjects_list = subjects_list.get(species, dataset)
+            subjects_list = subjects_list.get(species, dataset)[0]
             dataset_list = []
             for sample in subjects_list.get('samples'):
                 subject_identifier = sample['sample_name'].split('_')[0:1]
@@ -142,7 +142,7 @@ def get_subject_datasets(type, species, dataset):
         try:
             subjects_list = vdjbase.SamplesApi(Resource)
             request.args = {'cols': '["sample_name", "study_id", "subject_id"]'}
-            subjects_list = subjects_list.get(species, dataset)
+            subjects_list = subjects_list.get(species, dataset)[0]
             dataset_list = []
             for sample in subjects_list.get('samples'):
                 subject_dataset_obj = SubjectDataset(id=sample['sample_name'], 

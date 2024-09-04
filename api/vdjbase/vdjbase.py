@@ -362,7 +362,7 @@ class SamplesApi(Resource):
         """ Returns the list of samples in the selected dataset """
 
         if species not in vdjbase_dbs or set(dataset.split(',')).difference(set(vdjbase_dbs[species])):
-            return list()
+            return list(), 404
 
         args = filter_arguments.parse_args(request)
 
@@ -539,7 +539,7 @@ class SamplesApi(Resource):
             'total_items': total_size,
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
-        }
+        }, 200
 
 def find_vdjbase_samples(attribute_query, species, datasets, filter):
     hap_filters = None

@@ -643,7 +643,7 @@ class SubjectsAPI(Resource):
             'total_items': total_size,
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
-        }
+        }, 200
 
 
 def find_genomic_samples(attribute_query, species, genomic_datasets, genomic_filters):
