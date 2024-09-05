@@ -14,7 +14,7 @@ from flask_security.utils import hash_password
 from flask_swagger_ui import get_swaggerui_blueprint
 from extensions import celery
 
-from db.vdjbase_db import study_data_db_init, manage_airrseq, airrseq_import, airrseq_copy, airrseq_remove
+from db.vdjbase_db import study_data_db_init
 
 sql_db = None
 
@@ -150,57 +150,6 @@ def send_from_gff(path):
     return send_from_directory(app.config['STATIC_PATH'], path)
 
 
-@app.route('/create_user', methods=['GET', 'POST'])
-def create_user():
-    if user_datastore.find_role('Admin') is not None:
-        return redirect('/')
-
-    form = FirstAccountForm()
-
-    if request.method == 'POST':
-        if form.validate():
-            user = user_datastore.create_user(email=form.email.data, password=hash_password(form.password.data), name=form.name.data)
-            sql_db.session.commit()
-            user_datastore.create_role(name='Admin')
-            user_datastore.add_role_to_user(user, 'Admin')
-            sql_db.session.commit()
-            flash("User created")
-            return redirect('/')
-
-    return render_template('security/first_account.html', form=form)
-
-
-@app.route('/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    form = ProfileForm(obj=current_user)
-    form.email = ''
-    if request.method == 'POST':
-        if form.validate():
-            save_Profile(db, current_user, form)
-            flash('Profile updated.')
-
-    return render_template('profile.html', form=form, current_user=current_user, url='profile')
-
-
-@app.route('/airrseq', methods=['GET', 'POST'])
-def airrseq():
-    return manage_airrseq(app)
-
-
-@app.route('/airrseq_import_status/<species>/<dataset>', methods=['GET', 'POST'])
-def airrseq_import_status(species, dataset):
-    return airrseq_import(species.replace(' ', '_'), dataset.replace(' ', '_'), app)
-
-
-@app.route('/airrseq_copy_live', methods=['GET', 'POST'])
-def airrseq_copy_live():
-    return airrseq_copy(app, vdjbase_dbs)
-
-
-@app.route('/airrseq_delete/<species>/<dataset>', methods=['GET', 'POST'])
-def airrseq_delete(species, dataset):
-    return airrseq_remove(species, dataset, app, vdjbase_dbs)
 
 
 @app.route('/export_vdjbase_metadata', methods=['GET', 'POST'])
