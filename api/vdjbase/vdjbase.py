@@ -895,8 +895,13 @@ class AllSubjectsGenotypeApi(Resource):
         cache_filename = f"{app.config['OUTPUT_PATH']}/airrseq_all_subjects_genotype_{species}.pickle"
         if os.path.isfile(cache_filename):
             # check that the file is newer than the last revision dates of the databases
-            last_revision_time = max([genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys()])
-            if datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time:
+            # check that the file is newer than the last revision dates of the databases
+            last_revision_time = None
+            revision_times = [genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys() if genomic_dbs[species][dataset].created]
+            if revision_times:
+                last_revision_time = max(revision_times)
+
+            if (last_revision_time and datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time) or last_revision_time is None:
                 try:
                     with open(cache_filename, 'rb') as f:
                         return pickle.load(f), 200
