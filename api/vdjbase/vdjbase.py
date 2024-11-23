@@ -293,7 +293,7 @@ class AllSamplesInfoApi(Resource):
             if revision_times:
                 last_revision_time = max(revision_times)
 
-            if (datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time) or (last_revision_time is None):
+            if last_revision_time is None or (datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time):
                 try:
                     with open(cache_filename, 'rb') as f:
                         return pickle.load(f), 200
@@ -906,7 +906,7 @@ class AllSubjectsGenotypeApi(Resource):
             if revision_times:
                 last_revision_time = max(revision_times)
 
-            if (last_revision_time and datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time) or last_revision_time is None:
+            if last_revision_time is None or (last_revision_time and datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename)) > last_revision_time):
                 try:
                     with open(cache_filename, 'rb') as f:
                         return pickle.load(f), 200
