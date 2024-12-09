@@ -249,8 +249,8 @@ def get_sample_metadata(type, species, dataset, sample):
                 error_response = ErrorResponse(message="Sample not found")
                 return error_response.model_dump_json(), 400
 
-            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info[0]))
-            return custom_jsonify(rep_obj.model_dump()), 200
+            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(sample_info[0]))
+            return custom_jsonify(rep_obj.model_dump(by_alias=True)), 200
 
         except Exception as e:
             error_response = ErrorResponse(message=str(e))
@@ -264,8 +264,8 @@ def get_sample_metadata(type, species, dataset, sample):
                 error_response = ErrorResponse(message="Sample not found")
                 return error_response.model_dump_json(), 400
 
-            rep_obj = SampleMetadataResponse(repertoire=create_repertoire_obj(sample_info[0]))
-            return custom_jsonify(rep_obj.model_dump()), 200
+            rep_obj = SampleMetadataResponse(Repertoire=create_repertoire_obj(sample_info[0]))
+            return custom_jsonify(rep_obj.model_dump(by_alias=True)), 200
 
         except Exception as e:
             error_response = ErrorResponse(message=str(e))
@@ -313,15 +313,15 @@ def get_all_samples_metadata(type, species, dataset):
         return error_response.model_dump_json(), 500
 
     repertoires = [create_repertoire_obj(s) for s in sample_info[0]]
-    rep_obj = AllSamplesMetadataResponse(repertoire_class_list=repertoires)
-    return custom_jsonify(rep_obj.model_dump()), 200
+    rep_obj = AllSamplesMetadataResponse(Repertoire=repertoires)
+    return custom_jsonify(rep_obj.model_dump(by_alias=True)), 200
 
 
 def create_repertoire_obj(subject_info):
     """Create a Repertoire object from subject information."""
     subject_info = fill_missing_required_fields(Repertoire,  subject_info)
 
-    rep_object = Repertoire(repertoire_id=subject_info.get("sample_name"),
+    rep_object = Repertoire(repertoire_id=subject_info.get("sample_name"), 
                             repertoire_name=subject_info.get("repertoire_name", None),
                             repertoire_description=subject_info.get("repertoire_description", None),
                             study=create_study_object(subject_info),

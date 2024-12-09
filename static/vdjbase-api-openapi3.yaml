@@ -1,8 +1,26 @@
 openapi: 3.0.0
 
+# before generation, change Repertoire: attribute in subject_genotype_response and all_subjects_genotype_response to repertoire_class, repertoire_class_list respectively
 # to generate: datamodel-codegen  --input vdjbase-api-openapi3.yaml --input-file-type openapi --output new_model.py --output-model-type pydantic_v2.BaseModel --strict-nullable --use-subclass-enum
+# after generation, change attributes back
 # After generating model.py from the schema, please replace all occurrences of AwareDatetime with NaiveDatetime
-# Check the existing model.py for other fixups that may be required
+# Also add an aliases as follows:
+# class AllSamplesMetadataResponse(BaseModel):
+#     repertoire_class_list: Optional[List[Repertoire]] = Field(
+#       None,
+#       description='List of Repertoire metadata for samples included in this dataset.',
+#       alias='Repertoire'
+#   )
+# and
+#class SampleMetadataResponse(BaseModel):
+#    repertoire_class: Optional[Repertoire] = Field(
+#        None, 
+#        alias='Repertoire'
+#    )
+
+# this will switch the defined attribute from repertoire_class_list to Repertoire in the returned object
+# the reason for these changes is that Pydantic does not allow attributes to have the same name as classes 
+
 
 info:
   title: VDJbase API
@@ -123,14 +141,14 @@ components:
     sample_metadata_response:
       type: object
       properties:
-        repertoire: 
+        Repertoire: 
           $ref: './Repertoire.yaml#/Repertoire'
 
     # the response object for all samples metadata
     all_samples_metadata_response:
       type: object
       properties:
-        repertoire_class_list:
+        Repertoire:
             description: List of Repertoire metadata for samples included in this dataset.
             type: array
             nullable: true

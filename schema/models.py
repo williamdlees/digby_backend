@@ -8,7 +8,7 @@ from datetime import date
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import NaiveDatetime, BaseModel, Field, RootModel
+from pydantic import NaiveDatetime, BaseModel, Field, RootModel, ConfigDict
 
 
 class Ontology(BaseModel):
@@ -1048,8 +1048,12 @@ class AllSamplesMetadataResponse(BaseModel):
     repertoire_class_list: Optional[List[Repertoire]] = Field(
         None,
         description='List of Repertoire metadata for samples included in this dataset.',
+        alias='Repertoire'
     )
 
 
 class SampleMetadataResponse(BaseModel):
-    repertoire: Optional[Repertoire] = None
+    repertoire_class: Optional[Repertoire] = Field(
+        None, 
+        alias='Repertoire'
+    )
