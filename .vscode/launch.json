@@ -52,6 +52,16 @@
             "justMyCode": false
         },
         {
+            "name": "make_genomic_db - digby_private_data/rhesus_IGL",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_genomic_db.py",
+            "args": ["Rhesus_Macaque", "IGL"],
+            "cwd": "D:/Research/digby_private_data/Genomic/Rhesus_Macaque/IGL",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "make_airr_seq_db - digby_data/TRB",
             "type": "python",
             "request": "launch",

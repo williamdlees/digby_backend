@@ -14,7 +14,7 @@ from db.genomic_ref import update_genomic_ref, read_gene_order
 from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro
 from db.genomic_db import Base, RefSeq
 from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances, calculate_max_cov_sample
-from db.igenotyper import process_igenotyper_record, add_gene_level_features
+from db.igenotyper import process_genomic_record, add_gene_level_features
 from db.bed_file import read_bed_files
 from db.source_details import db_source_details
 
@@ -187,7 +187,7 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
         sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row, annotation_method, annotation_reference)
 
         bam_path = os.path.join(study['bam_dir'], row['sample_id'])
-        process_igenotyper_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, bam_path)
+        process_genomic_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, bam_path)
         
     session.commit()
     calculate_appearances(session)
@@ -496,10 +496,17 @@ def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, 
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - template_amount_unit is not a valid ontology object: {e}')
     
-    try:
-        ref = session.query(RefSeq).filter(RefSeq.name == row['reference_assembly']).one_or_none()
-    except exc.NoResultFound:
-        raise ImportException(f'Error - reference assembly {row["reference_assembly"]} not found in database.')
+    ref_id = None
+    if row['reference_assembly']:
+        try:
+            ref = session.query(RefSeq).filter(RefSeq.name == row['reference_assembly']).one_or_none()
+        except exc.NoResultFound:
+            ref = None
+
+        if ref is None:
+            raise ImportException(f'Error - reference assembly {row["reference_assembly"]} not found in database.')
+        else:
+            ref_id = ref.id
 
     sample_obj = Sample(
         sample_name=sample_name,
@@ -514,7 +521,7 @@ def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, 
         biomaterial_provider=row['biomaterial_provider'],
         reference_assembly=row['reference_assembly'],
         annotation_path='',
-        ref_seq_id=ref.id,
+        ref_seq_id=ref_id,
         study_id=study.id,
         patient_id=patient.id,
         tissue_pro_id=tissuepro.id,

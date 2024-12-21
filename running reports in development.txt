@@ -1,0 +1,63 @@
+Hi Tal,
+
+I worked out that it is easier to install rabbitMQ on Windows than WSL. To do this:
+
+install Chocolately if you don't have it already: https://community.chocolatey.org/
+
+now open a Windows Administrator prompt: https://www.howtogeek.com/194041/how-to-open-the-command-prompt-as-administrator-in-windows-10/
+
+in the command window, type:
+
+choco install rabbitmq
+
+Once rabbitmq is installed, you should be able to start celery. 
+
+Full startup procedure
+======================
+
+- open a command prompt, type:
+
+wsl
+
+This will open a wsl session and redis should start automatically. Leave the window open.
+
+- open another command, cd to your digby_backend directory, type:
+
+celery -A app:celery worker --pool=solo -l info
+
+This should start celery running. If everything is ok it should display something like these lines once it is running:
+
+[2024-09-04 17:39:48,309: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
+[2024-09-04 17:39:48,317: INFO/MainProcess] mingle: searching for neighbors
+[2024-09-04 17:39:49,352: INFO/MainProcess] mingle: all alone
+[2024-09-04 17:39:49,377: INFO/MainProcess] celery@Raven ready.
+
+Keep the Celery window open.
+
+- now go to VS Code. In the file api/reports.py, comment out this code around lines 180-182:
+
+            #from api.reports.rep_genotype_heatmap import run
+            #run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
+            #raise BadRequest("we're debugging!")
+			
+- start the server from the > prompt, like we did yesterday. 
+
+Now go to the browser and enter the URL you are using to run your report. If everything is ok, you should see
+some action in the Celery window, as it runs your report. 
+
+... if any of these steps don't work as expected, ping me on Slack.
+
+
+Timing your report
+==================
+
+The report is now running in the mode used on the server and you can time how long it takes. That will give you a fairer comparison against the time taken by the server to run the old report.
+
+Debugging your report
+=====================
+
+You can't set breakpoints in your code in this mode, because it is running as a separate process. To debug it, uncomment the three lines you commented out earlier. In this line:
+
+from api.reports.rep_genotype_heatmap import run
+
+make sure that the imported module (api.reports.rep_genotype_heatmap) matches the filename of the report you want to run (api/reports/rep_genotype_heatmap.py)

@@ -49,7 +49,7 @@ def to_float(row, field):
 # TODO - Simplify the schema by merging Feature and Sequence. See ../../notes on genomic schema.txt
 
 
-def process_igenotyper_record(session, dataset_dir, sample, annotation_file, reference_features, bam_path):
+def process_genomic_record(session, dataset_dir, sample, annotation_file, reference_features, bam_path):
     global annotation_records
 
     print(f"Importing sample {sample.sample_name}")
@@ -122,135 +122,135 @@ def process_igenotyper_record(session, dataset_dir, sample, annotation_file, ref
 
             sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
 
-    sense = '+'     # by + sense we mean 5' to 3'
-    feature_id = 1
-
     for row in rows:
-        if 'sense' in row:
-            sense = row['sense']
+        if row['vdjbase_allele']:
+            seq = process_row(row, session, sample)
 
-        if not row['vdjbase_allele']:
-            continue        # probably an incomplete/fragmentary row
-
-        # this field seems to have been changed recently and I don't want to break compatibility
-
-        if 'gene' not in row:
-            row['gene'] = row['genotyper_gene']
-        
-        gene_type = row['gene'][3]
-
-        # TODO: allow constant genes when bed files are fixed
-
-        #if gene_type == 'C':
-        #    continue
-
-        if gene_type in ['V', 'D', 'J', 'C']:
-            seq = find_allele_by_name(session, row['vdjbase_allele'])
-
-            if not seq:
-                if gene_type == 'V':
-                    gapped_seq = row['V-REGION-GAPPED']
-                else:
-                    gapped_seq = ''
-
-                seq = save_novel_allele(session, row['gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row[f'{gene_type}-REGION'], gapped_seq)
-
-            update_sample_sequence_link(session, int(row['haplotype'].replace('h=', '')), sample, seq)
-            feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, sample.ref_seq)
-
-            if feature and seq.sequence.replace('.', '') != feature.feature_seq.replace('.', ''):
-                print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in sample {sample.sample_name} subject {sample.patient.patient_name}')
-
-            if gene_type == 'V':
-                if not feature:
-                    feature_id = session.query(Feature).count()
-
-                    if 'REGION' in reference_features[sample.ref_seq.name][seq.gene.name]:
-                        start = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['start']
-                        end = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['end']
-                    else:
-                        start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['start'] + 11
-                        end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['end']
-
-                    # if there are gaps in the alignment against the reference assembly, carry these into the feature
-                    # TODO - this shouldn't be needed any longer now: gaps are maintained in the CIGAR, not as dots
-
-                    if '.' in row['V-REGION']:
-                        feature_seq = row['V-REGION']
-                        seq.sequence = row['V-REGION']
-                    else:
-                        feature_seq = seq.sequence
-
-                    feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, row['V-REGION_CIGAR'], 'CDS', start, end, sense,
-                                                 f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, sample.ref_seq)
-
-                link_sequence_to_feature(seq, feature)
-                add_feature('V-NONAMER', 'NONAMER', reference_features, row, seq, session, sample, sense)
-                add_feature('V-SPACER', 'SPACER', reference_features, row, seq, session, sample, sense)
-                add_feature('V-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, sample, sense)
-                add_feature('L-PART2', 'L-PART2', reference_features, row, seq, session, sample, sense)
-                add_feature('V-INTRON', 'INTRON', reference_features, row, seq, session, sample, sense)
-                add_feature('L-PART1', 'EXON_1', reference_features, row, seq, session, sample, sense)
-                add_feature('V-UTR', 'UTR', reference_features, row, seq, session, sample, sense)
-
-            elif gene_type == 'D':
-                if not feature:
-                    feature_id = session.query(Feature).count()
-                    start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
-                    end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION_CIGAR'], 'CDS', start, end, sense,
-                                                 f"Name={seq.name}_D-REGION;ID={feature_id}", feature_id, sample.ref_seq)
-
-                link_sequence_to_feature(seq, feature)
-                add_feature('D-3_NONAMER', '3_NONAMER', reference_features, row, seq, session, sample, sense)
-                add_feature('D-3_SPACER', '3_SPACER', reference_features, row, seq, session, sample, sense)
-                add_feature('D-3_HEPTAMER', '3_HEPTAMER', reference_features, row, seq, session, sample, sense)
-                add_feature('D-5_NONAMER', '5_NONAMER', reference_features, row, seq, session, sample, sense)
-                add_feature('D-5_SPACER', '5_SPACER', reference_features, row, seq, session, sample, sense)
-                add_feature('D-5_HEPTAMER', '5_HEPTAMER', reference_features, row, seq, session, sample, sense)
-
-            elif gene_type == 'J':
-                if not feature:
-                    feature_id = session.query(Feature).count()
-                    start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
-                    end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION_CIGAR'], 'CDS', start, end, sense,
-                                                 f"Name={seq.name}_J-REGION;ID={feature_id}", feature_id, sample.ref_seq)
-
-                link_sequence_to_feature(seq, feature)
-                add_feature('J-NONAMER', 'NONAMER', reference_features, row, seq, session, sample, sense)
-                add_feature('J-SPACER', 'SPACER', reference_features, row, seq, session, sample, sense)
-                add_feature('J-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, sample, sense)
-
-            elif gene_type == 'C':
-                if not feature:
-                    feature_id = session.query(Feature).count()
-                    start = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['start']
-                    end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
-                    feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
-                                                 f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
-                    link_sequence_to_feature(seq, feature)
-
-                    for feature_name, rec in reference_features[sample.ref_seq.name][seq.gene.name].items():
-                        if feature_name != 'GENE':
-                            add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense)
-
-
-            if 'Total_Positions' in row:
-                sf = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id, SampleSequence.sample_id == sample.id).first()
-                sf.total_pos = to_int(row, 'Total_Positions')
-                sf.av_coverage = to_float(row, 'Average_Coverage')
-                sf.mismatched_positions = to_int(row, 'Mismatched_Positions')
-                sf.matched_positions = to_int(row, 'Matched_Positions')
-                sf.position_mismatches = row['Position_Mismatches']
-                sf.position_matches = row['Position_Matches']
-                sf.percent_accuracy = to_float(row, 'Percent_Accuracy')
-                sf.positions_10x = to_int(row, 'Positions_With_At_Least_10x_Coverage')
-                sf.fully_spanning_reads = to_int(row, 'Fully_Spanning_Reads')
-                sf.fully_spanning_matches = to_int(row, 'Fully_Spanning_Reads_100%_Match')
-
-        add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense)
+            #if seq:
+            #    create_features(row, session, sample, reference_features, seq)
     session.commit()
+
+
+def process_row(row, session, sample):
+    if 'gene' not in row:
+        row['gene'] = row['genotyper_gene']
+
+    gene_type = row['gene'][3]
+
+    if gene_type in ['V', 'D', 'J', 'C']:
+        seq = find_allele_by_name(session, row['vdjbase_allele'])
+
+        if not seq:
+            if gene_type == 'V':
+                gapped_seq = row['V-REGION-GAPPED']
+            else:
+                gapped_seq = ''
+
+            seq = save_novel_allele(session, row['gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row[f'{gene_type}-REGION'], gapped_seq)
+
+        update_sample_sequence_link(session, int(row['haplotype'].replace('h=', '')), sample, seq)
+        return seq
+
+    return None
+
+
+def create_features(row, session, sample, reference_features, seq):
+    sense = '+'     # by + sense we mean 5' to 3'
+    if 'sense' in row:
+        sense = row['sense']
+    
+    gene_type = row['gene'][3]
+
+    feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, sample.ref_seq)
+
+    if feature and seq.sequence.replace('.', '') != feature.feature_seq.replace('.', ''):
+        print(f'Error: feature {feature.name} sequence does not match that of sequence {seq.name} in sample {sample.sample_name} subject {sample.patient.patient_name}')
+
+    if gene_type == 'V':
+        if not feature:
+            feature_id = session.query(Feature).count()
+
+            if 'REGION' in reference_features[sample.ref_seq.name][seq.gene.name]:
+                start = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['start']
+                end = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['end']
+            else:
+                start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['start'] + 11
+                end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['end']
+
+            if '.' in row['V-REGION']:
+                feature_seq = row['V-REGION']
+                seq.sequence = row['V-REGION']
+            else:
+                feature_seq = seq.sequence
+
+            feature = add_feature_to_ref(seq.name, 'allele', 'V-REGION', feature_seq, row['V-REGION_CIGAR'], 'CDS', start, end, sense,
+                                            f"Name={seq.name}_V-REGION;ID={feature_id}", feature_id, sample.ref_seq)
+
+        link_sequence_to_feature(seq, feature)
+        add_feature('V-NONAMER', 'NONAMER', reference_features, row, seq, session, sample, sense)
+        add_feature('V-SPACER', 'SPACER', reference_features, row, seq, session, sample, sense)
+        add_feature('V-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, sample, sense)
+        add_feature('L-PART2', 'L-PART2', reference_features, row, seq, session, sample, sense)
+        add_feature('V-INTRON', 'INTRON', reference_features, row, seq, session, sample, sense)
+        add_feature('L-PART1', 'EXON_1', reference_features, row, seq, session, sample, sense)
+        add_feature('V-UTR', 'UTR', reference_features, row, seq, session, sample, sense)
+
+    elif gene_type == 'D':
+        if not feature:
+            feature_id = session.query(Feature).count()
+            start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
+            end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
+            feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION_CIGAR'], 'CDS', start, end, sense,
+                                            f"Name={seq.name}_D-REGION;ID={feature_id}", feature_id, sample.ref_seq)
+
+        link_sequence_to_feature(seq, feature)
+        add_feature('D-3_NONAMER', '3_NONAMER', reference_features, row, seq, session, sample, sense)
+        add_feature('D-3_SPACER', '3_SPACER', reference_features, row, seq, session, sample, sense)
+        add_feature('D-3_HEPTAMER', '3_HEPTAMER', reference_features, row, seq, session, sample, sense)
+        add_feature('D-5_NONAMER', '5_NONAMER', reference_features, row, seq, session, sample, sense)
+        add_feature('D-5_SPACER', '5_SPACER', reference_features, row, seq, session, sample, sense)
+        add_feature('D-5_HEPTAMER', '5_HEPTAMER', reference_features, row, seq, session, sample, sense)
+
+    elif gene_type == 'J':
+        if not feature:
+            feature_id = session.query(Feature).count()
+            start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
+            end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
+            feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION_CIGAR'], 'CDS', start, end, sense,
+                                            f"Name={seq.name}_J-REGION;ID={feature_id}", feature_id, sample.ref_seq)
+
+        link_sequence_to_feature(seq, feature)
+        add_feature('J-NONAMER', 'NONAMER', reference_features, row, seq, session, sample, sense)
+        add_feature('J-SPACER', 'SPACER', reference_features, row, seq, session, sample, sense)
+        add_feature('J-HEPTAMER', 'HEPTAMER', reference_features, row, seq, session, sample, sense)
+
+    elif gene_type == 'C':
+        if not feature:
+            feature_id = session.query(Feature).count()
+            start = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['start']
+            end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
+            feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
+                                            f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
+            link_sequence_to_feature(seq, feature)
+
+            for feature_name, rec in reference_features[sample.ref_seq.name][seq.gene.name].items():
+                if feature_name != 'GENE':
+                    add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense)
+
+    if 'Total_Positions' in row:
+        sf = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id, SampleSequence.sample_id == sample.id).first()
+        sf.total_pos = to_int(row, 'Total_Positions')
+        sf.av_coverage = to_float(row, 'Average_Coverage')
+        sf.mismatched_positions = to_int(row, 'Mismatched_Positions')
+        sf.matched_positions = to_int(row, 'Matched_Positions')
+        sf.position_mismatches = row['Position_Mismatches']
+        sf.position_matches = row['Position_Matches']
+        sf.percent_accuracy = to_float(row, 'Percent_Accuracy')
+        sf.positions_10x = to_int(row, 'Positions_With_At_Least_10x_Coverage')
+        sf.fully_spanning_reads = to_int(row, 'Fully_Spanning_Reads')
+        sf.fully_spanning_matches = to_int(row, 'Fully_Spanning_Reads_100%_Match')
+
+    add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense)
 
 
 # Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
@@ -273,10 +273,6 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, sample
 
     if not feature_rec:
         feature_id = session.query(Feature).count()
-
-        #if bed_name == 'gene':
-        #    breakpoint()
-
         start = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['start']
         end = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['end']
 
