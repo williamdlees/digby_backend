@@ -34,8 +34,8 @@ def save_genomic_dataset_details(session, species, locus, commit_id, branch):
     if not details:
         details = Details(
             dbtype='genomic',
-            species=species, 
-            locus=locus, 
+            species=species,
+            locus=locus,
             created_on=datetime.datetime.now(),
             created_by='digby_backend',
             software_commit_id=commit_id,
@@ -53,7 +53,10 @@ def save_genomic_ref_seq(session, name, ref_sequence, reference, chromosome, sta
 def add_feature_to_ref(name, feature_level, feature_type, feature_seq, cigar, feature, start, end, strand, attribute, parent_id, ref):
     gene = Feature(name=name, feature_level=feature_level, feature_type=feature_type, feature_seq=feature_seq, feature_cigar=cigar, feature=feature,
                    start=start, end=end, strand=strand, attribute=attribute, parent_id=parent_id)
-    ref.features.append(gene)
+
+    if ref:
+        ref.features.append(gene)
+
     return gene
 
 

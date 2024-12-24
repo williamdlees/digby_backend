@@ -65,6 +65,11 @@ def create_dataset(species, dataset):
             for ref in study_data['Reference_assemblies'].values():
                 ref = session.query(RefSeq).filter(RefSeq.name == ref['name']).one_or_none()
                 add_gene_level_features(session, ref, reference_features)
+        else:
+            # create a dummy reference with no coordinates or features
+            save_genomic_ref_seq(session, 'dummy', 'dummy', '', 'dummy', 0, 0, '+')
+            ref = session.query(RefSeq).filter(RefSeq.name == 'dummy').one_or_none()
+            reference_features = {}
 
         session.commit()
         for study_name, study in study_data['Studies'].items():
@@ -169,9 +174,12 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
             study_obj = create_study(session, study_name, required_fields, row)
 
         if row['subject_id'] not in subjects:
-            subject_name = f'{study_name}_I{subject_num}'
-            subject_num += 1
-            subject_samples[row['subject_id']] = 1
+            if 'vdjbase_name' in row:
+                subject_name = '_'.join(row['vdjbase_name'].split('_')[:-1])
+            else:
+                subject_name = f'{study_name}_I{subject_num}'
+                subject_num += 1
+                subject_samples[row['subject_id']] = 1
 
             subject_object = create_subject(session, study_obj, subject_name, row)
             subjects[row['subject_id']] = subject_object
@@ -179,14 +187,20 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
             subject_object = subjects[row['subject_id']]
             subject_samples[row['subject_id']] += 1
 
-        sample_name = f'{subject_object.patient_name}_S{subject_samples[row["subject_id"]]}'
+        if 'vdjbase_name' in row:
+            sample_name = row['vdjbase_name']
+        else:
+            sample_name = f'{subject_object.patient_name}_S{subject_samples[row["subject_id"]]}'
 
         tissuepro_object = find_or_create_tissuepro(session, tissuepros, row)
         seqprotocol_object = find_or_create_seqprotocol(session, seqprotocols, row)
         datapro_object = find_or_create_datapro(session, datapros, row)
         sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row, annotation_method, annotation_reference)
 
-        bam_path = os.path.join(study['bam_dir'], row['sample_id'])
+        if study['bam_dir']:
+            bam_path = os.path.join(study['bam_dir'], row['sample_id'])
+        else:
+            bam_path = ''
         process_genomic_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, bam_path)
         
     session.commit()
@@ -311,8 +325,11 @@ def create_study(session, study_name, required_fields, row):
         raise ImportException(f'Error - study type is not a valid ontology object: {e}')
             
     try:
-        keywords_study = json.loads(row['keywords_study'])
-        keywords_study = ', '.join(keywords_study)
+        if row['keywords_study']:
+            keywords_study = json.loads(row['keywords_study'])
+            keywords_study = ', '.join(keywords_study)
+        else:
+            keywords_study = ''
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - keywords_study is not a valid JSON list: {e}')
 

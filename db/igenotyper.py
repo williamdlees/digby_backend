@@ -123,11 +123,14 @@ def process_genomic_record(session, dataset_dir, sample, annotation_file, refere
             sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
 
     for row in rows:
+        if sample.annotation_method == 'Digger':
+            row = convert_digger_row(row)
+
         if row['vdjbase_allele']:
             seq = process_row(row, session, sample)
 
-            #if seq:
-            #    create_features(row, session, sample, reference_features, seq)
+            if seq:
+                create_features(row, session, sample, reference_features, seq)
     session.commit()
 
 
@@ -170,12 +173,14 @@ def create_features(row, session, sample, reference_features, seq):
         if not feature:
             feature_id = session.query(Feature).count()
 
-            if 'REGION' in reference_features[sample.ref_seq.name][seq.gene.name]:
-                start = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['start']
-                end = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['end']
-            else:
-                start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['start'] + 11
-                end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['end']
+            start = end = 0
+            if reference_features:
+                if 'REGION' in reference_features[sample.ref_seq.name][seq.gene.name]:
+                    start = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['start']
+                    end = reference_features[sample.ref_seq.name][seq.gene.name]['REGION']['end']
+                else:
+                    start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['start'] + 11
+                    end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_2']['end']
 
             if '.' in row['V-REGION']:
                 feature_seq = row['V-REGION']
@@ -198,8 +203,12 @@ def create_features(row, session, sample, reference_features, seq):
     elif gene_type == 'D':
         if not feature:
             feature_id = session.query(Feature).count()
-            start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
-            end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
+
+            start = end = 0
+            if reference_features:
+                start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
+                end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
+
             feature = add_feature_to_ref(seq.name, 'allele', 'D-REGION', seq.sequence, row['D-REGION_CIGAR'], 'CDS', start, end, sense,
                                             f"Name={seq.name}_D-REGION;ID={feature_id}", feature_id, sample.ref_seq)
 
@@ -214,8 +223,11 @@ def create_features(row, session, sample, reference_features, seq):
     elif gene_type == 'J':
         if not feature:
             feature_id = session.query(Feature).count()
-            start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
-            end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
+            start = end = 0
+            if reference_features:
+                start = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['start']
+                end = reference_features[sample.ref_seq.name][seq.gene.name]['EXON_1']['end']
+
             feature = add_feature_to_ref(seq.name, 'allele', 'J-REGION', seq.sequence, row['J-REGION_CIGAR'], 'CDS', start, end, sense,
                                             f"Name={seq.name}_J-REGION;ID={feature_id}", feature_id, sample.ref_seq)
 
@@ -227,8 +239,11 @@ def create_features(row, session, sample, reference_features, seq):
     elif gene_type == 'C':
         if not feature:
             feature_id = session.query(Feature).count()
-            start = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['start']
-            end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
+            start = end = 0
+            if reference_features:
+                start = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['start']
+                end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
+
             feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
                                             f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
             link_sequence_to_feature(seq, feature)
@@ -253,6 +268,33 @@ def create_features(row, session, sample, reference_features, seq):
     add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense)
 
 
+conv_features = {
+    'V': [('V-REGION-GAPPED', 'seq_gapped'), ('V-NONAMER', 'v_nonamer'), ('V-HEPTAMER', 'v_heptamer'), ('L-PART1', 'l_part1'), ('L-PART2', 'l_part2')],
+    'D': [('D-REGION', 'seq'), ('D-3_NONAMER', 'd_3_nonamer'), ('D-3_HEPTAMER', 'd_3_heptamer'), ('D-5_NONAMER', 'd_5_nonamer'), ('D-5_HEPTAMER', 'd_5_heptamer')],
+    'J': [('J-REGION', 'seq'), ('J-NONAMER', 'j_nonamer'), ('J-HEPTAMER', 'j_heptamer')],
+    'C': [('C-REGION', 'seq')]
+}
+
+
+def convert_digger_row(row):
+    row['vdjbase_allele'] = row['asc']
+    row['genotyper_gene'] = row['asc_gene']
+
+    if row['genotyper_gene']:
+        gene_type = row['genotyper_gene'][3]
+
+        row['haplotype'] = '0'
+
+        if gene_type in ['V', 'D', 'J', 'C']:
+            row[f'{gene_type}-REGION'] = row['seq']
+            row[f'{gene_type}-REGION_CIGAR'] = f'len({row["seq"]})M'
+
+            for feature, field in conv_features[gene_type]:
+                row[feature] = row[field]
+                row[feature + '_CIGAR'] = f'len({row[field]})M'
+
+    return row
+
 # Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
 def add_feature(feature, bed_name, reference_features, row, seq, session, sample, strand='+'):
     if feature not in row or not row[feature]:
@@ -273,8 +315,12 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, sample
 
     if not feature_rec:
         feature_id = session.query(Feature).count()
-        start = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['start']
-        end = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['end']
+
+        start = end = 0
+
+        if reference_features:
+            start = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['start']
+            end = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['end']
 
         feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence,  row[feature + '_CIGAR'], 'UTR', start, end, strand,
                                      f"Name={feature_seq.name};ID={feature_id}", feature_id, sample.ref_seq)

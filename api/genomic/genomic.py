@@ -783,7 +783,7 @@ class AssemblyAPI(Resource):
             assemblies = db.session.query(distinct(RefSeq.name)).all()
             results.extend(assemblies)
 
-        return [{'assembly': row[0]} for row in results]
+        return [{'assembly': row[0]} for row in results if 'dummy' not in row[0] ]
 
 
 @ns.route('/genotype/<string:species>/<string:patient_name>')

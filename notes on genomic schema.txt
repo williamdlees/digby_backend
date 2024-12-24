@@ -1,3 +1,8 @@
+Coming back to this after a while, I'm a bit wary. At the moment, Feature is linked to a Reference while Sequence is not. We could potentially
+have multiple References that contained the same Feature, as we move to reference graphs.
+
+---
+
 Once upon a time, Feature was supposed to be something like NONAMER, SPACER
 Instances (i.e. particular sequences observed in an individual) were supposed to be recorded in Sequence
 However, that has become overtaken by events and now seems unnecessarily compex. The 'gene' or 'allele' feature type differentiates these two now.

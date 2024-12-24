@@ -34,7 +34,7 @@ def update_genomic_ref(session, ref_file):
         else:
             gene_name = name
 
-        if 'V' in name and '.' not in seq:
+        if name[3] == 'V' and '.' not in seq:
             print(f'Error in reference set {ref_file}: V-sequence {name} is not gapped')
 
         gene_id = session.query(Gene.id).filter(Gene.name==gene_name).one_or_none()
