@@ -59,8 +59,12 @@ class SpeciesApi(Resource):
 
 def find_datasets(species):
     datasets = []
-    for name in vdjbase_dbs[species].keys():
-        datasets.append({'dataset': name, 'description': vdjbase_dbs[species][name].description})
+    for name, v in vdjbase_dbs[species].items():
+        try:
+            created = v.created.strftime('%Y-%m-%d')
+        except:
+            created = ''
+        datasets.append({'dataset': name, 'description': v.description, 'created': created})
     return datasets
 
 

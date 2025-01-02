@@ -53,7 +53,14 @@ def get_genomic_datasets(species):
     sp = get_genomic_species()
 
     if species in sp:
-        datasets = [{'dataset': d, 'locus': d} for d in genomic_dbs[species].keys() if 'description' not in d]
+        created = ''
+        datasets = []
+        for k, v in genomic_dbs[species].items():
+            try:
+                created = v.created.strftime('%Y-%m-%d')
+            except:
+                created = ''
+            datasets.append({'dataset': k, 'description': v.description, 'created': created})
         return datasets
     else:
         return []
@@ -75,8 +82,87 @@ def get_genomic_db(species, dataset):
         return None
 
 
+@ns.route('/dataset_info/<string:species>/<string:dataset>')
+class DataSetInfoAPI(Resource):
+    @digby_protected()
+    def get(self, species, dataset):
+        """Returns information and statistics on the dataset"""
+        if species not in genomic_dbs or dataset not in genomic_dbs[species]:
+            return None, 404
+
+        session = genomic_dbs[species][dataset].session
+        stats = {}
+
+        stats['description'] = genomic_dbs[species][dataset].description
+        stats['total_subjects'] = session.query(Patient.id).count()
+        stats['total_samples'] = session.query(Sample.id).count()
+        stats['sex_count'] = session.query(Patient.sex, func.count(Patient.sex)).group_by(Patient.sex).order_by(func.count(Patient.sex).desc()).all()
+        stats['study_count'] = session.query(Study.study_name, func.count(Sample.sample_name)).join(Sample, Sample.study_id == Study.id).group_by(Study.study_name).order_by(func.count(Sample.sample_name).desc()).all()
+        stats['condition_count'] = session.query(Patient.disease_diagnosis_label, func.count(Patient.disease_diagnosis_label)).group_by(Patient.disease_diagnosis_label).order_by(func.count(Patient.disease_diagnosis_label).desc()).all()
+        stats['condition_count'] = [x for x in stats['condition_count'] if x[0] is not None]
+        total_with_condition = sum([x[1] for x in stats['condition_count']])
+        stats['condition_count'].append(('Unreported', stats['total_subjects'] - total_with_condition))
+        stats['ethnicity'] = session.query(Patient.ethnicity,  func.count(Patient.ethnicity)).group_by(Patient.ethnicity).order_by(func.count(Patient.ethnicity).desc()).all()
+        stats['celltype_count'] = 0
+        stats['tissue_count'] = session.query(TissuePro.tissue_label, func.count(TissuePro.tissue_label)).group_by(TissuePro.tissue_label).order_by(func.count(TissuePro.tissue_label).desc()).all()
+        studies = session.query(
+            Study.study_name,
+            Study.study_id,
+            Study.lab_address,
+            Study.num_subjects,
+            Study.num_samples,
+            Study.pub_ids,
+            Study.accession_reference
+        ).all()
+        stats['studies'] = []
+
+        for row in studies:
+            row = row._asdict()
+            row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
+            row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
+            row['study_id'] = link_convert(row['study_id'])
+            row['pub_ids'] = link_convert(row['pub_ids'])
+            stats['studies'].append(row)
+
+        stats['studies'].sort(key=lambda p: int(p['study_name'].replace('P', '')))
+
+        return stats
+
+
+# Convert some frequently occurring accession ids to links
+def link_convert(item):
+    res = []
+
+    if not item:
+        return None
+
+    for el in item.split(','):
+        for prefix in ['BioProject:', 'SRA:']:
+            if prefix in el:
+                el = el.replace(prefix, '')
+        el = el.strip()
+
+        if 'PMID:' in el:
+            el = el.replace('PMID:', '')
+            el = el.strip()
+            el = f'https://pubmed.ncbi.nlm.nih.gov/{el}'
+        elif ' ' not in el:   # general safety measure for things that won't translate
+            if 'PRJNA' in el:
+                el = f'https://www.ncbi.nlm.nih.gov/bioproject/?term={el}'
+            elif 'PRJEB' in el:
+                el = f'https://www.ebi.ac.uk/ena/browser/view/{el}'
+            elif 'PRJCA' in el:
+                el = f'https://ngdc.cncb.ac.cn/bioproject/browse/{el}'
+            elif 'SRP' in el:
+                el = f'https://www.ncbi.nlm.nih.gov/sra/?term={el}'
+
+        res.append(el)
+
+    return ','.join(res)
+
+
 @ns.route('/subject_info/<string:species>/<string:dataset>/<string:sample_id>')
-class SampleInfoApi(Resource):
+class SubjectInfoApi(Resource):
     @digby_protected()
     def get(self, species, dataset, sample_id):
         """ Returns information on the selected sample """
