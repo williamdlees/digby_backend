@@ -84,7 +84,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         },
         {
           "id": "sort_order",
@@ -184,7 +184,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         },
         {
           "id": "sort_order",
@@ -273,7 +273,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         }
       ],
       "filter_params": true,
@@ -319,7 +319,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         }
       ],
       "filter_params": true,
@@ -455,7 +455,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         }
       ],
       "filter_params": true,
@@ -492,7 +492,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         },
         {
           "id": "read_length",
@@ -538,7 +538,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min Kdiff"
+          "label": "Min allele score"
         },
         {
           "id": "read_length",
