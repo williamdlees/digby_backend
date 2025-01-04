@@ -487,7 +487,20 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
         if gene_type in processed_gene_types:
             continue
 
-        kdiff = row["k_diff"]
+        allele_scores = {}
+        if 'k_diff' in row:
+            for index, allele in enumerate(str(row["GENOTYPED_ALLELES"]).split(",")):
+                allele_scores[allele] = row["k_diff"]
+        elif 'z_score' in row:
+            scores = str(row["z_score"]).split(',')
+            for index, allele in enumerate(str(row["GENOTYPED_ALLELES"]).split(",")):
+                if index < len(scores):
+                    allele_scores[allele] = scores[index]
+                else:
+                    allele_scores[allele] = '0'
+                    print(f"Error: z_score for gene {gene} does not have enough values")
+            print(f"{','.join(allele_scores.keys())} {','.join(allele_scores.values())} ")
+
         # allele counts come from un-genotyped column
         allele_counts = {}
         ac = str(row["counts"]).split(',')
@@ -507,6 +520,7 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
             freq_by_clone = 0
             freq_by_seq = 0
             count = 0
+            score = 0
             if allele != "Del":
                 # check for bug found in TRB genotypes
                 if len(str(row["Freq_by_Clone"]).split(";")) <= index:
@@ -525,11 +539,12 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
 
                 freq_by_seq = int(float(str(row["Freq_by_Seq"]).split(";")[index]))
                 count = int(allele_counts[allele]) if allele in allele_counts else 0
+                score = float(allele_scores[allele]) if allele in allele_scores else 0
 
             allele_snps, base_allele_name, pipeline_name, this_allele_name = parse_ambiguous_allele(allele, gene, pipeline_names)
 
             try:
-                add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
+                add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, score, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
                        total_count, session)
             except DbCreationError as e:
                 print(e)

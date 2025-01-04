@@ -2,27 +2,20 @@
 #
 #       Confidence checks on novel alleles
 #
-#       This might be better as part of the pipeline, but, at least while the checks are under development,
-#       they are run when the alleles view is rendered for the first time, so that they can be modified
-#       without re-running the pipeline. To re-run the checks, run the command below from sqlite command line
-#       UPDATE database_alleles SET novel=False;
-#
 ##########################################################################################################
 import sys
 import os.path
 
 from Bio.Seq import Seq
 from Bio.Data.CodonTable import TranslationError
-from sqlalchemy import not_, distinct, or_
+from sqlalchemy import not_, or_
 
 from db.vdjbase_genotypes import find_allele_or_similar
-from db.vdjbase_model import Allele, AllelesSample, Gene, GenesDistribution, AllelesPattern, AlleleConfidenceReport, SNP, HaplotypeEvidence, SamplesHaplotype
+from db.vdjbase_model import Allele, AllelesSample, AlleleConfidenceReport, SNP, HaplotypeEvidence, SamplesHaplotype
 from db.vdjbase_airr_model import SeqProtocol, Sample
 
 import re
 import csv
-
-
 
 
 def check_novel_confidence(ds_dir, session):

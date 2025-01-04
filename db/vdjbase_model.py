@@ -146,6 +146,7 @@ class HaplotypeEvidence(Base):
     sample_id = Column(ForeignKey('sample.id'), nullable=False, index=True)
     hap_gene = Column(String(50), nullable=False)
     counts = Column(String(200), nullable=False)
+    scores = Column(String(200), nullable=False)
 
     allele = relationship('Allele')
     sample = relationship('Sample')

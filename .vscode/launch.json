@@ -72,6 +72,16 @@
             "justMyCode": false
         },
         {
+            "name": "make_airr_seq_db - digby_data/IGL",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Human", "IGL"],
+            "cwd": "D:/Research/digby_data/AIRR-seq/Human/IGL",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "make_airr_seq_db - digby_data/IGK",
             "type": "python",
             "request": "launch",
