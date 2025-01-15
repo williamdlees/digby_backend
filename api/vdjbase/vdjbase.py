@@ -7,8 +7,9 @@ from os.path import isfile
 import json
 from math import ceil
 import pickle
+from io import BytesIO
 
-from flask import request
+from flask import request, send_file
 from flask_restx import Resource, reqparse
 
 from api.reports.report_utils import make_output_file
@@ -20,11 +21,12 @@ from werkzeug.exceptions import BadRequest
 from db.filter_list import apply_filter_to_list
 from api.system.system import digby_protected
 
-from app import vdjbase_dbs, app, genomic_dbs
+from app import vdjbase_dbs, app, genomic_dbs, madc_index
 from db.vdjbase_api_query_filters import sample_info_filters, sequence_filters
 from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
 from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
 from db.genomic_db import Gene as GenomicGene
+from db.vdjbase_db import species_lookup
 
 from api.reports.genotypes import process_repseq_genotype
 
@@ -220,16 +222,58 @@ class DataSetInfoAPI(Resource):
             row = row._asdict()
             row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
             row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
+            study_id = row['study_id'] 
+
+            row['repertoires'] = ''
+            if row['study_id']:
+                study_id = row['study_id']
+                if ': ' in study_id:
+                    study_id = study_id.split(': ')[1]
+
+                species_id = vdjbase_dbs[species][dataset].taxid
+                if species_id in madc_index and dataset in madc_index[species_id] and len([x for x in madc_index[species_id][dataset].values() if x['study_id'] == study_id]) > 0:
+                    row['repertoires'] = '/repseq/download_study_script/' + species + '/' + study_id + '/' + dataset
+
             row['study_id'] = link_convert(row['study_id'])
             row['pub_ids'] = link_convert(row['pub_ids'])
             stats['studies'].append(row)
 
-        stats['studies'].sort(key = lambda p: int(p['study_name'].replace('P', '')))
+        stats['studies'].sort(key=lambda p: int(p['study_name'].replace('P', '')))
 
         return stats
 
 
+# 
+@ns.route('/download_study_script/<string:species>/<string:study_id>/<string:dataset>')
+class DownloadStudyScript(Resource):
+    @digby_protected()
+    def get(self, species, study_id, dataset):
+        """Returns information and statistics on the dataset"""
+        if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species] or not vdjbase_dbs[species][dataset].taxid:
+            return None, 404
+
+        species_id = vdjbase_dbs[species][dataset].taxid
+        if species_id not in madc_index or dataset not in madc_index[species_id]:
+            return None, 404
+
+        script = f'# Download script for study {study_id}\n# Please note that the server has a download limit, to prevent abuse. If the HTTP code 503 is returned, the server is rate-limited and it will provide an indication of when you can retry.\n'
+        
+        count = 1
+        for repertoire_id, row in madc_index[species_id][dataset].items():
+            if row['study_id'] == study_id:
+                script += 'curl -w "HTTP code: %{response_code}" https://madc.vdjbase.org/airr/v1/rearrangement/' + repertoire_id + f' > {study_id}_{dataset}_{repertoire_id}.tsv.gz\n'
+                count += 1
+
+        mem = BytesIO()
+        mem.write(script.encode('utf-8'))
+        mem.seek(0)
+
+        return send_file(mem, as_attachment=True, attachment_filename=f'{study_id}_{dataset}_download.sh', mimetype='text/plain')
+
+
 # Convert some frequently occurring accession ids to links
+
+
 def link_convert(item):
     res = []
 
@@ -380,6 +424,10 @@ class SamplesApi(Resource):
             required_cols.append('sample_name')
         if 'dataset' not in required_cols:
             required_cols.append('dataset')
+        if 'repertoire_id' not in required_cols:
+            required_cols.append('repertoire_id')
+        if 'species_id' not in required_cols:
+            required_cols.append('species_id')
 
         for col in required_cols:
             if col not in sample_info_filters.keys():
@@ -502,6 +550,11 @@ class SamplesApi(Resource):
             for r in ret:
                 r['genotypes'] = {}
                 r['genotypes']['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'sort_order': 'Locus'})
+
+                if r['repertoire_id'] and r['species_id'] and r['species_id'] in madc_index and r['dataset'] in madc_index[r['species_id']] and r['repertoire_id'] in madc_index[r['species_id']][r['dataset']]:
+                    r['genotypes']['madc_url'] = f"https://madc.vdjbase.org/airr/v1/rearrangement/{r['repertoire_id']}"
+                else:
+                    r['genotypes']['madc_url'] = ''
 
                 r['genotypes']['path'] = app.config['BACKEND_LINK']
                 sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset']]) + '/'

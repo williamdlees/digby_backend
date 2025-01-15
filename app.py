@@ -15,6 +15,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from extensions import celery
 
 from db.vdjbase_db import study_data_db_init
+from db.madc import madc_init
 
 sql_db = None
 
@@ -63,6 +64,7 @@ custom_logging.init_logging(app, mail)
 
 vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
 genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/db'))
+madc_index = madc_init(app)
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 

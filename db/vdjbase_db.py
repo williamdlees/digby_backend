@@ -46,9 +46,9 @@ class ContentProvider():
 
 # TODO: when we change to biomial species names, update this lookup and corresponding code
 species_lookup = {
-    'Human': ('Homo sapiens', 'NCBITAXON: 9606'),
-    'Rhesus Macaque': ('Macaca mulatta', 'NCBITAXON: 9544'),
-    'Crab-eating Macaque': ('Macaca fascicularis', 'NCBITAXON: 9541'),
+    'Human': ('Homo sapiens', 'NCBITAXON:9606'),
+    'Rhesus Macaque': ('Macaca mulatta', 'NCBITAXON:9544'),
+    'Crab-eating Macaque': ('Macaca fascicularis', 'NCBITAXON:9541'),
 }
 
 
