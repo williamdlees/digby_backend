@@ -197,11 +197,7 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
         datapro_object = find_or_create_datapro(session, datapros, row)
         sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row, annotation_method, annotation_reference)
 
-        if study['bam_dir']:
-            bam_path = os.path.join(study['bam_dir'], row['sample_id'])
-        else:
-            bam_path = ''
-        process_genomic_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, bam_path)
+        process_genomic_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, study['bam_dir'])
         
     session.commit()
     calculate_appearances(session)
@@ -514,7 +510,7 @@ def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, 
         raise ImportException(f'Error - template_amount_unit is not a valid ontology object: {e}')
     
     ref_id = None
-    if row['reference_assembly']:
+    if row['reference_assembly'] and 'none' not in row['reference_assembly'].lower():
         try:
             ref = session.query(RefSeq).filter(RefSeq.name == row['reference_assembly']).one_or_none()
         except exc.NoResultFound:

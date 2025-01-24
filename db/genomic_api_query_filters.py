@@ -30,7 +30,7 @@ genomic_sample_filters = {
     'read_direction': {'model': 'Sample', 'field': Sample.read_direction, 'help': 'Read direction for the raw reads or sequences. The first file in paired-read sequencing.', 'example': 'forward'},
     'paired_filename': {'model': 'Sample', 'field': Sample.paired_filename, 'help': 'File name for the second file in paired-read sequencing', 'example': 'MS10R-NMonson-C7JR9_S1_R2_001.fastq'},
     'paired_read_direction': {'model': 'Sample', 'field': Sample.paired_read_direction, 'help': 'Read direction for the second file in paired-read sequencing', 'example': 'reverse'},
-    'sample_name': {'model': 'Sample', 'field': Sample.sample_name, 'help': 'Sample name as allocated by VDJbase', 'example': ''},
+    'sample_name': {'model': 'Sample', 'sort': 'underscore', 'field': Sample.sample_name, 'help': 'Sample name as allocated by VDJbase', 'example': ''},
     'annotation_path': {'model': 'Sample', 'field': Sample.annotation_path, 'help': 'Reports produced during the annotation', 'example': ''},
     'annotation_method': {'model': 'Sample', 'field': Sample.annotation_method, 'help': 'Name of the annotation method', 'example': 'Igenotyper'},
     'annotation_reference': {'model': 'Sample', 'field': Sample.annotation_reference, 'help': 'Citation for annotation method', 'example': 'https://www.frontiersin.org/article/10.3389/fimmu.2020.02136'},

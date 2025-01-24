@@ -4,6 +4,7 @@ import os.path
 import shutil
 import csv
 import glob
+from zipfile import ZipFile
 
 from receptor_utils.simple_bio_seq import write_csv
 
@@ -97,30 +98,35 @@ def process_genomic_record(session, dataset_dir, sample, annotation_file, refere
     # Find the bam files for the sample
 
     if bam_path:
-        bamfile_path = None
-        bam_files = glob.glob(os.path.join(bam_path, "*.bam"))
-        if len(bam_files) == 1:
-            bamfile_path = bam_files[0]
-
-        elif len(bam_files) == 0:
-            sdir = glob.glob(os.path.join(bam_path, "*"))
-            if len(sdir) == 1 and os.path.isdir(sdir[0]):
-                bam_files = glob.glob(os.path.join(sdir[0], "*.bam"))
-                if len(bam_files) == 1:
-                    bamfile_path = bam_files[0]
-    
-        if not bamfile_path:
-            sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
-            print(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
-        else:
-            shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
-
-            if os.path.exists(bamfile_path + '.bai'):
-                shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
+        if sample.annotation_method == 'IGenotyper':
+            bam_path = os.path.join(bam_path, sample.sample_id)
+            bamfile_path, bam_files = find_sequence_file(bam_path)
+        
+            if not bamfile_path:
+                sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
+                print(f"ERROR: {len(bam_files)} bam files found for sample {sample.sample_name} at path {bam_path}")
             else:
-                raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
+                shutil.copy(bamfile_path, os.path.join(sample_path, f"{sample.sample_name}.bam"))
 
-            sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
+                if os.path.exists(bamfile_path + '.bai'):
+                    shutil.copy(bamfile_path + '.bai', os.path.join(sample_path, f"{sample.sample_name}.bam.bai"))
+                else:
+                    raise GeneParsingException(f"ERROR: No bai file found for {bamfile_path}")
+
+                sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.bam"))
+        elif sample.annotation_method == 'Digger':
+            fasta_files = glob.glob(os.path.join(bam_path, "*.fasta"))
+            fasta_file = [x for x in fasta_files if sample.sample_id in x]
+            if len(fasta_file) == 0:
+                fasta_file = [x for x in fasta_files if sample.patient.subject_id in x]
+
+            if len(fasta_file) != 1:
+                sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
+                print(f"ERROR: {len(fasta_file)} fasta files found for sample {sample.sample_name} at path {bam_path}")
+            else:
+                with ZipFile(os.path.join(sample_path, f"{sample.sample_name}.zip"), 'w') as zip:
+                    zip.write(fasta_file[0], f"{sample.sample_name}.fasta")
+                sample.contig_bam_path = '/'.join((study_name, sample.sample_name, f"{sample.sample_name}.zip"))
 
     for row in rows:
         if sample.annotation_method == 'Digger':
@@ -131,7 +137,24 @@ def process_genomic_record(session, dataset_dir, sample, annotation_file, refere
 
             if seq:
                 create_features(row, session, sample, reference_features, seq)
+
     session.commit()
+
+
+def find_sequence_file(bam_path):
+    bamfile_path = None
+    bam_files = glob.glob(os.path.join(bam_path, "*.bam"))
+    if len(bam_files) == 1:
+        bamfile_path = bam_files[0]
+
+    elif len(bam_files) == 0:
+        sdir = glob.glob(os.path.join(bam_path, "*"))
+        if len(sdir) == 1 and os.path.isdir(sdir[0]):
+            bam_files = glob.glob(os.path.join(sdir[0], "*.bam"))
+            if len(bam_files) == 1:
+                bamfile_path = bam_files[0]
+
+    return bamfile_path, bam_files
 
 
 def process_row(row, session, sample):

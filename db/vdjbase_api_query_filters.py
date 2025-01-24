@@ -30,7 +30,7 @@ sample_info_filters = {
     'read_direction': {'model': 'Sample', 'field': Sample.read_direction, 'help': 'Read direction for the raw reads or sequences. The first file in paired-read sequencing.', 'example': 'forward'},
     'paired_filename': {'model': 'Sample', 'field': Sample.paired_filename, 'help': 'File name for the second file in paired-read sequencing', 'example': 'MS10R-NMonson-C7JR9_S1_R2_001.fastq'},
     'paired_read_direction': {'model': 'Sample', 'field': Sample.paired_read_direction, 'help': 'Read direction for the second file in paired-read sequencing', 'example': 'reverse'},
-    'sample_name': {'model': 'Sample', 'field': Sample.sample_name, 'help': 'Sample name as allocated by VDJbase', 'example': ''},
+    'sample_name': {'model': 'Sample', 'field': Sample.sample_name, 'sort': 'underscore', 'help': 'Sample name as allocated by VDJbase', 'example': ''},
     'reads': {'model': 'Sample', 'field': Sample.reads, 'sort': 'numeric', 'help': 'Reads processed by VDJbase pipeline', 'example': ''},
     'genotype': {'model': 'Sample', 'field': Sample.genotype, 'help': 'Links to genotype reports', 'example': ''},
     'igsnper_plot_path': {'model': 'Sample', 'field': Sample.igsnper_plot_path, 'help': 'Path for igsnper plot', 'example': ''},
