@@ -255,7 +255,7 @@ enum_fields = {
 def check_enums(meta_records):
     for table, fields in meta_records.items():
         for field, value in fields.items():
-            if field == 'keywords_study':
+            if field == 'keywords_study' and value:
                 for kw in value.split(','):
                     if kw not in enum_fields['keywords_study']:
                         print(f"Warning: keyword {kw} in {table} not in enum list")
