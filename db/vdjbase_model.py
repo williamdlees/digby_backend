@@ -118,9 +118,7 @@ class AllelesSample(Base):
     count = Column(Integer, nullable=True)
     total_count = Column(Integer, nullable=True)
 
-    allele = relationship('Allele', backref='sample_associations', cascade="all")
     patient = relationship('Patient')
-    sample = relationship('Sample', backref='allele_associations', cascade="all")
 
 
 class GenesDistribution(Base):
