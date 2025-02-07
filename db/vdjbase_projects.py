@@ -342,6 +342,8 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
                 'Sample': {}
             }
 
+            print(f'Processing airr sample {rec["vdjbase_name"]}')
+
             if rec['airr_file'] not in miairr_json:
                 with open(os.path.join(ds_dir, rec['airr_file']), 'r') as fi:
                     miairr_json[rec['airr_file']] = json.load(fi)
