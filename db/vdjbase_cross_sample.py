@@ -79,12 +79,12 @@ def calculate_gene_frequencies(ds_dir, session):
             family = gene[:4]
 
             if family_total_seq[family] == 0:
-                print('family_total_seq for family %s is zero for sample %s' % (family, sample_name))
+                print('family_total_seq for gene type %s is zero for sample %s' % (family, sample_name))
             else:
                 frequencies_by_seq[gene] /= float(family_total_seq[family])
 
             if family_total_clone[family] == 0:
-                print('family_total_clone for family %s is zero for sample %s' % (family, sample_name))
+                print('family_total_clone for gene type %s is zero for sample %s' % (family, sample_name))
             else:
                 frequencies_by_clone[gene] /= float(family_total_clone[family])
 
