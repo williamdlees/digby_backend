@@ -48,7 +48,7 @@ def calculate_gene_frequencies(ds_dir, session):
     genes = session.query(Gene)
     gene_ids_by_name = dict(zip([gene.name for gene in genes], [gene.id for gene in genes]))
 
-    freqs = session.query(Sample.id, Patient.id, func.sum(AllelesSample.freq_by_seq), func.sum(AllelesSample.freq_by_clone), Gene.name) \
+    freqs = session.query(Sample.id, Patient.id, func.sum(AllelesSample.freq_by_seq), func.sum(AllelesSample.freq_by_clone), Gene.name, Sample.sample_name) \
         .filter(Patient.id == Sample.patient_id) \
         .filter(AllelesSample.sample_id == Sample.id) \
         .filter(AllelesSample.allele_id == Allele.id) \
@@ -56,13 +56,13 @@ def calculate_gene_frequencies(ds_dir, session):
         .group_by(*(Sample.id, Gene.id)) \
         .all()
 
-    for sample_id in list(set([x[0] for x in freqs])):
+    for sample_id, sample_name in list(set([(x[0], x[5]) for x in freqs])):
         frequencies_by_seq = {}
         frequencies_by_clone = {}
         family_total_seq = {}
         family_total_clone = {}
 
-        for _, patient_id, count_seq, count_clone, gene_name in [x for x in freqs if x[0] == sample_id]:
+        for _, patient_id, count_seq, count_clone, gene_name, _ in [x for x in freqs if x[0] == sample_id]:
             family = gene_name[:4]
             if family not in family_total_seq.keys():
                 family_total_seq[family] = 0
@@ -79,12 +79,12 @@ def calculate_gene_frequencies(ds_dir, session):
             family = gene[:4]
 
             if family_total_seq[family] == 0:
-                print('family_total_seq is zero for sample %s' % sample.sample_name)
+                print('family_total_seq for family %s is zero for sample %s' % (family, sample_name))
             else:
                 frequencies_by_seq[gene] /= float(family_total_seq[family])
 
             if family_total_clone[family] == 0:
-                print('family_total_clone is zero for sample %s' % sample.sample_name)
+                print('family_total_clone for family %s is zero for sample %s' % (family, sample_name))
             else:
                 frequencies_by_clone[gene] /= float(family_total_clone[family])
 
