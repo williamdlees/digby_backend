@@ -58,7 +58,7 @@ def create_single_database(job, species, dataset, upload_path, in_situ=False):
     details = session.query(Details).one_or_none()
     if not details:
         details = Details(
-            dbtype='genomic',
+            dbtype='airrseq',
             species=species, 
             locus=dataset, 
             created_on=datetime.datetime.now(),

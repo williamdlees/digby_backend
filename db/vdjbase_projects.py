@@ -350,7 +350,7 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
             rep_ids = rec['airr_repertoire_id'].split(';')
 
             # specify tables explicitly, so that they get traversed in the desired order
-            tables = ['Study', 'TissuePro', 'SeqProtocol', 'DataPro', 'Patient', 'Sample']
+            tables = ['Study', 'TissuePro', 'SeqProtocol', 'DataPro', 'Patient', 'Sample', 'GenoDetection']
             build_metadata(tables, table_fields, rec['vdjbase_name'], miairr_json, rec['airr_file'], rep_ids, meta_records)
             merge_attributes(meta_records, table_fields)
             project_meta_records[rec['vdjbase_name']] = meta_records
@@ -397,6 +397,10 @@ def walk_repertoire(obj, desired_attributes, desired_compounds, row, crumb, meta
                 if target == desired_att:
                     collect_attribute(desired_att, obj, meta_records, table)
 
+        # special for preprocessing tool versions
+        if len(crumb) > 2 and crumb[-3] == 'preprocessing' and crumb[-2] == 'software_versions':
+            collect_attribute('prepro_tool', f'{crumb[-1]}: {obj}', meta_records, 'GenoDetection')
+
 
 # Collect an attribute value into a meta_record
 def collect_attribute(desired_att, obj, meta_records, table):
@@ -437,9 +441,24 @@ def merge_attributes(meta_records, table_fields):
             except:
                 print(f"Error combining value in attribute {attr}: cannot coerce to {row_spec[attr]['type']}")
 
-            if '.' in attr:
+            # some GenoDetection specials
+
+            geno_specials = {
+                'Single Assignment': 'single_assignment',
+                'aligner.version': 'aligner_ver',
+                'Genotyper.Tool': 'geno_tool',
+                'Genotyper.Version': 'geno_ver',
+                'Haplotyper.Tool': 'haplotype_tool',
+                'Haplotyper.Version': 'haplotype_ver',
+            }
+
+            if attr in geno_specials:
+                meta_records[table][geno_specials[attr]] = meta_records[table][attr]
+                del meta_records[table][attr]
+            elif '.' in attr:
                 meta_records[table][attr.replace('.', '_')] = meta_records[table][attr]
                 del meta_records[table][attr]
+
 
 
 # Find a repertoire in the json record for a single MiAIRR file
