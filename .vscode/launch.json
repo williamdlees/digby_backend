@@ -102,6 +102,16 @@
             "justMyCode": false
         },
         {
+            "name": "make_airr_seq_db - digby_private_data/TRB",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Human", "TRB"],
+            "cwd": "D:/Research/digby_private_data/AIRR-seq/Human/TRB",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "vdjbase_create_airr_classes.py",
             "type": "python",
             "request": "launch",

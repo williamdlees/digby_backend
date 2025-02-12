@@ -272,6 +272,12 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
                                          for rec in table_fields[table].values()
                                          if rec['VDJbase table'] == table and rec['YML attribute'] and (yml_full or not rec['structured_name'])}
 
+    # apply fixups to GenoDetection fields
+
+    for attr, key in desired_attributes['GenoDetection'].items():
+        if key.replace('_', '.') in geno_specials:
+            desired_attributes['GenoDetection'][attr] = geno_specials[key.replace('_', '.')]
+
     # dict attributes are not the same as names - so find indexes into the various YML objects
 
     yml_objects = {
@@ -355,6 +361,9 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
             merge_attributes(meta_records, table_fields)
             project_meta_records[rec['vdjbase_name']] = meta_records
 
+    if not project_meta_records:
+        print(f"No MiAIRR data found for repertoire_id {rec['airr_repertoire_id']} in project {project_name}")
+
     return project_meta_records
 
 
@@ -410,6 +419,17 @@ def collect_attribute(desired_att, obj, meta_records, table):
         meta_records[table][desired_att].append(obj)
 
 
+# some GenoDetection specials
+geno_specials = {
+    'Single Assignment': 'single_assignment',
+    'aligner.version': 'aligner_ver',
+    'Genotyper.Tool': 'geno_tool',
+    'Genotyper.Version': 'geno_ver',
+    'Haplotyper.Tool': 'haplotype_tool',
+    'Haplotyper.Version': 'haplotype_ver',
+}
+
+
 # merge lists of attrbutes as sensibly as we can, converting to type spec in table_defs
 def merge_attributes(meta_records, table_fields):
     for table, row_spec in table_fields.items():
@@ -440,17 +460,6 @@ def merge_attributes(meta_records, table_fields):
                             meta_records[table][attr] = 1
             except:
                 print(f"Error combining value in attribute {attr}: cannot coerce to {row_spec[attr]['type']}")
-
-            # some GenoDetection specials
-
-            geno_specials = {
-                'Single Assignment': 'single_assignment',
-                'aligner.version': 'aligner_ver',
-                'Genotyper.Tool': 'geno_tool',
-                'Genotyper.Version': 'geno_ver',
-                'Haplotyper.Tool': 'haplotype_tool',
-                'Haplotyper.Version': 'haplotype_ver',
-            }
 
             if attr in geno_specials:
                 meta_records[table][geno_specials[attr]] = meta_records[table][attr]
