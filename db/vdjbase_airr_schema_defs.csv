@@ -148,7 +148,6 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,genotype_report,airrseq,,Sample,genotype_report,,string,FALSE,,TRUE,long,FALSE,Genotype report,,Path to genotype report,,
 ,study_name,mixin,,Study,name,,string,TRUE,,TRUE,short,FALSE,Study name,,Study name,,
 ,prepro_tool,airrseq,,GenoDetection,prepro_tool,Genotype Detections.Pre-processing,string,TRUE,,TRUE,long,FALSE,Preprocessing tool,,Preprocessing tool,PRESTO,
-,prepro_versions,airrseq,,GenoDetection,prepro_versions,Genotype Detections.Pre-processing,string,TRUE,,TRUE,long,FALSE,Preprocessing tool,,Preprocessing tool,PRESTO,
 ,aligner.tool,airrseq,,GenoDetection,aligner_tool,Genotype Detections.Alignment Tool,string,TRUE,,TRUE,long,FALSE,Aligner tool,,Aligner tool,IgBLAST,
 ,aligner.version,airrseq,,GenoDetection,aligner_ver,Genotype Detections.Aligner Version,string,TRUE,,TRUE,long,FALSE,Aligner version,,Aligner version,1.18,
 ,aligner_reference_v,airrseq,,GenoDetection,aligner_reference_v,Genotype Detections.Alignment reference v,string,TRUE,,TRUE,long,FALSE,Aligner ref V,,Aligner ref V,IMGT full - version 2021-06-06,
