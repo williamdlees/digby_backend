@@ -70,6 +70,8 @@ def import_studies(ds_dir, species, dataset, session):
         miairr_metadata = {}
         if project_name in miairr_projects:
             miairr_metadata = process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, session)
+        else:
+            print(f"No MiAIRR data found for project {project_name}")
 
         process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, session)
 
@@ -360,9 +362,6 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
             build_metadata(tables, table_fields, rec['vdjbase_name'], miairr_json, rec['airr_file'], rep_ids, meta_records)
             merge_attributes(meta_records, table_fields)
             project_meta_records[rec['vdjbase_name']] = meta_records
-
-    if not project_meta_records:
-        print(f"No MiAIRR data found for repertoire_id {rec['airr_repertoire_id']} in project {project_name}")
 
     return project_meta_records
 
