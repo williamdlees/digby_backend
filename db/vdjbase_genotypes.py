@@ -60,9 +60,9 @@ def process_genotypes(ds_dir, species, dataset, session):
 
         # fix up filenames for the live database
         if sample.genotype:
-            sample.genotype = sample.genotype.replace(ds_dir + '\\', '').replace('\\', '/')
+            sample.genotype = sample.genotype.replace('\\', '/').replace(ds_dir + '/', '')
         if sample.asc_genotype:
-            sample.asc_genotype = sample.asc_genotype.replace(ds_dir + '\\', '').replace('\\', '/')
+            sample.asc_genotype = sample.asc_genotype.replace('\\', '/').replace(ds_dir + '/', '')
             
     session.commit()
 
