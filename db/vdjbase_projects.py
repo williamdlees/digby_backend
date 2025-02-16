@@ -360,6 +360,7 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
             # specify tables explicitly, so that they get traversed in the desired order
             tables = ['Study', 'TissuePro', 'SeqProtocol', 'DataPro', 'Patient', 'Sample', 'GenoDetection']
             build_metadata(tables, table_fields, rec['vdjbase_name'], miairr_json, rec['airr_file'], rep_ids, meta_records)
+            check_ontologies(meta_records)
             merge_attributes(meta_records, table_fields)
             project_meta_records[rec['vdjbase_name']] = meta_records
 
@@ -386,6 +387,18 @@ def build_metadata(tables, table_fields, vdjbase_name, miairr_json, miairr_file,
         walk_repertoire(repertoire, desired_attributes, desired_compounds, row, ['Repertoire'], meta_records)
 
 
+def check_ontologies(meta_records):
+    for table in meta_records:
+        for k, v in meta_records[table].items():
+            if 'label' in k and v[0] and k.replace('label', 'id') in meta_records[table]:
+                lk = k.replace('label', 'id')
+                if not meta_records[table][lk] \
+                    or len(meta_records[table][lk]) == 0 \
+                    or not meta_records[table][lk][0] \
+                    or meta_records[table][lk][0] == 'null' \
+                    or ':' not in meta_records[table][lk][0]:
+                        print(f"Invalid ontology id for label {k} value {v}: {meta_records[table][lk]}")
+
 # walk the repertoire looking for attributes on our list
 def walk_repertoire(obj, desired_attributes, desired_compounds, row, crumb, meta_records):
     if isinstance(obj, dict):
@@ -404,6 +417,9 @@ def walk_repertoire(obj, desired_attributes, desired_compounds, row, crumb, meta
 
                 if target == desired_att:
                     collect_attribute(desired_att, obj, meta_records, table)
+
+                #if target == 'label':
+                #    breakpoint()
 
         # special for preprocessing tool versions
         if len(crumb) > 2 and crumb[-3] == 'preprocessing' and crumb[-2] == 'software_versions':
