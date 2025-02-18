@@ -69,7 +69,7 @@
     },
     "rep_genotype_heatmap": {
       "title": "Genotype Heatmap",
-      "description": "Heatmap showing the inferred genotype derived from each selected sample. Selecting >150 samples may exhaust server memory in which case no report will be returned.",
+      "description": "Heatmap showing the inferred genotype derived from each selected sample.",
       "thumbnail": "genotype_heatmap.png",
       "params": [
         {
@@ -84,7 +84,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         },
         {
           "id": "sort_order",
@@ -184,7 +184,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         },
         {
           "id": "sort_order",
@@ -273,7 +273,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         }
       ],
       "filter_params": true,
@@ -319,7 +319,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         }
       ],
       "filter_params": true,
@@ -455,7 +455,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         }
       ],
       "filter_params": true,
@@ -492,7 +492,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         },
         {
           "id": "read_length",
@@ -538,7 +538,7 @@
         {
           "id": "f_kdiff",
           "type": "decimal",
-          "label": "Min allele score"
+          "label": "Min Kdiff"
         },
         {
           "id": "read_length",

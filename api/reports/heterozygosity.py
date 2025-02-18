@@ -1,7 +1,5 @@
-# Heterozygosity plot for AIRR-seq samples
-
 from werkzeug.exceptions import BadRequest
-from api.reports.reports import run_rscript, send_report
+from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file, collate_samples, chunk_list
 from app import vdjbase_dbs
 from db.vdjbase_model import AllelesSample, Gene, Allele, AllelesPattern
@@ -9,10 +7,11 @@ from db.vdjbase_airr_model import Patient, Sample
 import os
 from api.vdjbase.vdjbase import apply_rep_filter_params
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from api.reports.Python_scripts.Heterozygous import create_heterozygous_plot
 
-HETEROZYGOSITY_SCRIPT = 'Heterozygous.R'
 SAMPLE_CHUNKS = 400
-
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(rep_samples) == 0:
@@ -23,8 +22,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
     chain, samples_by_dataset = collate_samples(rep_samples)
-
-    # Format we need to produce is [(gene_name, hetero count, homo count),...]
 
     gene_hetrozygous_dis = {}
 
@@ -58,8 +55,6 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
             allele_sample_recs.extend(query.all())
 
-        # As the result is indexed, run over each gene in turn, count the number of alleles found in each patient, update h_counts accordingly
-
         i = 0
         target_gene = ''
 
@@ -83,16 +78,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
                 patient_allele_ids = set(patient_allele_ids)
 
-                # If we have both an unambiguous allele and an ambiguous allele containing that unambiguous one,
-                # drop the unambiguous one because it is already counted
-
                 if params['ambiguous_alleles'] != 'Exclude':
                     patterns = session.query(AllelesPattern.pattern_id)\
                         .filter(AllelesPattern.allele_in_p_id.in_(patient_allele_ids))\
                         .filter(AllelesPattern.pattern_id.in_(patient_allele_ids))\
                         .all()
 
-                    if patterns is not None and len(patterns) >0:
+                    if patterns is not None and len(patterns) > 0:
                         patterns = set([pattern[0] for pattern in patterns])
                         patient_allele_ids = patient_allele_ids - patterns
 
@@ -112,12 +104,12 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     df.to_csv(haplo_path, sep='\t', index=False)
     output_path = make_output_file('html')
 
-    cmd_line = ["-i", haplo_path,
-                "-o", output_path,
-                "-c", chain,
-                ]
+    #Plot Creation
+    create_heterozygous_plot(haplo_path, output_path, chain)
 
-    if run_rscript(HETEROZYGOSITY_SCRIPT, cmd_line) and os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
+    if os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format)
     else:
         raise BadRequest('No output from report')
+
+

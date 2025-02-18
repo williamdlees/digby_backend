@@ -1,13 +1,6 @@
 # Download data for genomic samples
-import csv
-import zipfile
-import os
-import glob
-from werkzeug.exceptions import BadRequest
-
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
+from werkzeug.exceptions import BadRequest
 
 from api.genomic.genomic import find_genomic_samples, find_genomic_sequences
 from db.genomic_api_query_filters import genomic_sequence_filters, genomic_sample_filters
@@ -15,6 +8,12 @@ from api.reports.reports import send_report
 from api.reports.report_utils import make_output_file
 from app import app
 from db.genomic_airr_model import Sample
+import csv
+import zipfile
+import os
+
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 
 def zipdir(path, ziph, arc_root):
@@ -51,17 +50,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     elif 'Sample files' in params['type']:
         outfile = make_output_file('zip')
         with zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED) as fo:
-            # add reference sequence
-            for genomic_dataset in genomic_datasets:
-                for fn in [species + '*.gff3', species + '*.fasta']:
-                    files = glob.glob(os.path.join(app.config['STATIC_PATH'], 'study_data', 'Genomic', 'samples', species, genomic_dataset, fn))
-                    for file in files:
-                        fo.write(file, arcname=file.replace(app.config['STATIC_PATH'], ''))
-
-            # add samples
             added_dirs = []
             sample_paths = find_genomic_samples([Sample.annotation_path], species, genomic_datasets, params['filters'])
-            sample_paths = [s for s in sample_paths if '.csv' in s['annotation_path']] # remove any null paths
             sample_paths = ['/'.join(['study_data/Genomic', s['annotation_path'].split('Genomic')[1]]) for s in sample_paths]
             sample_paths = [os.path.join(app.config['STATIC_PATH'], s) for s in sample_paths]
             for sample_path in sample_paths:

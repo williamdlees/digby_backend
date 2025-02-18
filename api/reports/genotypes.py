@@ -33,9 +33,6 @@ def fake_gene(gene_details, gene_name, subject):
         'GENOTYPED_ALLELES': ','.join(gene_details['alleles']),
         'Freq_by_Clone': ';'.join(gene_details['fc']),
         'Freq_by_Seq': ';'.join(gene_details['fs']),
-        'genotyped_alleles': ','.join(gene_details['alleles']),
-        'freq_by_clone': ';'.join(gene_details['fc']),
-        'freq_by_seq': ';'.join(gene_details['fs']),
     }
     return rec
 
