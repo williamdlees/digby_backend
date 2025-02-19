@@ -177,12 +177,13 @@ class ReportsRunApi(Resource):
             # uncomment the following lines to debug reports. They will run in-process and you can step through them
             # but will always return an exception to the front end
             # IN THE IMPORT BELOW, CHOOSE THE REPORT YOU WISH TO DEBUG
-            from api.reports.allele_usage import run
+
+            runner = importlib.import_module('api.reports.' + report_name)
 
             # Set test_mode flag here for debugging
             test_mode = False  # Change to False for full run
 
-            run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
+            return runner.run(args.format, args.species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params)
             raise BadRequest("we're debugging!")
 
             # Pass to Celery
