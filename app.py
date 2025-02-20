@@ -3,14 +3,11 @@ import custom_logging
 import yaml
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, request, flash, Blueprint, redirect, url_for, send_from_directory
-from flask_migrate import Migrate
-from flask_security import Security, SQLAlchemyUserDatastore, login_required
+from flask import Flask, render_template, Blueprint, redirect, url_for, send_from_directory
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_admin import Admin
 from flask_cors import CORS
-from flask_security.utils import hash_password
 from flask_swagger_ui import get_swaggerui_blueprint
 from extensions import celery
 
@@ -68,12 +65,6 @@ madc_index = madc_init(app)
 
 admin_obj = Admin(app, template_mode='bootstrap3')
 
-from security.useradmin import *
-from security.security import *
-
-user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-security = Security(app, user_datastore, confirm_register_form=ExtendedRegisterForm)
-
 from api.restx import api
 from api.genomic.genomic import ns as genomic
 from api.vdjbase.vdjbase import ns as vdjbase
@@ -85,7 +76,6 @@ import db.vdjbase_maint
 import db.vdjbase_export
 from db.vdjbase_igsnper import do_igsnper
 
-migrate = Migrate(app, sql_db)
 
 blueprint = Blueprint('api', __name__, url_prefix='/api')
 api.init_app(blueprint)
@@ -134,10 +124,7 @@ jwt = JWTManager(app)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if user_datastore.find_role('Admin') is None:
-        return redirect(url_for('create_user'))
-
-    return render_template('index.html', current_user=current_user)
+    return render_template('index.html', current_user='')
 
 
 @app.route('/static/<path:path>', methods=['GET', 'POST'])
@@ -154,13 +141,13 @@ def send_from_gff(path):
 
 
 
-@app.route('/export_vdjbase_metadata', methods=['GET', 'POST'])
-@login_required
-def export_vdjbase_metadata():
-    return db.vdjbase_export.export_metadata()
+#@app.route('/export_vdjbase_metadata', methods=['GET', 'POST'])
+#@login_required
+#def export_vdjbase_metadata():
+#    return db.vdjbase_export.export_metadata()
 
 
-@app.route('/create_igsnp/<species>/<dataset>/', methods=['GET', 'POST'])
-@login_required
-def create_igsnp(species, dataset):
-    return do_igsnper(species, dataset)
+#@app.route('/create_igsnp/<species>/<dataset>/', methods=['GET', 'POST'])
+#@login_required
+#def create_igsnp(species, dataset):
+#    return do_igsnper(species, dataset)

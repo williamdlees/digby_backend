@@ -8,7 +8,7 @@ from flask_jwt_extended import create_access_token, set_access_cookies, jwt_requ
 from flask_restx import Resource, reqparse, fields, marshal, inputs
 from api.restx import api
 import json
-from app import vdjbase_dbs, app, db
+from app import app
 from datetime import datetime
 import time
 
