@@ -28,7 +28,26 @@ def madc_init(app):
     
         for repertoire in repertoires:
             repertoire_id = repertoire['repertoire_id']
-            species = repertoire['subject']['species']['id']
+
+            if 'subject' not in repertoire or not repertoire['subject']:
+                print(f'No subject defined for repertoire {repertoire_id}')
+                continue
+            elif 'subject_id' not in repertoire['subject'] or not repertoire['subject']['subject_id']:
+                print(f'No subject id defined for repertoire {repertoire_id}')
+                continue
+            elif 'study' not in repertoire or not repertoire['study']:
+                print(f'No study defined for repertoire {repertoire_id}')
+                continue
+            elif 'study_id' not in repertoire['study'] or not repertoire['study']['study_id']:
+                print(f'No study id defined for repertoire {repertoire_id}')
+                continue
+
+            if 'species' not in repertoire['subject'] or not repertoire['subject']['species'] or 'id' not in repertoire['subject']['species'] or not repertoire['subject']['species']['id']:
+                print(f'No species defined for repertoire {repertoire_id}: assuming human')
+                species = 'NCBITAXON:9606'
+            else:
+                species = repertoire['subject']['species']['id']
+                
             subject_id = repertoire['subject']['subject_id']
             study_id = repertoire['study']['study_id']
 
