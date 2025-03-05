@@ -218,6 +218,13 @@ class DataSetInfoAPI(Resource):
         ).all()
         stats['studies'] = []
 
+        madc_studies = []
+        species_id = vdjbase_dbs[species][dataset].taxid
+        if species_id in madc_index and dataset in madc_index[species_id]:
+            dataset_recs = list(madc_index[species_id][dataset].values())
+            madc_studies = [x['study_id'] for x in dataset_recs]
+            madc_studies = list(set(madc_studies))
+
         for row in studies:
             row = row._asdict()
             row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
@@ -225,14 +232,9 @@ class DataSetInfoAPI(Resource):
             study_id = row['study_id'] 
 
             row['repertoires'] = ''
-            if row['study_id']:
-                study_id = row['study_id']
-                if ': ' in study_id:
-                    study_id = study_id.split(': ')[1]
-
-                species_id = vdjbase_dbs[species][dataset].taxid
-                if species_id in madc_index and dataset in madc_index[species_id] and len([x for x in madc_index[species_id][dataset].values() if x['study_id'] == study_id]) > 0:
-                    row['repertoires'] = '/repseq/download_study_script/' + species + '/' + study_id + '/' + dataset
+            study_id = row['study_id']
+            if study_id and study_id in madc_studies:
+                row['repertoires'] = '/repseq/download_study_script/' + species + '/' + study_id + '/' + dataset
 
             row['study_id'] = link_convert(row['study_id'])
             row['pub_ids'] = link_convert(row['pub_ids'])

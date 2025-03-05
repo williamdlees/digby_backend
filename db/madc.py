@@ -25,7 +25,7 @@ def madc_init(app):
 
     try:
         repertoires = response.json()['Repertoire']
-    
+
         for repertoire in repertoires:
             repertoire_id = repertoire['repertoire_id']
 
@@ -47,9 +47,12 @@ def madc_init(app):
                 species = 'NCBITAXON:9606'
             else:
                 species = repertoire['subject']['species']['id']
-                
+
             subject_id = repertoire['subject']['subject_id']
             study_id = repertoire['study']['study_id']
+
+            if len(repertoire['sample']) == 0:
+                print(f'No samples defined for repertoire {repertoire_id}')
 
             for sample in repertoire['sample']:
                 if 'pcr_target' in sample:
@@ -63,7 +66,17 @@ def madc_init(app):
                             if locus not in ret[species]:
                                 ret[species][locus] = {}
 
+                            if repertoire_id in ret[species][locus]:
+                                x_rec = ret[species][locus][repertoire_id]
+                                if x_rec['subject_id'] != subject_id or x_rec['study_id'] != study_id or x_rec['species'] != species or x_rec['locus'] != locus:
+                                    # this avoids a warning if, say, the same pcr_target_locus is listed twice (PRJNA608742!)
+                                    print(f"Duplicate repertoire id {repertoire_id} for {species} {locus} {ret[species][locus][repertoire_id]['subject_id']} and {subject_id}")
+
                             ret[species][locus][repertoire_id] = {'repertoire_id': repertoire_id, 'species': species, 'subject_id': subject_id, 'locus': locus, 'study_id': study_id}
+                        else:
+                            print(f'No pcr_target_locus defined for sample {sample["sample_id"]}')
+                else:
+                    print(f'No pcr_target defined for sample {sample["sample_id"]}')
 
     except Exception as e:
         app.logger.error(f'Error processing MADC repertoires: {str(e)}')
