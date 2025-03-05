@@ -11,6 +11,17 @@ from db.genomic_db import Sequence, Gene
 import os
 
 
+def get_gene_type(label):
+    gene = label.split('*')[0]
+
+    if gene[3] == 'J' or gene[3] == 'V':
+        return gene[3]
+    elif gene[3] == 'D' and '-' in gene and '_' not in gene or ('C' not in gene and ('TRD' in gene or 'TRB' in gene)):
+        return 'D'
+    else:
+        return 'C'
+
+
 # Add reference sequences
 
 
@@ -44,8 +55,7 @@ def update_genomic_ref(session, ref_file):
             if '-' in gene_name[4:]:
                 family = gene_name[4:].split('-')[0]
 
-
-            gene_type = gene_name.replace('LJI.Rh_', '')[:4]
+            gene_type = gene_name[:3] + get_gene_type(gene_name)
 
             gene_obj = save_gene(session, gene_name, gene_type, family, 0, 0, False)
             gene_id = gene_obj.id

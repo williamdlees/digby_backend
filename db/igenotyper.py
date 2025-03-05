@@ -45,6 +45,18 @@ def to_float(row, field):
             return 0
     else:
         return 0
+
+
+def get_gene_type(label):
+    gene = label.split('*')[0]
+
+    if gene[3] == 'J' or gene[3] == 'V':
+        return gene[3]
+    elif gene[3] == 'D' and '-' in gene and '_' not in gene or ('C' not in gene and ('TRD' in gene or 'TRB' in gene)):
+        return 'D'
+    else:
+        return 'C'
+
     
 
 # TODO - Simplify the schema by merging Feature and Sequence. See ../../notes on genomic schema.txt
@@ -161,7 +173,7 @@ def process_row(row, session, sample):
     if 'gene' not in row:
         row['gene'] = row['genotyper_gene']
 
-    gene_type = row['gene'][3]
+    gene_type = get_gene_type(row['gene'])
 
     if gene_type in ['V', 'D', 'J', 'C']:
         seq = find_allele_by_name(session, row['vdjbase_allele'])
@@ -185,7 +197,7 @@ def create_features(row, session, sample, reference_features, seq):
     if 'sense' in row:
         sense = row['sense']
     
-    gene_type = row['gene'][3]
+    gene_type = get_gene_type(row['gene'])
 
     feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, sample.ref_seq)
 
@@ -264,16 +276,20 @@ def create_features(row, session, sample, reference_features, seq):
             feature_id = session.query(Feature).count()
             start = end = 0
             if reference_features:
-                start = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['start']
-                end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
+                # fudge for special ighc bed in human ref
+                ref_seq = sample.ref_seq.name
+                if ref_seq == 'igh' and 'ighc' in reference_features:
+                    ref_seq = 'ighc'
+                start = reference_features[ref_seq][seq.gene.name]['GENE']['start']
+                end = reference_features[ref_seq][seq.gene.name]['GENE']['end']
 
             feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
                                             f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
             link_sequence_to_feature(seq, feature)
 
-            for feature_name, rec in reference_features[sample.ref_seq.name][seq.gene.name].items():
+            for feature_name, rec in reference_features[ref_seq][seq.gene.name].items():
                 if feature_name != 'GENE':
-                    add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense)
+                    add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense, ref_seq_name=ref_seq)
 
     if 'Total_Positions' in row:
         sf = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id, SampleSequence.sample_id == sample.id).first()
@@ -288,7 +304,11 @@ def create_features(row, session, sample, reference_features, seq):
         sf.fully_spanning_reads = to_int(row, 'Fully_Spanning_Reads')
         sf.fully_spanning_matches = to_int(row, 'Fully_Spanning_Reads_100%_Match')
 
-    add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense)
+    # fudge for special ighc bed in human ref
+    ref_seq = sample.ref_seq.name
+    if gene_type == 'C' and ref_seq == 'igh' and 'ighc' in reference_features:
+        ref_seq = 'ighc'
+    add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense, ref_seq_name=ref_seq)
 
 
 conv_features = {
@@ -304,7 +324,7 @@ def convert_digger_row(row):
     row['genotyper_gene'] = row['asc_gene']
 
     if row['genotyper_gene']:
-        gene_type = row['genotyper_gene'][3]
+        gene_type = get_gene_type(row['genotyper_gene'])
 
         row['haplotype'] = '0'
 
@@ -319,9 +339,12 @@ def convert_digger_row(row):
     return row
 
 # Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
-def add_feature(feature, bed_name, reference_features, row, seq, session, sample, strand='+'):
+def add_feature(feature, bed_name, reference_features, row, seq, session, sample, strand='+', ref_seq_name=None):
     if feature not in row or not row[feature]:
         return
+    
+    if not ref_seq_name:            # fudge for human ighc
+        ref_seq_name = sample.ref_seq.name
 
     feature_seq = find_sequence_by_sequence(session, feature, seq.gene.name, row[feature])
 
@@ -342,8 +365,8 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, sample
         start = end = 0
 
         if reference_features:
-            start = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['start']
-            end = reference_features[sample.ref_seq.name][seq.gene.name][bed_name]['end']
+            start = reference_features[ref_seq_name][seq.gene.name][bed_name]['start']
+            end = reference_features[ref_seq_name][seq.gene.name][bed_name]['end']
 
         feature_rec = add_feature_to_ref(feature_seq.name, 'allele', feature, feature_seq.sequence,  row[feature + '_CIGAR'], 'UTR', start, end, strand,
                                      f"Name={feature_seq.name};ID={feature_id}", feature_id, sample.ref_seq)

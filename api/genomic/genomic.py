@@ -958,6 +958,16 @@ class AllSubjectsGenotypeApi(Resource):
 
         return genotype_sets, 200
 
+def get_gene_type(label):
+    gene = label.split('*')[0]
+
+    if gene[3] == 'J' or gene[3] == 'V':
+        return gene[3]
+    elif gene[3] == 'D' and '-' in gene and '_' not in gene or ('C' not in gene and ('TRD' in gene or 'TRB' in gene)):
+        return 'D'
+    else:
+        return 'C'
+
 
 def single_genotype(species, dataset, patient_name):
     session = genomic_dbs[species][dataset].session
@@ -979,7 +989,7 @@ def single_genotype(species, dataset, patient_name):
     undocumented = []
     deleted = []
     for row in genotype.itertuples():
-        gene_type = row.gene[3]
+        gene_type = get_gene_type(row.gene)
 
         if gene_type not in germline_set.keys():
             continue

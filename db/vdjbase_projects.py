@@ -128,7 +128,7 @@ def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, 
         for table in meta_records.keys():
             if table in miairr_metadata[sample_name]:
                 setattrs(meta_records[table], **miairr_metadata[sample_name][table])
-
+        
         commit_database(meta_records, sample_name, session)
 
 # apply some controls to fields that often seem to go awry
@@ -339,7 +339,7 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
     project_meta_records = {}
 
     for rec in airr_corresp:
-        if project_name + '_' in rec['vdjbase_name'] and rec['airr_repertoire_id']:
+         if project_name + '_' in rec['vdjbase_name'] and rec['airr_repertoire_id']:
             meta_records = {
                 'Study': {},
                 'Patient': {},
@@ -499,6 +499,8 @@ def commit_database(meta_records, vdjbase_name, session):
     fixup_fields(meta_records)
     check_enums(meta_records)
 
+    print(f'Committing metadata for sample {vdjbase_name}')
+
     row_ids = {}
     (p_n, i_n, s_n) = vdjbase_name.split('_')
     meta_records['Study']['study_name'] = p_n
@@ -533,8 +535,8 @@ def commit_database(meta_records, vdjbase_name, session):
                     meta_records[table_name][k] = v
 
             db_row = session.query(table).filter_by(**meta_records[table_name]).all()
-            if db_row and len(db_row) > 1:
-                breakpoint()
+            #if db_row and len(db_row) > 1:
+            #    breakpoint()
 
             # something of a corner case, but we have two projects that are missing some samples in the iReceptor+ metadata.
             # Make sure we only create one project record per study, regardless of metadata differences
@@ -566,7 +568,9 @@ def commit_database(meta_records, vdjbase_name, session):
     meta_records['Sample']['geno_detection_id'] = row_ids['GenoDetection']
     sample = Sample(**meta_records['Sample'])
     session.add(sample)
+
     session.commit()
+
 
 
 # enumerate dirs and paths under the specified directory

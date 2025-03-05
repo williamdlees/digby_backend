@@ -92,7 +92,7 @@ def create_single_database(job, species, dataset, upload_path, in_situ=False):
         result.extend(check_novel_confidence(ds_dir, session))
     except Exception as e:
         result.append(e.args[0])
-        traceback.print_exc(limit=2, file=sys.stdout)
+        traceback.print_exc(limit=200, file=sys.stdout)
         success = False
     finally:
         db_connection.close()
