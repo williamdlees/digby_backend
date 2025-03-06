@@ -64,7 +64,7 @@ class LoginApi(Resource):
                 "refresh_token": refresh_token,
                 "refresh_token_lifetime": refresh_token_details['exp'] - int(time.time()),
             })
-            # set_access_cookies(response, access_token)
+            set_access_cookies(response, access_token)
             return response
 
         return "Unrecognised user name or password", 401
@@ -85,7 +85,7 @@ class RefreshApi(Resource):
             "access_token_lifetime": access_token_details['exp'] - int(time.time()),
         })
 
-        # set_access_cookies(response, access_token)
+        set_access_cookies(response, access_token)
         return response
 
 

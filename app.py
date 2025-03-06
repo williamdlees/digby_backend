@@ -128,7 +128,7 @@ load_report_defs()
 
 from flask_jwt_extended import JWTManager
 
-app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
 jwt = JWTManager(app)
 
 
