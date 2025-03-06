@@ -487,6 +487,9 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
         if gene_type in processed_gene_types:
             continue
 
+        if row["GENOTYPED_ALLELES"] == "NA" or row["GENOTYPED_ALLELES"] == '':
+            continue
+
         allele_scores = {}
         if 'k_diff' in row:
             for index, allele in enumerate(str(row["GENOTYPED_ALLELES"]).split(",")):
