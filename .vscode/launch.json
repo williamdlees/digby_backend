@@ -52,12 +52,12 @@
             "justMyCode": false
         },
         {
-            "name": "make_genomic_db - digby_private_data/rhesus_IGL",
+            "name": "make_genomic_db - digby_private_data/rhesus_IGH",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
-            "args": ["Rhesus_Macaque", "IGL"],
-            "cwd": "D:/Research/digby_private_data/Genomic/Rhesus_Macaque/IGL",
+            "args": ["Rhesus_Macaque", "IGH"],
+            "cwd": "D:/Research/digby_private_data/Genomic/Rhesus_Macaque/IGH",
             "console": "integratedTerminal",
             "justMyCode": false
         },
@@ -118,6 +118,16 @@
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGK"],
             "cwd": "D:/Research/digby_dev_data/AIRR-seq/Human/IGK",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "make_airr_seq_db - digby_private_data/rh IGH",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Human", "IGH"],
+            "cwd": "D:/Research/digby_private_data/AIRR-seq/Rhesus_macaque/IGH",
             "console": "integratedTerminal",
             "justMyCode": false
         },

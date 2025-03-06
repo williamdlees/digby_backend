@@ -10,6 +10,7 @@ import pandas as pd
 from sqlalchemy import func
 import glob
 from collections import namedtuple
+from receptor_utils import simple_bio_seq as simple
 
 from db.vdjbase_airr_model import Sample
 from db.vdjbase_exceptions import DbCreationError
@@ -479,8 +480,8 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
     :type session: obj
     """
     print(sample.genotype)
-    genotype = pd.read_csv(sample.genotype, sep='\t')
-    for index, row in genotype.iterrows():
+    genotype = simple.read_csv(sample.genotype, delimiter='\t')
+    for row in genotype:
         gene = row["gene"]
         gene_type = gene[3]
 
@@ -492,11 +493,11 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
 
         allele_scores = {}
         if 'k_diff' in row:
-            for index, allele in enumerate(str(row["GENOTYPED_ALLELES"]).split(",")):
+            for allele in row["GENOTYPED_ALLELES"].split(","):
                 allele_scores[allele] = row["k_diff"]
         elif 'z_score' in row:
             scores = str(row["z_score"]).split(',')
-            for index, allele in enumerate(str(row["GENOTYPED_ALLELES"]).split(",")):
+            for index, allele in enumerate(row["GENOTYPED_ALLELES"].split(",")):
                 if index < len(scores):
                     allele_scores[allele] = scores[index]
                 else:
@@ -506,7 +507,7 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
 
         # allele counts come from un-genotyped column
         allele_counts = {}
-        ac = str(row["counts"]).split(',')
+        ac = row["counts"].split(',')
         total_count = sum([int(x) if x.isnumeric() else 0 for x in ac])
         for index, allele in enumerate(str(row["alleles"]).split(",")):
             if not ((allele == "Unk") or ("NR" in allele) or ("del" in allele.lower())) and index < len(ac):
