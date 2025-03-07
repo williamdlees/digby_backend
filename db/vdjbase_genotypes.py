@@ -503,7 +503,7 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
                 else:
                     allele_scores[allele] = '0'
                     print(f"Error: z_score for gene {gene} does not have enough values")
-            print(f"{','.join(allele_scores.keys())} {','.join(allele_scores.values())} ")
+            # print(f"{','.join(allele_scores.keys())} {','.join(allele_scores.values())} ")
 
         # allele counts come from un-genotyped column
         allele_counts = {}

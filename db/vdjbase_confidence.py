@@ -533,5 +533,5 @@ def check_novels_in_ogrdbstats(filename, expected):
     # the inconsistency for the time being: hopefully will be cleared up by the ref book
 
     if len(missing_novels) or len(novels_as_non):
-        print('Error in ogrdbstats %s:\nmissing novels %s, novels listed as non-novel: %s' % (filename, ','.join(missing_novels), ','.join(novels_as_non)))
+        print('Issues in ogrdbstats %s:\n Novels listed in the INF_FILE but having no unambiguous calls in the repertoire: %s\n Novels not listed in the INF_FILE: %s' % (filename, ','.join(missing_novels), ','.join(novels_as_non)))
 
