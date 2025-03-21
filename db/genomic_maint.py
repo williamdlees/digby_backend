@@ -189,6 +189,7 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
 
         if 'vdjbase_name' in row:
             sample_name = row['vdjbase_name']
+            print(f'using vdjbase_name from metadata: {sample_name}')
         else:
             sample_name = f'{subject_object.patient_name}_S{subject_samples[row["subject_id"]]}'
 
@@ -374,9 +375,11 @@ def find_or_create_tissuepro(session, tissuepros, row):
     tissuepro_dict = {k: v for k, v in row.items() if k in required_fields['tissuepro']}
 
     try:
-        type_rec = json.loads(row['tissue'])
-        tissuepro_dict['tissue_id'] = type_rec['id']
-        tissuepro_dict['tissue_label'] = type_rec['label']
+        tissuepro_dict['tissue_id'] = tissuepro_dict['tissue_label'] = None
+        if row['tissue']:
+            type_rec = json.loads(row['tissue'])
+            tissuepro_dict['tissue_id'] = type_rec['id']
+            tissuepro_dict['tissue_label'] = type_rec['label']
         del tissuepro_dict['tissue']
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - tissue is not a valid ontology object: {e}')

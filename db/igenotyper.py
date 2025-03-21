@@ -26,7 +26,7 @@ def read_csv(filename):
 
 
 def to_int(row, field):
-    if row[field]:
+    if field in row and row[field]:
         try:
             return int(row[field])
         except ValueError:
@@ -37,7 +37,7 @@ def to_int(row, field):
 
 
 def to_float(row, field):
-    if row[field]:
+    if field in row and row[field]:
         try:
             return float(row[field])
         except ValueError:
@@ -84,10 +84,14 @@ def process_genomic_record(session, dataset_dir, sample, annotation_file, refere
             fi.write('<html><body><h2>Missing File</h2><p>The file you requested cannot be found. This is likely to be because the annotation pipeline produced no results for this sample.</p></body></html>')
 
     if not rows:
-        print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
-        sample.annotation_path = '/'.join((study_name, 'missing.html'))
-        sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
-        return
+        # quick fix - try subject as sample name
+        rows = [x for x in annotation_records[annotation_file] if str(x['sample_name']) == str(sample.patient.subject_id) and str(x['subject']) == str(sample.patient.subject_id) and x['project'] == sample.patient.study.study_id]
+
+        if not rows:
+            print(f'ERROR: {annotation_file} contains no data for sample {sample.sample_id} subject {sample.patient.subject_id} project {sample.patient.study.study_id}')
+            sample.annotation_path = '/'.join((study_name, 'missing.html'))
+            sample.contig_bam_path = '/'.join((study_name, 'missing.html'))
+            return
 
     # Make the samples directory and project subdirectory if they don't exist
 
@@ -297,18 +301,19 @@ def create_features(row, session, sample, reference_features, seq):
         sf.av_coverage = to_float(row, 'Average_Coverage')
         sf.mismatched_positions = to_int(row, 'Mismatched_Positions')
         sf.matched_positions = to_int(row, 'Matched_Positions')
-        sf.position_mismatches = row['Position_Mismatches']
-        sf.position_matches = row['Position_Matches']
+        sf.position_mismatches = row['Position_Mismatches'] if 'Position_Mismatches' in row else 0
+        sf.position_matches = row['Position_Matches'] if 'Position_Matches' in row else 0
         sf.percent_accuracy = to_float(row, 'Percent_Accuracy')
         sf.positions_10x = to_int(row, 'Positions_With_At_Least_10x_Coverage')
         sf.fully_spanning_reads = to_int(row, 'Fully_Spanning_Reads')
         sf.fully_spanning_matches = to_int(row, 'Fully_Spanning_Reads_100%_Match')
 
     # fudge for special ighc bed in human ref
-    ref_seq = sample.ref_seq.name
-    if gene_type == 'C' and ref_seq == 'igh' and 'ighc' in reference_features:
-        ref_seq = 'ighc'
-    add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense, ref_seq_name=ref_seq)
+    if sample.ref_seq:
+        ref_seq = sample.ref_seq.name
+        if gene_type == 'C' and ref_seq == 'igh' and 'ighc' in reference_features:
+            ref_seq = 'ighc'
+        add_feature('gene_sequence', 'GENE', reference_features, row, seq, session, sample, sense, ref_seq_name=ref_seq)
 
 
 conv_features = {
@@ -343,7 +348,7 @@ def add_feature(feature, bed_name, reference_features, row, seq, session, sample
     if feature not in row or not row[feature]:
         return
     
-    if not ref_seq_name:            # fudge for human ighc
+    if sample.ref_seq and not ref_seq_name:            # fudge for human ighc
         ref_seq_name = sample.ref_seq.name
 
     feature_seq = find_sequence_by_sequence(session, feature, seq.gene.name, row[feature])

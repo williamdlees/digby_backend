@@ -42,6 +42,16 @@
             "justMyCode": false
         },
         {
+            "name": "make_genomic_db - digby_private_data/IGHC",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_genomic_db.py",
+            "args": ["Human", "IGHC"],
+            "cwd": "D:/Research/digby_private_data/Genomic/Human/IGHC",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "make_genomic_db - digby_private_data/IGL",
             "type": "python",
             "request": "launch",
@@ -57,7 +67,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
             "args": ["Rhesus_Macaque", "IGH"],
-            "cwd": "D:/Research/digby_private_data/Genomic/Rhesus_Macaque/IGH",
+            "cwd": "D:/Research/digby_private_data/Genomic/Rhesus Macaque/IGH",
             "console": "integratedTerminal",
             "justMyCode": false
         },

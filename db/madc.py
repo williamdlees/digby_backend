@@ -30,20 +30,20 @@ def madc_init(app):
             repertoire_id = repertoire['repertoire_id']
 
             if 'subject' not in repertoire or not repertoire['subject']:
-                print(f'No subject defined for repertoire {repertoire_id}')
+                print(f'No subject defined for MADC repertoire {repertoire_id}')
                 continue
             elif 'subject_id' not in repertoire['subject'] or not repertoire['subject']['subject_id']:
-                print(f'No subject id defined for repertoire {repertoire_id}')
+                print(f'No subject id defined for MADC repertoire {repertoire_id}')
                 continue
             elif 'study' not in repertoire or not repertoire['study']:
-                print(f'No study defined for repertoire {repertoire_id}')
+                print(f'No study defined for MADC repertoire {repertoire_id}')
                 continue
             elif 'study_id' not in repertoire['study'] or not repertoire['study']['study_id']:
-                print(f'No study id defined for repertoire {repertoire_id}')
+                print(f'No study id defined for MADC repertoire {repertoire_id}')
                 continue
 
             if 'species' not in repertoire['subject'] or not repertoire['subject']['species'] or 'id' not in repertoire['subject']['species'] or not repertoire['subject']['species']['id']:
-                print(f'No species defined for repertoire {repertoire_id}: assuming human')
+                print(f'No species defined in MADC repertoire {repertoire_id}: assuming human')
                 species = 'NCBITAXON:9606'
             else:
                 species = repertoire['subject']['species']['id']
@@ -52,7 +52,7 @@ def madc_init(app):
             study_id = repertoire['study']['study_id']
 
             if len(repertoire['sample']) == 0:
-                print(f'No samples defined for repertoire {repertoire_id}')
+                print(f'No samples defined for MADC repertoire {repertoire_id}')
 
             for sample in repertoire['sample']:
                 if 'pcr_target' in sample:
@@ -70,13 +70,13 @@ def madc_init(app):
                                 x_rec = ret[species][locus][repertoire_id]
                                 if x_rec['subject_id'] != subject_id or x_rec['study_id'] != study_id or x_rec['species'] != species or x_rec['locus'] != locus:
                                     # this avoids a warning if, say, the same pcr_target_locus is listed twice (PRJNA608742!)
-                                    print(f"Duplicate repertoire id {repertoire_id} for {species} {locus} {ret[species][locus][repertoire_id]['subject_id']} and {subject_id}")
+                                    print(f"Duplicate MADC repertoire id {repertoire_id} for {species} {locus} {ret[species][locus][repertoire_id]['subject_id']} and {subject_id}")
 
                             ret[species][locus][repertoire_id] = {'repertoire_id': repertoire_id, 'species': species, 'subject_id': subject_id, 'locus': locus, 'study_id': study_id}
                         else:
-                            print(f'No pcr_target_locus defined for sample {sample["sample_id"]}')
+                            print(f'No pcr_target_locus defined for MADC sample {sample["sample_id"]}')
                 else:
-                    print(f'No pcr_target defined for sample {sample["sample_id"]}')
+                    print(f'No pcr_target defined for MADC sample {sample["sample_id"]}')
 
     except Exception as e:
         app.logger.error(f'Error processing MADC repertoires: {str(e)}')
