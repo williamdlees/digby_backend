@@ -172,7 +172,7 @@ def link_sequence_to_feature(sequence, feature):
     sequence.features.append(feature)
     
 
-def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence):
+def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence, seq_type=None):
     if not notes:
         functionality = 'Functional'
     elif 'Stop' in notes:
@@ -192,7 +192,7 @@ def save_novel_allele(session, gene_name, name, notes, sequence, gapped_sequence
         name=name,
         gene_id=gene_id,
         imgt_name='',
-        type=find_type(name),
+        type=find_type(name) if not seq_type else seq_type + '-REGION',
         sequence=sequence,
         novel=True,
         appearances=0,

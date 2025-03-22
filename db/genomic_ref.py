@@ -25,7 +25,7 @@ def get_gene_type(label):
 # Add reference sequences
 
 
-def update_genomic_ref(session, ref_file):
+def update_genomic_ref(session, ref_file, dataset):
     if not os.path.isfile(ref_file):
         return f'No reference file {ref_file}'
 
@@ -80,7 +80,7 @@ def update_genomic_ref(session, ref_file):
         s = Sequence(
             name=name,
             imgt_name='',
-            type=find_type(name),
+            type=find_type(name) if dataset != 'IGHC' else 'C-REGION',
             sequence=seq.replace('.', ''),
             novel=False,
             appearances=0,

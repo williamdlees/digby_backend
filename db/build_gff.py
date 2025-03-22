@@ -105,6 +105,8 @@ def unphased_feature_alignment(dataset_dir, name_prefix, ref_seq, session):
         for feature in features:
             if feature.feature_level == 'allele' and feature.feature_type != 'gene_sequence':
                 for sequence in feature.sequences:
+                    if sequence.type == 'C-REGION':
+                        continue
                     feature_name = ('*' + sequence.name.split('*')[1].replace('_phased', '') if '*' in sequence.name else sequence.name)
                     rec = feature_gff_rec(feature, feature_name, ref_seq, sequence, session)
                     if rec:

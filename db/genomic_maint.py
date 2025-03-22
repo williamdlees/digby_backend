@@ -14,7 +14,7 @@ from db.genomic_ref import update_genomic_ref, read_gene_order
 from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro
 from db.genomic_db import Base, RefSeq
 from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances, calculate_max_cov_sample
-from db.igenotyper import process_genomic_record, add_gene_level_features
+from db.igenotyper import process_genomic_record, add_gene_level_features, add_ighc_gene_level_features
 from db.bed_file import read_bed_files
 from db.source_details import db_source_details
 
@@ -48,7 +48,7 @@ def create_dataset(species, dataset):
             
         read_gene_order(session, dataset_dir)
         for file in study_data['Reference_sets']:
-            update_genomic_ref(session, os.path.join(dataset_dir, file))
+            update_genomic_ref(session, os.path.join(dataset_dir, file), dataset)
             print(f'Processed reference set {file} for species {species} dataset {dataset}')
 
         reference_set_version = study_data['Reference_set_version']
@@ -64,7 +64,10 @@ def create_dataset(species, dataset):
 
             for ref in study_data['Reference_assemblies'].values():
                 ref = session.query(RefSeq).filter(RefSeq.name == ref['name']).one_or_none()
-                add_gene_level_features(session, ref, reference_features)
+                if ref.name == 'ighc':
+                    add_ighc_gene_level_features(session, ref, reference_features)
+                else:
+                    add_gene_level_features(session, ref, reference_features)
         else:
             # create a dummy reference with no coordinates or features
             save_genomic_ref_seq(session, 'dummy', 'dummy', '', 'dummy', 0, 0, '+')

@@ -177,7 +177,12 @@ def process_row(row, session, sample):
     if 'gene' not in row:
         row['gene'] = row['genotyper_gene']
 
-    gene_type = get_gene_type(row['gene'])
+    ref_seq = sample.ref_seq.name
+
+    if ref_seq == 'ighc':
+        gene_type = 'C'
+    else:
+        gene_type = get_gene_type(row['gene'])
 
     if gene_type in ['V', 'D', 'J', 'C']:
         seq = find_allele_by_name(session, row['vdjbase_allele'])
@@ -188,7 +193,7 @@ def process_row(row, session, sample):
             else:
                 gapped_seq = ''
 
-            seq = save_novel_allele(session, row['gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row[f'{gene_type}-REGION'], gapped_seq)
+            seq = save_novel_allele(session, row['gene'], row['vdjbase_allele'], row['notes'].replace('\\n', '\r\n'), row[f'{gene_type}-REGION'], gapped_seq, gene_type)
 
         update_sample_sequence_link(session, int(row['haplotype'].replace('h=', '')), sample, seq)
         return seq
@@ -201,7 +206,12 @@ def create_features(row, session, sample, reference_features, seq):
     if 'sense' in row:
         sense = row['sense']
     
-    gene_type = get_gene_type(row['gene'])
+    ref_seq = sample.ref_seq.name
+
+    if ref_seq == 'ighc':
+        gene_type = 'C'
+    else:
+        gene_type = get_gene_type(row['gene'])
 
     feature = find_feature_by_name(session, f'{gene_type}-REGION', seq.name, sample.ref_seq)
 
@@ -280,10 +290,6 @@ def create_features(row, session, sample, reference_features, seq):
             feature_id = session.query(Feature).count()
             start = end = 0
             if reference_features:
-                # fudge for special ighc bed in human ref
-                ref_seq = sample.ref_seq.name
-                if ref_seq == 'igh' and 'ighc' in reference_features:
-                    ref_seq = 'ighc'
                 start = reference_features[ref_seq][seq.gene.name]['GENE']['start']
                 end = reference_features[ref_seq][seq.gene.name]['GENE']['end']
 
@@ -452,6 +458,23 @@ def add_gene_level_features(session, ref, reference_features):
                 else:
                     add_gene_level_subfeature(locus, feature, feature_type, f'{locus}CRegion', feature_id, parent_id, ref)
             feature_id += 1
+
+
+# Add features for igh constant genes. Separate function mainly because of gene naming issues
+def add_ighc_gene_level_features(session, ref, reference_features):
+    feature_id = 1
+    locus = 'IGH'
+    for gene, features in reference_features[ref.name].items():
+        parent_id = feature_id
+        for feature_type, feature in features.items():
+            if feature_type == 'GENE':
+                add_feature_to_ref(feature['gene'], 'gene', 'C-GENE', feature['ref_seq'], '', 'gene', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", feature_id, ref)
+                feature_id += 1
+                add_feature_to_ref(feature['gene'], 'gene', 'C-GENE', feature['ref_seq'], '', 'mRNA', feature['start'], feature['end'], '+', f"Name={feature['gene']};ID={feature_id}", parent_id, ref)
+            else:
+                add_gene_level_subfeature(locus, feature, feature_type, f'{locus}CRegion', feature_id, parent_id, ref)
+
+        feature_id += 1
 
 
 # Helper function for add_gene_level_features
