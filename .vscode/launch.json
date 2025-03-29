@@ -137,7 +137,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGH"],
-            "cwd": "D:/Research/digby_private_data/AIRR-seq/Rhesus_macaque/IGH",
+            "cwd": "D:/Research/digby_private_data/AIRR-seq/Rhesus Macaque/IGH",
             "console": "integratedTerminal",
             "justMyCode": false
         },
@@ -172,7 +172,7 @@
             "name": "vdjbase_create_digby_panel_cols.py",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/vdjbase_create_digby_panel_cols.py",
+            "program": "${workspaceFolder}/db/vdjbase_create_digby_panel_cols.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "justMyCode": false

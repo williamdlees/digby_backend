@@ -549,7 +549,7 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
 
             try:
                 add2sample(this_allele_name, base_allele_name, sample.id, sample.patient.id, score, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count,
-                       total_count, session)
+                           total_count, session)
             except DbCreationError as e:
                 print(e)
             
@@ -579,8 +579,7 @@ def find_allele_or_similar(allele_name, session):
     return allele
 
 
-
-def add2sample (allele_name, base_allele_name, sample_id, pid, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count, total_count, session):
+def add2sample(allele_name, base_allele_name, sample_id, pid, kdiff, pipeline_name, allele_snps, freq_by_clone, freq_by_seq, count, total_count, session):
     """
     Add a row to AllelesSample reflecting the presence of this allele in the sample.
     If the allele is not present in Allele already, add it there

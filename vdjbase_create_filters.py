@@ -47,7 +47,13 @@ excludes = {
 
 renames = {
     'sample_info_filters': [
-        {'name': 'name', 'class': 'Sample', 'rename': 'sample_name'}
+        {'name': 'name', 'class': 'Sample', 'rename': 'sample_name'},
+        {'name': 'aligner_ver', 'class': 'GenoDetection', 'rename': 'aligner_version'},
+        {'name': 'geno_tool', 'class': 'GenoDetection', 'rename': 'Genotyper_Tool'},
+        {'name': 'geno_ver', 'class': 'GenoDetection', 'rename': 'Genotyper_Version'},
+        {'name': 'haplotype_tool', 'class': 'GenoDetection', 'rename': 'Haplotyper_Tool'},
+        {'name': 'haplotype_ver', 'class': 'GenoDetection', 'rename': 'Haplotyper_Version'},
+        {'name': 'single_assignment', 'class': 'GenoDetection', 'rename': 'Single Assignment'},
     ],
     'sequence_filters': [
         {'name': 'name', 'class': 'Gene', 'rename': 'gene_name'}
@@ -66,6 +72,9 @@ def process_classes(fo, class_defs):
                 if column.name in excludes[filter]:
                     continue
 
+                # if column.name == 'aligner_ver':
+                #     breakpoint()
+
                 renamed = False
                 help_text = ''
                 example_text = ''
@@ -73,14 +82,15 @@ def process_classes(fo, class_defs):
                 if len(column.foreign_keys) > 0:
                     continue
 
-                if required_class.__name__ in class_defs and column.name in class_defs[required_class.__name__]:
-                    help_text = class_defs[required_class.__name__][column.name]['description'].replace("'", '"').replace('\n', '')
-                    example_text = class_defs[required_class.__name__][column.name]['example'].replace("'", '"').replace('\n', '')
-
                 for rename in renames[filter]:
                     if column.name == rename['name'] and required_class.__name__ == rename['class']:
                         try:
                             renamed = True
+
+                            if required_class.__name__ in class_defs and rename['rename'] in class_defs[required_class.__name__]:
+                                help_text = class_defs[required_class.__name__][rename['rename']]['description'].replace("'", '"').replace('\n', '')
+                                example_text = class_defs[required_class.__name__][rename['rename']]['example'].replace("'", '"').replace('\n', '')
+
                             if column.type.python_type is int:
                                 fo.write(f"    '{rename['rename']}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}.label('{rename['rename']}'), 'fieldname': '{column.name}', 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                             else:
@@ -90,6 +100,10 @@ def process_classes(fo, class_defs):
 
                 if not renamed:
                     try:
+                        if required_class.__name__ in class_defs and column.name in class_defs[required_class.__name__]:
+                            help_text = class_defs[required_class.__name__][column.name]['description'].replace("'", '"').replace('\n', '')
+                            example_text = class_defs[required_class.__name__][column.name]['example'].replace("'", '"').replace('\n', '')
+                            
                         if column.type.python_type is int:
                             fo.write(f"    '{column.name}': {{'model': '{required_class.__name__}', 'field': {required_class.__name__}.{column.name}, 'sort': 'numeric', 'help': '{help_text}', 'example': '{example_text}'}},\n")
                         else:

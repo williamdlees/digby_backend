@@ -1,6 +1,6 @@
 # Create sample panel column information for use in the front end
 
-from db.vdjbase_airr_common import read_definition_data
+from vdjbase_airr_common import read_definition_data
 from operator import attrgetter
 
 cols_file = '../digby/src/app/rep-sample/rep-sample-panel/rep-sample-panel-cols.ts'

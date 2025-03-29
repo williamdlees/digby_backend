@@ -1,5 +1,4 @@
 # Create database and associated files for a single genomic dataset
-from datetime import date
 import json
 
 from receptor_utils import simple_bio_seq as simple
@@ -45,7 +44,7 @@ def create_dataset(species, dataset):
         for val in ('Reference_set_version', 'Reference_sets'):
             if val not in study_data:
                 raise ImportException(f'Error - {val} is missing from the study metadata.')
-            
+
         read_gene_order(session, dataset_dir)
         for file in study_data['Reference_sets']:
             update_genomic_ref(session, os.path.join(dataset_dir, file), dataset)
@@ -202,7 +201,7 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
         sample_obj = create_sample(session, study_obj, subject_object, sample_name, tissuepro_object, seqprotocol_object, datapro_object, row, annotation_method, annotation_reference)
 
         process_genomic_record(session, dataset_dir, sample_obj, study['annotation_file'], reference_features, study['bam_dir'])
-        
+
     session.commit()
     calculate_appearances(session)
     calculate_max_cov_sample(session)
@@ -233,7 +232,7 @@ def create_subject(session, study_obj, subject_name, row):
         row['sex'] = 'not collected'
     else:
         raise ImportException(f"study {study_obj.study_name} sample {row['subject_id']}: invalid sex: {row['sex']}")
-        
+
     try:
         age_min = age_max = None
         if row['age_min']:
@@ -242,7 +241,7 @@ def create_subject(session, study_obj, subject_name, row):
             age_max = float(row['age_max'])
     except ValueError:
         raise ImportException('Error - age_min and age_max must be numeric.')
-        
+
     try:
         age_unit_id = age_unit_label = None
         if row['age_unit']:
@@ -263,7 +262,7 @@ def create_subject(session, study_obj, subject_name, row):
 
         if len(linked_subjects) != len(link_type):
             raise ImportException('Error - linked_subjects and link_type must have the same number of entries.')
-            
+
         linked_subjects = [x.strip() for x in linked_subjects]
         link_type = [x.strip() for x in link_type]
 
@@ -416,11 +415,10 @@ def find_or_create_tissuepro(session, tissuepros, row):
     if tissuepro_dict['cell_subset_label'] and (not tissuepro_dict['cell_subset_id'] or ':' not in tissuepro_dict['cell_subset_id']):
         print(f"Error - invalid cell_subset ID. for {tissuepro_dict['cell_subset_label']} id {tissuepro_dict['cell_subset_id']}")
 
-
     for obj, td in tissuepros:
         if td == tissuepro_dict:
             return obj
-        
+
     tp_label = f"TP{len(tissuepros) + 1}"
 
     tissuepro_obj = TissuePro(
@@ -466,8 +464,6 @@ def find_or_create_seqprotocol(session, seqprotocols, row):
     for obj, sd in seqprotocols:
         if sd == seqprotocol_dict:
             return obj
-
-    sp_label = f"SP{len(seqprotocols) + 1}"
 
     seqprotocol_obj = SeqProtocol(
         template_class=seqprotocol_dict['template_class'],

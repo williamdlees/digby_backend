@@ -95,7 +95,6 @@ def update_genomic_ref(session, ref_file, dataset):
     session.commit()
 
 
-
 def find_type(name):
     return name[3] + '-REGION'
 

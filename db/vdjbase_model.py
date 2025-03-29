@@ -62,6 +62,15 @@ class Allele(Base):
     novel = Column(Boolean, nullable=False)
     max_kdiff = Column(DECIMAL, nullable=False)
     closest_ref_id = Column(ForeignKey('allele.id'), index=True)
+    alias_1 = Column(String(50))      # alias columns used for names in other reference sets
+    alias_2 = Column(String(50))
+    alias_3 = Column(String(50))
+    alias_4 = Column(String(50))
+    alias_5 = Column(String(50))
+    alias_6 = Column(String(50))
+    alias_7 = Column(String(50))
+    alias_8 = Column(String(50))
+    alias_9 = Column(String(50))
 
     closest_ref = relationship('Allele', remote_side=[id])
     gene = relationship('Gene', back_populates="alleles")
@@ -163,3 +172,10 @@ class SamplesHaplotype(Base):
     haplotypes_file = relationship('HaplotypesFile')
     samples = relationship('Sample')
 
+
+class AlleleAliasSets(Base):
+    __tablename__ = 'allele_aliases'
+
+    id = Column(Integer, primary_key=True)
+    set_name = Column(String(50), nullable=False)
+    alias_number = Column(Integer, nullable=False)

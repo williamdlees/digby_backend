@@ -4,18 +4,13 @@ import os
 import os.path
 from glob import glob
 import yaml
-import traceback
 import json
-import sys
 import receptor_utils.simple_bio_seq as simple
 from sqlalchemy import inspect
 
 from db.vdjbase_exceptions import DbCreationError
 from db.vdjbase_airr_model import SeqProtocol, Study, TissuePro, Patient, Sample, DataPro, GenoDetection
 from db.vdjbase_airr_common import read_definition_data
-
-
-
 
 # a table of compound genes used in the pipeline, eg TRBV3-12, and their equiv in VDJbase eg TRBV3-1/2
 # the table is not stored in the database ..yet.. because it's only needed during intake
@@ -128,8 +123,9 @@ def process_yml_metadata(project_name, miairr_metadata, yml_data, table_fields, 
         for table in meta_records.keys():
             if table in miairr_metadata[sample_name]:
                 setattrs(meta_records[table], **miairr_metadata[sample_name][table])
-        
+
         commit_database(meta_records, sample_name, session)
+
 
 # apply some controls to fields that often seem to go awry
 def fixup_fields(meta_records):
@@ -217,14 +213,14 @@ enum_fields = {
             "RT(specific)+TS",
             "other",
             ],
-            
+
     "read_direction": [
             "forward",
             "reverse",
             "mixed",
             "null",
             ],
-            
+
     "complete_sequences": [
             "partial",
             "complete",
@@ -270,9 +266,11 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
     desired_attributes = {}
 
     for table in meta_records.keys():
-            desired_attributes[table] = {rec['YML attribute']: rec['simple_name'].replace('.', '_')
-                                         for rec in table_fields[table].values()
-                                         if rec['VDJbase table'] == table and rec['YML attribute'] and (yml_full or not rec['structured_name'])}
+        desired_attributes[table] = {
+            rec['YML attribute']: rec['simple_name'].replace('.', '_')
+            for rec in table_fields[table].values()
+            if rec['VDJbase table'] == table and rec['YML attribute'] and (yml_full or not rec['structured_name'])
+        }
 
     # apply fixups to GenoDetection fields
 
@@ -291,7 +289,6 @@ def build_yml_metadata(sample_name, table_fields, project_data, meta_records, ym
     for obj_type in yml_objects.keys():
         for obj_val in project_data[obj_type].values():
             yml_objects[obj_type][obj_val['Name']] = obj_val
-
 
     for table in meta_records.keys():
         for desired_attribute, table_attribute in desired_attributes[table].items():
@@ -339,7 +336,7 @@ def process_airr_metadata(project_name, ds_dir, airr_corresp, table_fields, sess
     project_meta_records = {}
 
     for rec in airr_corresp:
-         if project_name + '_' in rec['vdjbase_name'] and rec['airr_repertoire_id']:
+        if project_name + '_' in rec['vdjbase_name'] and rec['airr_repertoire_id']:
             meta_records = {
                 'Study': {},
                 'Patient': {},
@@ -392,12 +389,15 @@ def check_ontologies(meta_records):
         for k, v in meta_records[table].items():
             if 'label' in k and v[0] and k.replace('label', 'id') in meta_records[table]:
                 lk = k.replace('label', 'id')
-                if not meta_records[table][lk] \
-                    or len(meta_records[table][lk]) == 0 \
-                    or not meta_records[table][lk][0] \
-                    or meta_records[table][lk][0] == 'null' \
-                    or ':' not in meta_records[table][lk][0]:
-                        print(f"Invalid ontology id for label {k} value {v}: {meta_records[table][lk]}")
+                if (
+                    not meta_records[table][lk]
+                    or len(meta_records[table][lk]) == 0
+                    or not meta_records[table][lk][0]
+                    or meta_records[table][lk][0] == 'null'
+                    or ':' not in meta_records[table][lk][0]
+                ):
+                    print(f"Invalid ontology id for label {k} value {v}: {meta_records[table][lk]}")
+
 
 # walk the repertoire looking for attributes on our list
 def walk_repertoire(obj, desired_attributes, desired_compounds, row, crumb, meta_records):
@@ -418,7 +418,7 @@ def walk_repertoire(obj, desired_attributes, desired_compounds, row, crumb, meta
                 if target == desired_att:
                     collect_attribute(desired_att, obj, meta_records, table)
 
-                #if target == 'label':
+                # if target == 'label':
                 #    breakpoint()
 
         # special for preprocessing tool versions
@@ -484,7 +484,6 @@ def merge_attributes(meta_records, table_fields):
                 del meta_records[table][attr]
 
 
-
 # Find a repertoire in the json record for a single MiAIRR file
 def find_repertoire(miairr_file, rep_id):
     for rep in miairr_file['Repertoire']:
@@ -535,7 +534,7 @@ def commit_database(meta_records, vdjbase_name, session):
                     meta_records[table_name][k] = v
 
             db_row = session.query(table).filter_by(**meta_records[table_name]).all()
-            #if db_row and len(db_row) > 1:
+            # if db_row and len(db_row) > 1:
             #    breakpoint()
 
             # something of a corner case, but we have two projects that are missing some samples in the iReceptor+ metadata.
@@ -570,7 +569,6 @@ def commit_database(meta_records, vdjbase_name, session):
     session.add(sample)
 
     session.commit()
-
 
 
 # enumerate dirs and paths under the specified directory
@@ -619,12 +617,12 @@ def consolidate_metadata(export_dir):
 
                 for gk, gd in study_data[project_name]['Genotype Detections'].items():
                     if 'Aligner Tool' not in gd and 'Alignment Tool' in gd:
-                            study_data[project_name]['Genotype Detections'][gk]['Aligner Tool'] = gd['Alignment Tool']
-                            if gd['Alignment reference v'] == gd['Alignment reference d'] and gd['Alignment reference v'] == gd['Alignment reference j']:
-                                study_data[project_name]['Genotype Detections'][gk]['Germline Reference'] = gd['Alignment reference v']
-                            else:
-                                study_data[project_name]['Genotype Detections'][gk]['Germline Reference'] = '(%s (v), %s (d), %s (j))' %\
-                                                     (gd['Alignment reference v'], gd['Alignment reference d'], gd['Alignment reference j'])
+                        study_data[project_name]['Genotype Detections'][gk]['Aligner Tool'] = gd['Alignment Tool']
+                        if gd['Alignment reference v'] == gd['Alignment reference d'] and gd['Alignment reference v'] == gd['Alignment reference j']:
+                            study_data[project_name]['Genotype Detections'][gk]['Germline Reference'] = gd['Alignment reference v']
+                        else:
+                            study_data[project_name]['Genotype Detections'][gk]['Germline Reference'] = '(%s (v), %s (d), %s (j))' %\
+                                                    (gd['Alignment reference v'], gd['Alignment reference d'], gd['Alignment reference j'])
                     if isinstance(gd['Single Assignment'], str):
                         study_data[project_name]['Genotype Detections'][gk]['Single Assignment'] = ('t' in gd['Single Assignment'] or 'T' in gd['Single Assignment'])
 
@@ -659,7 +657,6 @@ def consolidate_metadata(export_dir):
                             if item not in metadata[project_name][section]:
                                 metadata[project_name][section][item] = copy.deepcopy(study_data[project_name][section][item])
 
-
             except Exception as e:
                 print('Exception processing metadata file %s: %s' % (metadata_file, e))
 
@@ -667,5 +664,3 @@ def consolidate_metadata(export_dir):
         fo.write(yaml.dump(metadata, default_flow_style=False))
 
     return metadata
-
-

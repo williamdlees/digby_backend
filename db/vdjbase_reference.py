@@ -3,8 +3,8 @@ import os
 from Bio import SeqIO
 import importlib.util
 
-from db.vdjbase_model import *
-from db.vdjbase_exceptions import *
+from db.vdjbase_model import Gene, Allele, AlleleAliasSets
+from db.vdjbase_exceptions import DbCreationError
 
 
 def read_reference(filename):
@@ -19,6 +19,7 @@ def read_reference(filename):
         records[rd] = rec.seq.lower()
 
     return records
+
 
 def import_reference_alleles(reference_dir, session, species):
     result = []
@@ -80,6 +81,7 @@ def save_allele(allele_name, gene_name, sequence, session):
         session.add(a)
     session.flush()
 
+
 def add_gene(extra_alpha, extra_locus, gene, gene_order, session, species):
     if gene in gene_order.LOCUS_ORDER:
         locus_order = gene_order.LOCUS_ORDER.index(gene)
@@ -101,4 +103,48 @@ def add_gene(extra_alpha, extra_locus, gene, gene_order, session, species):
         pseudo_gene=1 if gene in gene_order.PSEUDO_GENES else 0
     )
     session.add(g)
-    return(extra_alpha, extra_locus)
+    return (extra_alpha, extra_locus)
+
+
+# scan subdirs of reference_dir for alias sets
+# add an alias set if we find one or more .fasta files in a subdir
+def add_alias_sets(reference_dir, session):
+    results = []
+    alias_num = 1
+
+    alleles = session.query(Allele).all()
+    ungapped_seqs = {a.seq.replace('.', ''): a for a in alleles}
+
+    for subdir in os.listdir(reference_dir):
+        subdir_path = os.path.join(reference_dir, subdir)
+        if os.path.isdir(subdir_path):
+            fasta_files = [f for f in os.listdir(subdir_path) if f.endswith('.fasta')]
+            if fasta_files:
+                alias_set = AlleleAliasSets(
+                    set_name=subdir,
+                    alias_number=alias_num
+                )
+                session.add(alias_set)
+                alias_name = f'alias_{alias_num}'
+                alias_num += 1
+                results.append(f'Processing alias set {alias_num}')
+
+                for fasta_file in fasta_files:
+                    recs = read_reference(os.path.join(reference_dir, subdir_path, fasta_file))
+
+                    for allele, sequence in recs.items():
+                        if sequence in ungapped_seqs:
+                            similar = ungapped_seqs[sequence]
+
+                            # add the allele name to the alias_name column of the similar allele
+                            sn = getattr(similar, alias_name)
+                            if sn is None or len(sn) == 0:
+                                setattr(similar, alias_name, allele)
+                            else:
+                                setattr(similar, alias_name, f'{sn}|{allele}')
+
+                session.commit()
+
+    results.append('Alias sets processed')
+    return results
+ 

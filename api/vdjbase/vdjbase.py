@@ -15,7 +15,6 @@ from flask_restx import Resource, reqparse
 from api.reports.report_utils import make_output_file
 from api.restx import api
 from sqlalchemy import inspect, func, or_
-from sqlalchemy import null as sa_null
 from sqlalchemy_filters import apply_filters
 from werkzeug.exceptions import BadRequest
 from db.filter_list import apply_filter_to_list
@@ -23,10 +22,9 @@ from api.system.system import digby_protected
 
 from app import vdjbase_dbs, app, genomic_dbs, madc_index
 from db.vdjbase_api_query_filters import sample_info_filters, sequence_filters
-from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence
+from db.vdjbase_model import HaplotypesFile, SamplesHaplotype, Allele, AllelesSample, Gene, AlleleConfidenceReport, HaplotypeEvidence, AlleleAliasSets
 from db.vdjbase_airr_model import GenoDetection, SeqProtocol, Study, TissuePro, Patient, Sample, DataPro
 from db.genomic_db import Gene as GenomicGene
-from db.vdjbase_db import species_lookup
 
 from api.reports.genotypes import process_repseq_genotype
 
@@ -42,6 +40,7 @@ def object_as_dict(obj):
 ns = api.namespace('repseq', description='Genes and annotations inferred from RepSeq data')
 
 # for use by genomic api
+
 
 def get_vdjbase_species():
     return list(vdjbase_dbs.keys())
@@ -160,11 +159,18 @@ class NovelsSpApi(Resource):
                     print('Error in parsing haplotype counts: %s' % haplo.counts)
                     novel_count = 0
 
-                if best_hap['gene_type'] == '' \
-                    or (best_hap['gene_type'] == 'D' and gene_type == 'J') \
-                    or (best_hap['hetero'] and not hetero) \
-                    or best_hap['count'] < novel_count:
-                        best_hap = {'gene_type': gene_type, 'hetero': hetero, 'count': novel_count, 'example': haplo.sample.sample_name}
+                if (
+                    best_hap['gene_type'] == ''
+                    or (best_hap['gene_type'] == 'D' and gene_type == 'J')
+                    or (best_hap['hetero'] and not hetero)
+                    or best_hap['count'] < novel_count
+                ):
+                    best_hap = {
+                        'gene_type': gene_type,
+                        'hetero': hetero,
+                        'count': novel_count,
+                        'example': haplo.sample.sample_name,
+                    }
 
             result['j_haplotypes'] = j_haps
             result['d_haplotypes'] = d_haps
@@ -229,7 +235,7 @@ class DataSetInfoAPI(Resource):
             row = row._asdict()
             row['subjects_in_vdjbase'] = session.query(Study.id).join(Patient, Patient.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
             row['samples_in_vdjbase'] = session.query(Study.id).join(Sample, Sample.study_id == Study.id).filter(Study.study_name == row['study_name']).count()
-            study_id = row['study_id'] 
+            study_id = row['study_id']
 
             row['repertoires'] = ''
             study_id = row['study_id']
@@ -245,7 +251,6 @@ class DataSetInfoAPI(Resource):
         return stats
 
 
-# 
 @ns.route('/download_study_script/<string:species>/<string:study_id>/<string:dataset>')
 class DownloadStudyScript(Resource):
     @digby_protected()
@@ -259,7 +264,7 @@ class DownloadStudyScript(Resource):
             return None, 404
 
         script = f'# Download script for study {study_id}\n# Please note that the server has a download limit, to prevent abuse. If the HTTP code 503 is returned, the server is rate-limited and it will provide an indication of when you can retry.\n'
-        
+
         count = 1
         for repertoire_id, row in madc_index[species_id][dataset].items():
             if row['study_id'] == study_id:
@@ -307,12 +312,11 @@ def link_convert(item):
     return ','.join(res)
 
 
-
-
 rep_sample_bool_values = {
     'synthetic': ('Synthetic', '(blank)'),
     'single_assignment': ('Single', '(blank)'),
 }
+
 
 @ns.route('/sample_info/<string:species>/<string:dataset>/<string:sample>')
 class SampleInfoApi(Resource):
@@ -390,12 +394,12 @@ def get_sample_info(species, dataset, sample):
     if info:
         info = info._asdict()
 
-        for k,v in info.items():
+        for k, v in info.items():
             if v:
                 if isinstance(v, (datetime.datetime, datetime.date)):
                     info[k] = v.isoformat()
 
-        haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Sample).filter(Sample.sample_name==sample).order_by(HaplotypesFile.by_gene_s).all()
+        haplotypes = session.query(HaplotypesFile.by_gene_s).join(SamplesHaplotype).join(Sample).filter(Sample.sample_name == sample).order_by(HaplotypesFile.by_gene_s).all()
         info['haplotypes'] = [(h[0]) for h in haplotypes]
 
     return info
@@ -574,7 +578,6 @@ class SamplesApi(Resource):
                 else:
                     r['genotypes']['igsnper'] = ''
 
-
         if 'haplotypes' in required_cols:
             for r in ret:
                 session = vdjbase_dbs[species][r['dataset']].session
@@ -592,7 +595,7 @@ class SamplesApi(Resource):
                         sp = '/'.join(['static/study_data/VDJbase/samples', species, r['dataset'], filename])
                         if isfile(fp):
                             r['haplotypes'][hap] = {}
-                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'hap_gene': hap, 'sort_order' : 'Locus'})
+                            r['haplotypes'][hap]['analysis'] = json.dumps({'species': species, 'repSeqs': [r['dataset']], 'name': r['sample_name'], 'hap_gene': hap, 'sort_order': 'Locus'})
                             r['haplotypes'][hap]['rabhit'] = sp
                 else:
                     r['haplotypes'] = ''
@@ -604,6 +607,7 @@ class SamplesApi(Resource):
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }, 200
+
 
 def find_vdjbase_samples(attribute_query, species, datasets, filter):
     hap_filters = None
@@ -637,7 +641,7 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
                     for v in f['value']:
                         if v != '(blank)':
                             value_specs.append({'model': sample_info_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
-                    
+
                     f = {'or': value_specs}
 
                 filter_spec.append(f)
@@ -666,11 +670,18 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
             query = query.filter(Sample.sample_name.in_(hap_samples))
 
         if allele_filters:
-            allele_samples = session.query(Sample.sample_name.distinct()).join(AllelesSample,
-                                                                        Sample.id == AllelesSample.sample_id).join(
-                Allele, Allele.id == AllelesSample.allele_id).filter(Allele.name.in_(allele_filters['value'])).all()
+            allele_samples = session.query(Sample.sample_name.distinct()).join(
+                AllelesSample,
+                Sample.id == AllelesSample.sample_id
+            ).join(
+                Allele, Allele.id == AllelesSample.allele_id
+            ).filter(
+                Allele.name.in_(allele_filters['value'])
+            ).all()
+
             if allele_samples is None:
                 allele_samples = []
+
             query = query.filter(Sample.sample_name.in_([s[0] for s in allele_samples]))
 
         res = query.all()
@@ -694,6 +705,7 @@ rep_sequence_bool_values = {
     'novel': ('Novel', '(blank)'),
 }
 
+
 @ns.route('/sequences/<string:species>/<string:dataset>')
 class SequencesApi(Resource):
     @digby_protected()
@@ -714,9 +726,12 @@ class SequencesApi(Resource):
             required_cols = json.loads(args['cols'])
 
         for col in required_cols:
-            if col not in sequence_filters.keys():
-                print('bad column in request: %s' % col)
-                return list(), 404
+            try:
+                if col not in sequence_filters.keys():
+                    print('bad column in request: %s' % col)
+                    return list(), 404
+            except Exception as e:
+                raise BadRequest('Bad filter string %s' % args['filter'])
 
         if 'gene_name' in required_cols:
             required_cols.append('igsnper_plot_path')
@@ -731,7 +746,7 @@ class SequencesApi(Resource):
 
         for s in ret:
             for f in required_cols:
-                if sequence_filters[f]['field'] is not None and 'no_uniques' not in sequence_filters[f]:
+                if sequence_filters[f]['field'] is not None and 'no_uniques' not in sequence_filters[f] and f in s:
                     el = s[f]
                     if isinstance(el, (datetime.datetime, datetime.date)):        # convert and add to uniques. Can't convert the returned records until we sort
                         el = el.date().isoformat()
@@ -747,7 +762,7 @@ class SequencesApi(Resource):
 
         uniques['dataset'] = dataset.split(',')
 
-        # For gene order, it would be a good idea if datasets from the same species agreed!
+        # For gene order, it would be a good idea if datasets from the same species!
         # really need some way of merging gene order from several sets
 
         session = vdjbase_dbs[species][datasets[0]].session
@@ -782,7 +797,7 @@ class SequencesApi(Resource):
             except:
                 pass
 
-        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None)  else [{'field': 'name', 'order': 'asc'}]
+        sort_specs = json.loads(args['sort_by']) if ('sort_by' in args and args['sort_by'] != None) else [{'field': 'name', 'order': 'asc'}]
 
         if len(sort_specs) > 0:
             for spec in sort_specs:
@@ -793,12 +808,13 @@ class SequencesApi(Resource):
                     else:
                         ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''), x[f]), reverse=(spec['order'] == 'desc'))
         else:
-            ret = sorted(ret, key=lambda x : allele_sort_key(x['name']))
+            ret = sorted(ret, key=lambda x: allele_sort_key(x['name']))
 
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
-            ret = ret[first : first + args['page_size']]
+            ret = ret[first: first + args['page_size']]
 
+        aliases = []
         for rec in ret:
             for k, v in rec.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
@@ -806,12 +822,35 @@ class SequencesApi(Resource):
                 elif isinstance(v, decimal.Decimal):
                     rec[k] = '%0.2f' % v
 
+                if k.startswith('alias_') and k not in aliases:
+                    aliases.append(k)
+    
+        extra_cols = []
 
+        # determine the alias mapping to ref sets
+        # here we re-use the same session that was used for gene order
+        # to allow multiple sets from a locus to be displayed at once, the
+        # alias mapping must be the same for all datasets
+        try:
+            aliases = session.query(AlleleAliasSets.set_name, AlleleAliasSets.alias_number).all()
+        except:
+            aliases = []
 
-        return {
+        for alias in aliases:
+            extra_cols.append({
+                'id': f'alias_{alias[1]}',
+                'name': alias[0],
+                'hidden': False,
+                'type': 'string',
+                'size': 'small-col',
+                'description': f'name in {alias[0]} set, if included in that set'
+                })
+
+            return {
             'samples': ret,
             'uniques': uniques,
             'total_items': total_size,
+            'extra_cols': extra_cols,
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }
@@ -855,7 +894,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                         for v in f['value']:
                             if v != '(blank)':
                                 value_specs.append({'model': sequence_filters[f['field']]['model'], 'field': f['field'], 'op': '==', 'value': v})
-                        
+
                         f = {'or': value_specs}
 
                     filter_spec.append(f)
@@ -867,8 +906,25 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
     ret = []
     if len(dataset_filters) > 0:
         apply_filter_to_list(datasets, dataset_filters)
+
+    # determine aliases - these must be the same for each dataset in the list
+    # i.e. the same aliases must be used, and must have the same mapping in AlleleAliasSets
+
+    required_cols = [x for x in required_cols if not x.startswith('alias_')]
+    session = vdjbase_dbs[species][datasets[0]].session
+
+    try:
+        aliases = session.query(AlleleAliasSets.set_name, AlleleAliasSets.alias_number).all()
+    except:
+        aliases = []
+
+    required_cols.extend([f'alias_{alias[1]}' for alias in aliases])
+
     for dset in datasets:
         session = vdjbase_dbs[species][dset].session
+
+        # include any aliases in use in as the front end may not know to ask for them
+        # exclude any aliases the front end is asking for which may not be part of this dataset
 
         attribute_query = []
 
@@ -955,7 +1011,7 @@ class AllSubjectsGenotypeApi(Resource):
 
         if species not in vdjbase_dbs:
             return None, 404
-          
+
         cache_filename = f"{app.config['OUTPUT_PATH']}/airrseq_all_subjects_genotype_{species}.pickle"
         if os.path.isfile(cache_filename):
             # check that the file is newer than the last revision dates of the databases
@@ -1136,6 +1192,7 @@ def find_rep_filter_params(species, datasets):
 
 # Test if session refers to an AIRR-seq database
 
+
 def is_session_airrseq(session):
     for species in vdjbase_dbs.keys():
         for dataset in vdjbase_dbs[species].keys():
@@ -1144,6 +1201,7 @@ def is_session_airrseq(session):
 
 # Apply filter params to a list of samples in the context of a specific dataset
 # wanted_genes is returned in the required search order
+
 
 def apply_rep_filter_params(params, sample_list, session):
     if is_session_airrseq(session):
@@ -1248,9 +1306,3 @@ def merge_order(added, dataset, gene_order, locus_order, species, genomic):
                         gene_order.append(gene)
                     added = True
     return added, gene_order
-
-
-
-
-
-
