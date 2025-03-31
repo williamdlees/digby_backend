@@ -7,7 +7,7 @@ import importlib.util
 
 from receptor_utils import simple_bio_seq as simple
 from receptor_utils import number_v
-from db.genomic_db import Sequence, Gene
+from db.genomic_db import Sequence, Gene, AlleleAliasSets
 import os
 
 
@@ -137,3 +137,56 @@ def save_gene(session, name, type, family, locus_order, alpha_order, pseudo_gene
     session.add(g)
     session.flush()
     return g
+
+
+def read_reference(filename):
+    records = simple.read_fasta(filename)
+    for name in list(records.keys()):
+        if '|' in name:             # assume IMGT convention
+            rd = name.split('|')[1]
+            records[rd] = records[name]
+            del records[name]
+    return records
+
+
+# scan subdirs of reference_dir for alias sets
+# add an alias set if we find one or more .fasta files in a subdir
+def add_alias_sets(reference_dir, session):
+    alias_num = 1
+
+    alleles = session.query(Sequence).all()
+    ungapped_seqs = {a.sequence: a for a in alleles}
+
+    for subdir in os.listdir(reference_dir):
+        subdir_path = os.path.join(reference_dir, subdir)
+        if os.path.isdir(subdir_path):
+            fasta_files = [f for f in os.listdir(subdir_path) if f.endswith('.fasta')]
+            if fasta_files:
+                alias_set = AlleleAliasSets(
+                    set_name=subdir,
+                    alias_number=alias_num
+                )
+                session.add(alias_set)
+                alias_name = f'alias_{alias_num}'
+                print(f'Processing alias set {subdir}')
+                alias_num += 1
+
+                for fasta_file in fasta_files:
+                    recs = read_reference(os.path.join(reference_dir, subdir_path, fasta_file))
+
+                    for allele, sequence in recs.items():
+                        if sequence in ungapped_seqs:
+                            similar = ungapped_seqs[sequence]
+
+                            # add the allele name to the alias_name column of the similar allele
+                            sn = getattr(similar, alias_name)
+                            if sn is None or len(sn) == 0:
+                                setattr(similar, alias_name, allele)
+                            else:
+                                setattr(similar, alias_name, f'{sn}|{allele}')
+
+                session.commit()
+
+    print('Alias sets processed')
+
+ 

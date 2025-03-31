@@ -11,7 +11,7 @@ from math import ceil
 from werkzeug.exceptions import BadRequest
 
 from api.system.system import digby_protected
-from db.genomic_db import RefSeq, Feature, Sequence, SampleSequence, Gene, SequenceFeature
+from db.genomic_db import RefSeq, Feature, Sequence, SampleSequence, Gene, SequenceFeature, AlleleAliasSets
 from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro, Base
 from db.genomic_api_query_filters import genomic_sequence_filters, genomic_sample_filters
 
@@ -314,7 +314,7 @@ class SequencesAPI(Resource):
 
         required_cols = json.loads(args['cols'])
         genomic_datasets = genomic_datasets.split(',')
-        ret = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']) if args['filter'] else [])
+        ret, required_cols = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']) if args['filter'] else [])
 
         gene_order = {}
         set_index = 0
@@ -424,21 +424,58 @@ class SequencesAPI(Resource):
 
         total_size = len(ret)
 
+        # determine the alias mapping to ref sets
+        # here we re-use the same session that was used for gene order
+        # to allow multiple sets from a locus to be displayed at once, the
+        # alias mapping must be the same for all datasets
+        try:
+            aliases = db.session.query(AlleleAliasSets.set_name, AlleleAliasSets.alias_number).all()
+        except:
+            aliases = []
+
+        extra_cols = []
+        for alias in aliases:
+            extra_cols.append({
+                'id': f'alias_{alias[1]}',
+                'name': alias[0],
+                'hidden': False,
+                'type': 'string',
+                'size': 'small-col',
+                'description': f'name in {alias[0]} set, if included in that set'
+                })
+
         if args['page_size']:
             first = (args['page_number']) * args['page_size']
-            ret = ret[first : first + args['page_size']]
+            ret = ret[first: first + args['page_size']]
 
-        return {
+        foo = {
             'sequences': ret,
             'uniques': uniques,
             'total_items': total_size,
+            'extra_cols': extra_cols,
             'page_size': args['page_size'],
             'pages': ceil((total_size*1.0)/args['page_size']) if args['page_size'] else 1
         }
 
+        return foo, 200
+
 
 def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_filters):
     ret = []
+
+    # determine aliases - these must be the same for each dataset in the list
+    # i.e. the same aliases must be used, and must have the same mapping in AlleleAliasSets
+
+    required_cols = [x for x in required_cols if not x.startswith('alias_')]
+    db = get_genomic_db(species, genomic_datasets[0])
+
+    try:
+        aliases = db.session.query(AlleleAliasSets.set_name, AlleleAliasSets.alias_number).all()
+    except:
+        aliases = []
+
+    required_cols.extend([f'alias_{alias[1]}' for alias in aliases])
+
     for dataset in genomic_datasets:
         db = get_genomic_db(species, dataset)
 
@@ -570,11 +607,10 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
                     s[k] = v.date().isoformat()
                 elif isinstance(v, Decimal):
                     s[k] = int(v)
-            s['dataset'] = dataset
 
             ret.append(s)
 
-    return ret
+    return ret, required_cols
 
 
 @ns.route('/feature_pos/<string:species>/<string:dataset>/<string:ref_seq_name>/<string:feature_string>')

@@ -177,9 +177,7 @@ def process_row(row, session, sample):
     if 'gene' not in row:
         row['gene'] = row['genotyper_gene']
 
-    ref_seq = sample.ref_seq.name
-
-    if ref_seq == 'ighc':
+    if sample.ref_seq and sample.ref_seq.name == 'ighc':
         gene_type = 'C'
     else:
         gene_type = get_gene_type(row['gene'])
@@ -206,9 +204,7 @@ def create_features(row, session, sample, reference_features, seq):
     if 'sense' in row:
         sense = row['sense']
     
-    ref_seq = sample.ref_seq.name
-
-    if ref_seq == 'ighc':
+    if sample.ref_seq and sample.ref_seq.name == 'ighc':
         gene_type = 'C'
     else:
         gene_type = get_gene_type(row['gene'])

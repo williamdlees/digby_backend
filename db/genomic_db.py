@@ -94,6 +94,16 @@ class Sequence(Base):
     max_coverage_sample_id = Column(Integer)
     max_coverage_sample_name = Column(String)
     gene_id = Column(Integer, ForeignKey('gene.id'))
+    alias_1 = Column(String(50))      # alias columns used for names in other reference sets
+    alias_2 = Column(String(50))
+    alias_3 = Column(String(50))
+    alias_4 = Column(String(50))
+    alias_5 = Column(String(50))
+    alias_6 = Column(String(50))
+    alias_7 = Column(String(50))
+    alias_8 = Column(String(50))
+    alias_9 = Column(String(50))
+
     samples = relationship('Sample', secondary='sample_sequence', back_populates='sequences')
     features = relationship('Feature', secondary='sequence_feature', back_populates='sequences')
 
@@ -125,4 +135,9 @@ class Gene(Base):
     sequences = relationship('Sequence', backref='gene')
 
 
+class AlleleAliasSets(Base):
+    __tablename__ = 'allele_aliases'
 
+    id = Column(Integer, primary_key=True)
+    set_name = Column(String(50), nullable=False)
+    alias_number = Column(Integer, nullable=False)

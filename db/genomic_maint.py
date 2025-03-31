@@ -9,7 +9,7 @@ from sqlalchemy.pool import NullPool
 import os
 import yaml
 
-from db.genomic_ref import update_genomic_ref, read_gene_order
+from db.genomic_ref import update_genomic_ref, read_gene_order, add_alias_sets
 from db.genomic_airr_model import Sample, Study, Patient, SeqProtocol, TissuePro, DataPro
 from db.genomic_db import Base, RefSeq
 from db.genomic_db_functions import save_genomic_dataset_details, save_genomic_ref_seq, calculate_appearances, calculate_max_cov_sample
@@ -74,8 +74,12 @@ def create_dataset(species, dataset):
             reference_features = {}
 
         session.commit()
+
         for study_name, study in study_data['Studies'].items():
             process_study(dataset_dir, reference_features, session, study, study_name, reference_set_version)
+
+        add_alias_sets(os.path.join(dataset_dir, 'alias_sets'), session)
+        session.commit()
 
     except ImportException as e:
         print(e)

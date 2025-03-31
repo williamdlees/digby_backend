@@ -814,7 +814,6 @@ class SequencesApi(Resource):
             first = (args['page_number']) * args['page_size']
             ret = ret[first: first + args['page_size']]
 
-        aliases = []
         for rec in ret:
             for k, v in rec.items():
                 if isinstance(v, (datetime.datetime, datetime.date)):
@@ -822,9 +821,6 @@ class SequencesApi(Resource):
                 elif isinstance(v, decimal.Decimal):
                     rec[k] = '%0.2f' % v
 
-                if k.startswith('alias_') and k not in aliases:
-                    aliases.append(k)
-    
         extra_cols = []
 
         # determine the alias mapping to ref sets
@@ -846,7 +842,7 @@ class SequencesApi(Resource):
                 'description': f'name in {alias[0]} set, if included in that set'
                 })
 
-            return {
+        return {
             'samples': ret,
             'uniques': uniques,
             'total_items': total_size,
