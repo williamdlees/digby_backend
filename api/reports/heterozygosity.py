@@ -29,7 +29,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     gene_hetrozygous_dis = {}
 
     for dataset in samples_by_dataset.keys():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         allele_sample_recs = []
 
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):

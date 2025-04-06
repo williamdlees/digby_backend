@@ -319,9 +319,9 @@ def create_features(row, session, sample, reference_features, seq):
 
 
 conv_features = {
-    'V': [('V-REGION-GAPPED', 'seq_gapped'), ('V-NONAMER', 'v_nonamer'), ('V-HEPTAMER', 'v_heptamer'), ('L-PART1', 'l_part1'), ('L-PART2', 'l_part2')],
-    'D': [('D-REGION', 'seq'), ('D-3_NONAMER', 'd_3_nonamer'), ('D-3_HEPTAMER', 'd_3_heptamer'), ('D-5_NONAMER', 'd_5_nonamer'), ('D-5_HEPTAMER', 'd_5_heptamer')],
-    'J': [('J-REGION', 'seq'), ('J-NONAMER', 'j_nonamer'), ('J-HEPTAMER', 'j_heptamer')],
+    'V': [('V-REGION-GAPPED', 'seq_gapped'), ('V-NONAMER', 'v_nonamer'), ('V-HEPTAMER', 'v_heptamer'), ('V-SPACER', 'spacer_3'), ('L-PART1', 'l_part1'), ('L-PART2', 'l_part2')],
+    'D': [('D-REGION', 'seq'), ('D-3_NONAMER', 'd_3_nonamer'), ('D-3_HEPTAMER', 'd_3_heptamer'), ('D-3_SPACER', 'spacer_3'), ('D-5_NONAMER', 'd_5_nonamer'), ('D-5_SPACER', 'spacer_5'), ('D-5_HEPTAMER', 'd_5_heptamer')],
+    'J': [('J-REGION', 'seq'), ('J-NONAMER', 'j_nonamer'), ('J-HEPTAMER', 'j_heptamer'), ('J-SPACER', 'spacer_5')],
     'C': [('C-REGION', 'seq')]
 }
 
@@ -337,13 +337,14 @@ def convert_digger_row(row):
 
         if gene_type in ['V', 'D', 'J', 'C']:
             row[f'{gene_type}-REGION'] = row['seq']
-            row[f'{gene_type}-REGION_CIGAR'] = f'len({row["seq"]})M'
+            row[f'{gene_type}-REGION_CIGAR'] = f'{len(row["seq"])}M'
 
             for feature, field in conv_features[gene_type]:
                 row[feature] = row[field]
-                row[feature + '_CIGAR'] = f'len({row[field]})M'
+                row[feature + '_CIGAR'] = f'{len(row[field])}M'
 
     return row
+
 
 # Add a record for a particular sequence observed at a feature if it is not present already. Maintain usage linkages
 def add_feature(feature, bed_name, reference_features, row, seq, session, sample, strand='+', ref_seq_name=None):

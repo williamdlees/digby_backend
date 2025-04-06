@@ -90,7 +90,7 @@ class DataSetInfoAPI(Resource):
         if species not in genomic_dbs or dataset not in genomic_dbs[species]:
             return None, 404
 
-        session = genomic_dbs[species][dataset].session
+        session = genomic_dbs[species][dataset].get_session()
         stats = {}
 
         stats['description'] = genomic_dbs[species][dataset].description
@@ -195,7 +195,7 @@ class AllSamplesInfoApi(Resource):
         metadata_list = []
 
         for dataset in genomic_dbs[species].keys():
-            session = genomic_dbs[species][dataset].session
+            session = genomic_dbs[species][dataset].get_session()
             samples = session.query(Sample.sample_name).all()
             for sample in samples:
                 metadata_list.append(get_sample_info(species, dataset, sample[0]))
@@ -963,7 +963,7 @@ class AllSubjectsGenotypeApi(Resource):
 
         all_subjects = []
         for dataset in genomic_dbs[species].keys():
-            session = genomic_dbs[species][dataset].session
+            session = genomic_dbs[species][dataset].get_session()
             subjects = session.query(Patient.patient_name).all()
             all_subjects.extend(subjects)
 
@@ -1006,7 +1006,7 @@ def get_gene_type(label):
 
 
 def single_genotype(species, dataset, patient_name):
-    session = genomic_dbs[species][dataset].session
+    session = genomic_dbs[species][dataset].get_session()
     samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == patient_name).all()
 
     if len(samples) == 0:

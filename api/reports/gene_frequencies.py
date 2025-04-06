@@ -31,7 +31,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     genes_frequencies = defaultdict(list)
 
     for dataset in samples_by_dataset.keys():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
 
         for sample_chunk in chunk_list(samples_by_dataset[dataset], SAMPLE_CHUNKS):
             sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id)\

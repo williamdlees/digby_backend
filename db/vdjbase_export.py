@@ -22,7 +22,7 @@ def export_metadata():
                 os.mkdir(os.path.join(export_dir, species, dataset))
             if os.path.isfile(os.path.join(export_dir, species, dataset, 'projects.yml')):
                 os.remove(os.path.join(export_dir, species, dataset, 'projects.yml'))
-            session = vdjbase_dbs[species][dataset].session
+            session = vdjbase_dbs[species][dataset].get_session()
             studies = session.query(Study).all()
 
             meta = {}

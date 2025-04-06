@@ -101,7 +101,7 @@ class NovelsSpApi(Resource):
         if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
             return None, 404
 
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         novels = session.query(Allele)\
             .join(AllelesSample)\
             .join(Sample)\
@@ -202,7 +202,7 @@ class DataSetInfoAPI(Resource):
         if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
             return None, 404
 
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         stats = {}
 
         stats['description'] = vdjbase_dbs[species][dataset].description
@@ -360,7 +360,7 @@ class AllSamplesInfoApi(Resource):
         metadata_list = []
 
         for dataset in vdjbase_dbs[species].keys():
-            session = vdjbase_dbs[species][dataset].session
+            session = vdjbase_dbs[species][dataset].get_session()
             samples = session.query(Sample.sample_name).all()
             for sample in samples:
                 metadata_list.append(get_sample_info(species, dataset, sample[0]))
@@ -375,7 +375,7 @@ class AllSamplesInfoApi(Resource):
 
 
 def get_sample_info(species, dataset, sample):
-    session = vdjbase_dbs[species][dataset].session
+    session = vdjbase_dbs[species][dataset].get_session()
     attribute_query = []
 
     for col in sample_info_filters.keys():
@@ -521,7 +521,7 @@ class SamplesApi(Resource):
         if 'haplotypes' in required_cols:
             uniques['haplotypes'] = []
             for dset in dataset.split(','):
-                session = vdjbase_dbs[species][dset].session
+                session = vdjbase_dbs[species][dset].get_session()
                 haplotypes = session.query(HaplotypesFile.by_gene_s).distinct().order_by(HaplotypesFile.by_gene_s).all()
                 x = [(h[0]) for h in haplotypes]
                 uniques['haplotypes'].extend(x)
@@ -570,7 +570,7 @@ class SamplesApi(Resource):
                 del r['genotype_stats']
                 del r['genotype_report']
 
-                session = vdjbase_dbs[species][r['dataset']].session
+                session = vdjbase_dbs[species][r['dataset']].get_session()
                 igsnper_path = session.query(Sample.igsnper_plot_path, Sample.genotype_report).filter(Sample.sample_name == r['sample_name']).one_or_none()
 
                 if igsnper_path is not None and igsnper_path[0] is not None:
@@ -580,7 +580,7 @@ class SamplesApi(Resource):
 
         if 'haplotypes' in required_cols:
             for r in ret:
-                session = vdjbase_dbs[species][r['dataset']].session
+                session = vdjbase_dbs[species][r['dataset']].get_session()
                 haplotypes = session.query(Sample.sample_name, func.group_concat(HaplotypesFile.by_gene_s), func.group_concat(HaplotypesFile.file))
                 h = haplotypes.filter(Sample.sample_name == r['sample_name'])\
                     .join(SamplesHaplotype, SamplesHaplotype.samples_id == Sample.id)\
@@ -654,7 +654,7 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
         apply_filter_to_list(datasets, dataset_filters)
 
     for dset in datasets:
-        session = vdjbase_dbs[species][dset].session
+        session = vdjbase_dbs[species][dset].get_session()
 
         query = session.query(*attribute_query)\
             .join(GenoDetection, Sample.geno_detection_id == GenoDetection.id)\
@@ -765,7 +765,7 @@ class SequencesApi(Resource):
         # For gene order, it would be a good idea if datasets from the same species!
         # really need some way of merging gene order from several sets
 
-        session = vdjbase_dbs[species][datasets[0]].session
+        session = vdjbase_dbs[species][datasets[0]].get_session()
         gene_order = session.query(Gene.name, Gene.alpha_order).all()
         gene_order = {x[0]: x[1] for x in gene_order}
 
@@ -907,7 +907,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
     # i.e. the same aliases must be used, and must have the same mapping in AlleleAliasSets
 
     required_cols = [x for x in required_cols if not x.startswith('alias_')]
-    session = vdjbase_dbs[species][datasets[0]].session
+    session = vdjbase_dbs[species][datasets[0]].get_session()
 
     try:
         aliases = session.query(AlleleAliasSets.set_name, AlleleAliasSets.alias_number).all()
@@ -917,7 +917,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
     required_cols.extend([f'alias_{alias[1]}' for alias in aliases])
 
     for dset in datasets:
-        session = vdjbase_dbs[species][dset].session
+        session = vdjbase_dbs[species][dset].get_session()
 
         # include any aliases in use in as the front end may not know to ask for them
         # exclude any aliases the front end is asking for which may not be part of this dataset
@@ -1029,7 +1029,7 @@ class AllSubjectsGenotypeApi(Resource):
 
         all_subjects = []
         for dataset in vdjbase_dbs[species].keys():
-            session = vdjbase_dbs[species][dataset].session
+            session = vdjbase_dbs[species][dataset].get_session()
             subjects = session.query(Patient.patient_name).all()
             all_subjects.extend(subjects)
 
@@ -1092,7 +1092,7 @@ class GenotypeApi(Resource):
 
 
 def single_genotype(species, dataset, subject_name):
-    session = vdjbase_dbs[species][dataset].session
+    session = vdjbase_dbs[species][dataset].get_session()
     samples = session.query(Sample).join(Patient, Sample.patient_id == Patient.id).filter(Patient.patient_name == subject_name).all()
 
     if len(samples) == 0:
@@ -1149,7 +1149,7 @@ def find_rep_filter_params(species, datasets):
     haplotypes = []
 
     for dataset in datasets:
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         g_q = session.query(Gene.name, Gene.type).all()
         genes.extend((res[0] for res in g_q))
         gene_types.extend((res[1] for res in g_q))
@@ -1242,10 +1242,10 @@ def get_order_file(species, dataset, locus_order=True, genomic=False):
     file_name = os.path.join(app.config['OUTPUT_PATH'], '%s_%s_%s_order.tsv' % (species, dataset, 'locus' if locus_order else 'alpha'))
 
     if genomic:
-        session = genomic_dbs[species][dataset].session
+        session = genomic_dbs[species][dataset].get_session()
         gene = GenomicGene
     else:
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         gene = Gene
 
     if locus_order:

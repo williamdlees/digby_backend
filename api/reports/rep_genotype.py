@@ -32,19 +32,19 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     all_wanted_genes = set()
 
     for dataset in rep_samples_by_dataset.keys():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         sample_list = session.query(Sample.sample_name, Sample.genotype, Sample.patient_id).filter(Sample.sample_name.in_(rep_samples_by_dataset[dataset])).all()
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
 
         if len(wanted_genes) > 0:
             all_wanted_genes |= set(wanted_genes)
             for (name, genotype, patient_id) in sample_list:
-                session = vdjbase_dbs[species][dataset].session
+                session = vdjbase_dbs[species][dataset].get_session()
                 genotype = process_repseq_genotype(name, all_wanted_genes, session, False)
                 genotypes[name] = genotype
 
     for dataset in gen_samples_by_dataset.keys():
-        session = genomic_dbs[species][dataset].session
+        session = genomic_dbs[species][dataset].get_session()
         samples = session.query(GenomicSample).filter(GenomicSample.sample_name.in_(gen_samples_by_dataset[dataset])).all()
 
         if not samples:

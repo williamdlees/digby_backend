@@ -26,7 +26,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     results = []
 
     for dataset, sample_list in rep_samples_by_dataset.items():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
 
         novels = session.query(Allele, AllelesSample)\

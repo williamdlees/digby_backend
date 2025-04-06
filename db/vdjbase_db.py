@@ -1,25 +1,15 @@
 # Manage a list of available vdjbase-style databases
-import os
-import shutil
+
 from os.path import join, isdir, isfile
 from os import listdir
-from time import sleep
-from flask import render_template, request, redirect, url_for, Markup
+
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
-from flask_table import Table, Col
-from flask_wtf import FlaskForm
-from werkzeug.exceptions import BadRequest
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from flask_wtf.file import FileField, FileRequired
-from wtforms.validators import DataRequired
-from werkzeug.utils import secure_filename
 
-from db.vdjbase_exceptions import DbCreationError
 from db.vdjbase_maint import create_single_database
 from db.vdjbase_model import Details
-from extensions import celery
-import traceback
+
+
 
 Session = sessionmaker()
 
@@ -39,6 +29,16 @@ class ContentProvider():
         self.session = Session(bind=self.connection)
         self.description = description
 
+    def get_session(self):
+        if self.session is None or not self.session.is_active:
+            self.session = Session(bind=self.connection)
+        return self.session
+    
+    def close_session(self):
+        if self.session is not None and self.session.is_active:
+            self.session.close()
+            self.session = None
+            
     def close(self):
         self.connection.close()
         self.db.dispose()

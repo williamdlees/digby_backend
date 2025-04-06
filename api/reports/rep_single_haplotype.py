@@ -24,7 +24,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     rep_sample = rep_samples[0]
     html = (format == 'html')
 
-    session = vdjbase_dbs[species][rep_sample['dataset']].session
+    session = vdjbase_dbs[species][rep_sample['dataset']].get_session()
     primer_trans, gene_subs = find_primer_translations(session)
 
     p = session.query(HaplotypesFile.file)\

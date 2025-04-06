@@ -23,12 +23,12 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     if len(rep_samples) > 0:
         sample = rep_samples[0]
-        session = vdjbase_dbs[species][sample['dataset']].session
+        session = vdjbase_dbs[species][sample['dataset']].get_session()
         genotype = process_repseq_genotype(sample['sample_name'], [], session, False)
     else:
         sample = genomic_samples[0]
         sample['pcr_target_locus'] = sample['dataset']
-        session = genomic_dbs[species][sample['dataset']].session
+        session = genomic_dbs[species][sample['dataset']].get_session()
         genotype = process_genomic_genotype(sample['sample_name'], [], session, True, False)
 
     if len(genotype) == 0:

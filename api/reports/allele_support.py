@@ -31,7 +31,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     all_wanted_genes = []
 
     for dataset in rep_samples_by_dataset.keys():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
 
         refs = session.query(Allele).all()
 
@@ -54,7 +54,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     rep_counts = {}
 
     for dataset in rep_samples_by_dataset.keys():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         appearances = []
 
         for sample_chunk in chunk_list(rep_samples_by_dataset[dataset], SAMPLE_CHUNKS):
@@ -98,7 +98,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         gen_samples_by_dataset[gen_sample['dataset']].append(gen_sample['sample_name'])
 
     for dataset in gen_samples_by_dataset.keys():
-        session = genomic_dbs[species][dataset].session
+        session = genomic_dbs[species][dataset].get_session()
 
         query = session.query(GenomicSequence)
 
@@ -129,7 +129,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     gen_counts = {}
 
     for dataset in gen_samples_by_dataset.keys():
-        session = genomic_dbs[species][dataset].session
+        session = genomic_dbs[species][dataset].get_session()
         appearances = []
 
         for sample_chunk in chunk_list(gen_samples_by_dataset[dataset], SAMPLE_CHUNKS):

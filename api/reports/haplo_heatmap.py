@@ -28,7 +28,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     haplotypes = pd.DataFrame()
 
     for dataset in samples_by_dataset.keys():
-        session = vdjbase_dbs[species][dataset].session
+        session = vdjbase_dbs[species][dataset].get_session()
         primer_trans, gene_subs = find_primer_translations(session)
 
         haplos = []

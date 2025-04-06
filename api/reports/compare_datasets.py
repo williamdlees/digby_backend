@@ -31,7 +31,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         allele_lookups = [{}, {}]
 
         for i in (0, 1):
-            session.append(vdjbase_dbs[species][datasets[i]].session)
+            session.append(vdjbase_dbs[species][datasets[i]].get_session())
             alleles.append(session[i].query(Allele).all())
             allele_names.append(set([allele.name for allele in alleles[i]]))
 
