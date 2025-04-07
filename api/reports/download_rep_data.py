@@ -123,7 +123,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
                 headers.append(name)
 
         headers.append('dataset')
-        rows = find_sequences(params, rep_samples, species, headers)
+        rows, headers = find_sequences(params, rep_samples, species, headers)
 
         outfile = make_output_file('csv')
         with open(outfile, 'w', newline='') as fo:
@@ -144,6 +144,17 @@ def find_sequences(params, rep_samples, species, required_cols):
     for rep_sample in rep_samples:
         if rep_sample['dataset'] not in datasets:
             datasets.append(rep_sample['dataset'])
-    seqs = find_vdjbase_sequences(species, datasets, required_cols, params['filters'])
-    return seqs
+    rows, headers, alias_dict = find_vdjbase_sequences(species, datasets, required_cols, params['filters'])
+
+    for h in headers:
+        if h in alias_dict:
+            headers[headers.index(h)] = alias_dict[h]
+
+    for row in rows:
+        for r in list(row.keys()):
+            if r in alias_dict:
+                row[alias_dict[r]] = row[r]
+                del row[r]
+
+    return rows, headers
 

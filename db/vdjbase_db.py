@@ -31,6 +31,7 @@ class ContentProvider():
 
     def get_session(self):
         if self.session is None or not self.session.is_active:
+            print('renewing session')
             self.session = Session(bind=self.connection)
         return self.session
     
@@ -38,7 +39,7 @@ class ContentProvider():
         if self.session is not None and self.session.is_active:
             self.session.close()
             self.session = None
-            
+
     def close(self):
         self.connection.close()
         self.db.dispose()

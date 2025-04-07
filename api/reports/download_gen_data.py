@@ -75,7 +75,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     elif 'Ungapped' in params['type'] or 'Gapped' in params['type']:
         seq_name = 'sequence' if 'Ungapped' in params['type'] else 'gapped_sequence'
         required_cols = ['name', seq_name, 'dataset']
-        seqs = find_genomic_sequences(required_cols, genomic_datasets, species, params['filters'])
+        seqs, _, _ = find_genomic_sequences(required_cols, genomic_datasets, species, params['filters'])
 
         recs = []
         for seq in seqs:
@@ -88,14 +88,22 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         return send_report(outfile, 'fasta', attachment_filename='%s_sequences.fasta' % species)
 
     elif 'Gene info' in params['type']:
-        headers = genomic_sequence_filters.keys()
-        rows = find_genomic_sequences(headers, genomic_datasets, species, params['filters'])
+        headers = list(genomic_sequence_filters.keys())
+        rows, headers, alias_dict = find_genomic_sequences(headers, genomic_datasets, species, params['filters'])
+
+        for h in headers:
+            if h in alias_dict:
+                headers[headers.index(h)] = alias_dict[h]
 
         outfile = make_output_file('csv')
         with open(outfile, 'w', newline='') as fo:
             writer = csv.DictWriter(fo, dialect='excel', fieldnames=headers)
             writer.writeheader()
             for row in rows:
+                for r in list(row.keys()):
+                    if r in alias_dict:
+                        row[alias_dict[r]] = row[r]
+                        del row[r]
                 writer.writerow(row)
 
         return send_report(outfile, 'csv', attachment_filename='sequence_info.csv')

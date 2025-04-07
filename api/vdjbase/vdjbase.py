@@ -737,7 +737,7 @@ class SequencesApi(Resource):
             required_cols.append('igsnper_plot_path')
 
         datasets = dataset.split(',')
-        ret = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter']) if args['filter'] else [])
+        ret, required_cols, _ = find_vdjbase_sequences(species, datasets, required_cols, json.loads(args['filter']) if args['filter'] else [])
         total_size = len(ret)
 
         uniques = {}
@@ -914,6 +914,8 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
     except:
         aliases = []
 
+    alias_dict = {f'alias_{alias[1]}': alias[0] for alias in aliases}
+
     required_cols.extend([f'alias_{alias[1]}' for alias in aliases])
 
     for dset in datasets:
@@ -996,7 +998,7 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
 
                 ret.append(s)
 
-    return ret
+    return ret, required_cols, alias_dict
 
 
 @ns.route('/all_subjects_genotype/<string:species>')

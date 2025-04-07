@@ -314,7 +314,7 @@ class SequencesAPI(Resource):
 
         required_cols = json.loads(args['cols'])
         genomic_datasets = genomic_datasets.split(',')
-        ret, required_cols = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']) if args['filter'] else [])
+        ret, required_cols, _ = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']) if args['filter'] else [])
 
         gene_order = {}
         set_index = 0
@@ -474,6 +474,8 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
     except:
         aliases = []
 
+    alias_dict = {f'alias_{alias[1]}': alias[0] for alias in aliases}
+
     required_cols.extend([f'alias_{alias[1]}' for alias in aliases])
 
     for dataset in genomic_datasets:
@@ -610,7 +612,7 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
 
             ret.append(s)
 
-    return ret, required_cols
+    return ret, required_cols, alias_dict
 
 
 @ns.route('/feature_pos/<string:species>/<string:dataset>/<string:ref_seq_name>/<string:feature_string>')
