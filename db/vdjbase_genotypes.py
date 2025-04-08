@@ -482,6 +482,7 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
     print(sample.genotype)
     genotype = simple.read_csv(sample.genotype, delimiter='\t')
     for row in genotype:
+        genotyped_count = 0
         gene = row["gene"]
         gene_type = gene[3]
 
@@ -491,6 +492,7 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
         if row["GENOTYPED_ALLELES"] == "NA" or row["GENOTYPED_ALLELES"] == '':
             continue
 
+        genotyped_count += 1
         allele_scores = {}
         if 'k_diff' in row:
             for allele in row["GENOTYPED_ALLELES"].split(","):
@@ -552,7 +554,10 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
                            total_count, session)
             except DbCreationError as e:
                 print(e)
-            
+    
+    if genotyped_count == 0:
+        print('Error: no genotyped alleles found in sample %s' % sample.sample_name)
+
 
 def find_allele_or_similar(allele_name, session):
     """

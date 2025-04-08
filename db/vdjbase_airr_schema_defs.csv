@@ -140,8 +140,8 @@ Repertoire.data_processing.DataProcessing.analysis_provenance_id,analysis_proven
 ,igsnper_sample_id,airrseq,,Patient,igsnper_sample_id,,integer,FALSE,,TRUE,short,FALSE,Igsnper Sample ID,,Sample ID as allocated by IgSNPer,,Detemined at take-on
 ,sample_name,mixin,,Sample,name,Samples.Name,string,TRUE,1,FALSE,short,FALSE,Sample name,,Sample name as allocated by VDJbase,,Determined by pipeline
 ,reads,airrseq,,Sample,reads,Samples.Reads,integer,TRUE,3,FALSE,short,FALSE,VDJbase reads,,Reads processed by VDJbase pipeline,,Determined by pipeline
-,genotype,airrseq,,Sample,genotype,,genotype,FALSE,,TRUE,short,FALSE,Genotype report,,Links to genotype reports,,Derived at take-on
-,haplotypes,airrseq,,Sample,haplotype,,haplotype,FALSE,,TRUE,long,FALSE,Haplotype reports,,Links to haplotype reports,,
+,genotype,airrseq,,Sample,genotype,,genotype,TRUE,,TRUE,short,FALSE,Genotype report,,Links to genotype reports,,Derived at take-on
+,haplotypes,airrseq,,Sample,haplotype,,haplotype,TRUE,,TRUE,long,FALSE,Haplotype reports,,Links to haplotype reports,,
 ,igsnper_plot_path,airrseq,,Sample,igsnper_plot_path,,string,TRUE,,TRUE,long,FALSE,Igsnper plot path,,Path for igsnper plot,,
 ,sample_group,airrseq,,Sample,sample_group,Samples.Sample Group,string,TRUE,,TRUE,long,FALSE,Sample group,,Sample group,,? Possibly sample_processing_id
 ,genotype_stats,airrseq,,Sample,genotype_stats,,string,FALSE,,TRUE,long,FALSE,Genotype stats,,Path to genotype stats file,,
