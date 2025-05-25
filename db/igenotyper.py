@@ -286,16 +286,16 @@ def create_features(row, session, sample, reference_features, seq):
             feature_id = session.query(Feature).count()
             start = end = 0
             if reference_features:
-                start = reference_features[ref_seq][seq.gene.name]['GENE']['start']
-                end = reference_features[ref_seq][seq.gene.name]['GENE']['end']
+                start = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['start']
+                end = reference_features[sample.ref_seq.name][seq.gene.name]['GENE']['end']
 
             feature = add_feature_to_ref(seq.name, 'allele', 'C-REGION', seq.sequence, row['C-REGION_CIGAR'], 'CDS', start, end, sense,
                                             f"Name={seq.name}_C-REGION;ID={feature_id}", feature_id, sample.ref_seq)
             link_sequence_to_feature(seq, feature)
 
-            for feature_name, rec in reference_features[ref_seq][seq.gene.name].items():
+            for feature_name, rec in reference_features[sample.ref_seq.name][seq.gene.name].items():
                 if feature_name != 'GENE':
-                    add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense, ref_seq_name=ref_seq)
+                    add_feature(feature_name, feature_name, reference_features, row, seq, session, sample, sense, ref_seq_name=sample.ref_seq.name)
 
     if 'Total_Positions' in row:
         sf = session.query(SampleSequence).filter(SampleSequence.sequence_id == seq.id, SampleSequence.sample_id == sample.id).first()

@@ -157,6 +157,9 @@ def add_alias_sets(reference_dir, session):
     alleles = session.query(Sequence).all()
     ungapped_seqs = {a.sequence: a for a in alleles}
 
+    if not os.path.isdir(reference_dir):
+        return
+
     for subdir in os.listdir(reference_dir):
         subdir_path = os.path.join(reference_dir, subdir)
         if os.path.isdir(subdir_path):

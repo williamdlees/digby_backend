@@ -120,11 +120,16 @@ def phased_feature_alignment(dataset_dir, name_prefix, ref_seq, session):
         fo.write('@HD\tVN:1.3\tSO:coordinate\n')
         fo.write('@SQ\tSN:%s\tLN:%d\n' % (ref_seq.name, len(ref_seq.sequence)))
 
-        features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type == 'gene_sequence')).order_by(Feature.start, Feature.name).all()
+        # For ighc, take C-REGIONS which have a CIGAR that will exclude introns
 
-        if len(features) == 0:
-            print('gene_sequence features not found. falling back to REGIONS')
-            features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type.like('%REGION'))).order_by(Feature.start, Feature.name).all()
+        if ref_seq.name == 'ighc':
+            features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type == 'C-REGION')).order_by(Feature.start, Feature.name).all()
+        else:
+            features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type == 'gene_sequence')).order_by(Feature.start, Feature.name).all()
+
+            if len(features) == 0:
+                print('gene_sequence features not found. falling back to REGIONS')
+                features = session.query(Feature).filter(and_(Feature.refseq == ref_seq, Feature.feature_type.like('%REGION'))).order_by(Feature.start, Feature.name).all()
 
         for feature in features:
             if feature.feature_level == 'allele':
@@ -146,6 +151,10 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
     cigar_string = feature.feature_cigar
 
     if len(sequence.sequence) > 0 and cigar_string and cigar_string != '':
+        if len(sequence.sequence) != Cigar(cigar_string).__len__():
+            print('ERROR CIGAR length does not match sequence length for %s' % sequence.name)
+            return None
+
         if 'D' in cigar_string:
             sequence.sequence = sequence.sequence.replace('-', '')
         
