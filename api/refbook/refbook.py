@@ -147,7 +147,7 @@ class AscsOverview(Resource):
 class AscSeqs(Resource):
     @digby_protected()
     def get(self, species, chain, asc):
-        """ Returns data for the asc alignment refbook component """
+        """ Returns sequences of all alleles in an ASC """
 
         species_chains = SpeciesApi.get(self)
         
@@ -183,4 +183,5 @@ class AscSeqs(Resource):
                 if a not in alleles:
                     recs.append({'name': a, 'seq_gapped': gapped.upper(), 'seq': ungapped.upper()})
 
-        return ret
+        return {'alleles': recs}
+    
