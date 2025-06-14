@@ -662,6 +662,7 @@ def find_vdjbase_samples(attribute_query, species, datasets, filter):
             .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
             .join(TissuePro, Sample.tissue_pro_id == TissuePro.id)\
             .join(Study, Sample.study_id == Study.id)
+        
         query = apply_filters(query, filter_spec)
 
         if hap_filters:
@@ -933,11 +934,16 @@ def find_vdjbase_sequences(species, datasets, required_cols, seq_filter):
                 attribute_query.append(sequence_filters[col]['field'])
 
         query = session.query(*attribute_query).join(Gene, Allele.gene_id == Gene.id)
-        query = apply_filters(query, filter_spec)
-
+    
         if 'notes' in required_cols:
             query = query.outerjoin(AlleleConfidenceReport, Allele.id == AlleleConfidenceReport.allele_id).group_by(
                 Allele.id)
+
+        try:
+            query = apply_filters(query, filter_spec)
+        except:
+            pass  # we'll get an exception if a calculated field is used, eg notes_count. sqlalchemy_filters will not handle that
+                  # to get round this, generate additional fields in the table, so we don't need to use calculated fields
 
         res = query.all()
 
