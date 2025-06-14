@@ -29,7 +29,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
         session = vdjbase_dbs[species][dataset].get_session()
         sample_list, wanted_genes = apply_rep_filter_params(params, sample_list, session)
 
-        novels = session.query(Allele, AllelesSample)\
+        novels = session.query(Allele, AllelesSample, Sample)\
             .join(AllelesSample, AllelesSample.allele_id == Allele.id)\
             .join(Sample, AllelesSample.sample_id == Sample.id)\
             .join(SeqProtocol, Sample.seq_protocol_id == SeqProtocol.id)\
@@ -44,10 +44,10 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
         novels = novels.all()
 
-        for novel, allelesample in novels:
+        for novel, allelesample, sample in novels:
             result = {}
             result['name'] = novel.name
-            result['sample'] = allelesample.sample.sample_name
+            result['sample'] = sample.sample_name
             result['novel_count'] = allelesample.count
             result['total_count'] = allelesample.total_count
             results.append(result)
