@@ -47,7 +47,9 @@ def madc_init(app):
                             ret[species][locus][repertoire_id] = {'repertoire_id': repertoire_id, 'species': species, 'subject_id': subject_id, 'locus': locus, 'study_id': study_id}
 
     except Exception as e:
-        app.logger.error(f'Error processing MADC repertoires: {str(e)}')
+        # app.logger.error(f'Error processing MADC repertoires: {str(e)}')
+        # can't use mail in initialization
+        print(f'Error processing MADC repertoires: {str(e)}')
         return {}
 
     return ret
