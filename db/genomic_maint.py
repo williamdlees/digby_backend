@@ -248,7 +248,7 @@ def create_subject(session, study_obj, subject_name, row):
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - age_unit is not a valid ontology object: {e}')
 
-    if age_unit_label and not age_unit_id or ':' not in age_unit_id:
+    if (age_unit_label and not age_unit_id) or (age_unit_label and age_unit_id and ':' not in age_unit_id):
         print(f'Error - invalid age_unit ID. for {age_unit_label} id {age_unit_id}')
 
     mother_in_study = None
@@ -278,7 +278,7 @@ def create_subject(session, study_obj, subject_name, row):
     except json.JSONDecodeError:
         raise ImportException('Error - disease_diagnosis is not a valid ontology object.')
 
-    if disease_diagnosis_label and not disease_diagnosis_id or ':' not in disease_diagnosis_id:
+    if (disease_diagnosis_label and not disease_diagnosis_id) or (disease_diagnosis_label and disease_diagnosis_id and ':' not in disease_diagnosis_id):
         print(f'Error - invalid disease_diagnosis ID. for species {disease_diagnosis_label} id {disease_diagnosis_id}')
 
     subject_obj = Patient(
@@ -381,7 +381,7 @@ def find_or_create_tissuepro(session, tissuepros, row):
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - tissue is not a valid ontology object: {e}')
 
-    if tissuepro_dict['tissue_label'] and not tissuepro_dict['tissue_id'] or ':' not in tissuepro_dict['tissue_id']:
+    if (tissuepro_dict['tissue_label'] and not tissuepro_dict['tissue_id']) or (tissuepro_dict['tissue_label'] and tissuepro_dict['tissue_id'] and ':' not in tissuepro_dict['tissue_id']):
         print(f"Error - invalid tissue ID. for tissue {tissuepro_dict['tissue_label']} id {tissuepro_dict['tissue_id']}")
 
     try:
@@ -394,7 +394,7 @@ def find_or_create_tissuepro(session, tissuepros, row):
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - cell_species is not a valid ontology object: {e}')
 
-    if tissuepro_dict['cell_species_label'] and not tissuepro_dict['cell_species_id'] or ':' not in tissuepro_dict['cell_species_id']:
+    if (tissuepro_dict['cell_species_label'] and not tissuepro_dict['cell_species_id']) or (tissuepro_dict['cell_species_label'] and tissuepro_dict['cell_species_id'] and ':' not in tissuepro_dict['cell_species_id']):
         print(f"Error - invalid cell_species ID. for {tissuepro_dict['cell_species_label']} id {tissuepro_dict['cell_species_id']}")
 
     try:
@@ -407,7 +407,7 @@ def find_or_create_tissuepro(session, tissuepros, row):
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - cell_subset is not a valid ontology object: {e}')
 
-    if tissuepro_dict['cell_subset_label'] and not tissuepro_dict['cell_subset_id'] or ':' not in tissuepro_dict['cell_subset_id']:
+    if (tissuepro_dict['cell_subset_label'] and not tissuepro_dict['cell_subset_id']) or (tissuepro_dict['cell_subset_label'] and tissuepro_dict['cell_subset_id'] and ':' not in tissuepro_dict['cell_subset_id']):
         print(f"Error - invalid cell_subset ID. for {tissuepro_dict['cell_subset_label']} id {tissuepro_dict['cell_subset_id']}")
 
 
@@ -454,7 +454,7 @@ def find_or_create_seqprotocol(session, seqprotocols, row):
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - template_amount_unit is not a valid ontology object: {e}')
 
-    if seqprotocol_dict['template_amount_unit_label'] and not seqprotocol_dict['template_amount_unit_id'] or ':' not in seqprotocol_dict['template_amount_unit_id']:
+    if (seqprotocol_dict['template_amount_unit_label'] and not seqprotocol_dict['template_amount_unit_id']) or (seqprotocol_dict['template_amount_unit_label'] and seqprotocol_dict['template_amount_unit_id'] and ':' not in seqprotocol_dict['template_amount_unit_id']):
         print(f"Error - invalid template_amount ID. for {seqprotocol_dict['template_amount_unit_label']} id {seqprotocol_dict['template_amount_unit_id']}")
 
     for obj, sd in seqprotocols:
@@ -534,7 +534,7 @@ def create_sample(session, study, patient, sample_name, tissuepro, seqprotocol, 
     except json.JSONDecodeError as e:
         raise ImportException(f'Error - template_amount_unit is not a valid ontology object: {e}')
 
-    if row['collection_time_point_relative_unit_label'] and not row['collection_time_point_relative_unit_id'] or ':' not in row['collection_time_point_relative_unit_id']:
+    if (row['collection_time_point_relative_unit_label'] and not row['collection_time_point_relative_unit_id']) or (row['collection_time_point_relative_unit_label'] and row['collection_time_point_relative_unit_id'] and ':' not in row['collection_time_point_relative_unit_id']):
         print(f"Error - invalid collection_time_point_relative_unit ID. for  {row['collection_time_point_relative_unit_label']} id {row['collection_time_point_relative_unit_id']}")
 
     ref_id = None
