@@ -14,4 +14,7 @@ class Job:
         print('status: %s' % meta['value'])
 
 
-create_single_database(Job(), args.species, args.dataset_name, os.getcwd(), True)
+success, result = create_single_database(Job(), args.species, args.dataset_name, os.getcwd(), True)
+
+for r in result:
+    print(r)

@@ -57,6 +57,7 @@ def process_genotypes(ds_dir, species, dataset, session):
             sample_genotype(sample, pipeline_names, session)
         else:
             result.append('Error: no genotype file for sample %s - removing from sample list' % sample.sample_name)
+            print('Error: no genotype file for sample %s - removing from sample list' % sample.sample_name)
             session.delete(sample)
 
         # fix up filenames for the live database
