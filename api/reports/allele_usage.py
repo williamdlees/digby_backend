@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import time
-from api.reports.Python_scripts.Allele_Usage import create_allele_usage_plot
+from api.reports.Python_scripts.Allele_Usage import create_allele_usage_plot, create_allele_usage_plot_pdf
 
 
 # Define constant for sample chunk size
@@ -28,14 +28,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     start_time = time.time()
     
     # Validate input format
-    if format != 'html':
-        raise BadRequest('Invalid format requested')
-
+    if format not in ["html", "pdf"]:
+        raise ValueError("Invalid format. Choose 'html' or 'pdf'.")
+    
     # Process input parameters
     kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
     chain, rep_samples_by_dataset = collate_samples(rep_samples)
     g_chain, gen_samples_by_dataset = collate_gen_samples(genomic_samples)
-
     # Validate chain consistency
     if (chain and g_chain) and chain != g_chain:
         raise BadRequest('This report requires all samples to be selected from the same chain (IGH, IGK, ...')
@@ -188,8 +187,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     df = pd.DataFrame(listed_allele_count, columns=labels)
     
     # Generate and save report
-    output_path = make_output_file('html')
-    generate_report(df, output_path, chain)
+    output_path = make_output_file(format)
+    attachment_filename = f'{species}_allele_usage.{format}'
+    generate_report(format,df, output_path, chain)
 
     # Log execution time
     end_time = time.time()
@@ -198,7 +198,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     # Return report or raise exception if no output
     if os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
-        return send_report(output_path, format)
+        return send_report(output_path, format,attachment_filename)
     else:
         raise BadRequest('No output from report')
 
@@ -238,8 +238,15 @@ def allele_usage_bar_html(gene_segment, chain="IGH"):
     fig.update_layout(height=1300, showlegend=False, title_text=f"Allele Usage for {chain}", barmode='stack')
     return fig
 
-def generate_report(df, output_file, chain="IGH"):
-    # Generate plot
-    fig = create_allele_usage_plot(df, chain)
-    # Save plot to HTML file
-    fig.write_html(output_file)
+def generate_report(format, df, output_file, chain="IGH"):
+    # Generate plot 
+    if format == "html":
+        fig = create_allele_usage_plot(df, chain)
+        fig.write_html(output_file)
+    elif format == "pdf":
+        try:
+            plt=create_allele_usage_plot_pdf(df, chain)
+            plt.savefig(output_file, bbox_inches='tight')
+            plt.close()
+        except Exception as e:
+            print(f"Error generating PDF: {e}")

@@ -9,7 +9,7 @@ from api.vdjbase.vdjbase import apply_rep_filter_params
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from api.reports.Python_scripts.Heterozygous import create_heterozygous_plot
+from api.reports.Python_scripts.Heterozygous import create_heterozygous_plot_html,create_heterozygous_plot_pdf
 
 SAMPLE_CHUNKS = 400
 
@@ -17,8 +17,8 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     if len(rep_samples) == 0:
         raise BadRequest('No repertoire-derived genotypes were selected.')
 
-    if format != 'html':
-        raise BadRequest('Invalid format requested')
+    if format not in ["html", "pdf"]:
+        raise ValueError("Invalid format. Choose 'html' or 'pdf'.")
 
     kdiff = float(params['f_kdiff']) if 'f_kdiff' in params and params['f_kdiff'] != '' else 0
     chain, samples_by_dataset = collate_samples(rep_samples)
@@ -98,18 +98,25 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
             else:
                 gene_hetrozygous_dis[target_gene] = (target_gene, gene_hetrozygous_dis[target_gene][1] + h_counts[0], gene_hetrozygous_dis[target_gene][2] + h_counts[1])
 
-    haplo_path = make_output_file('tab')
+    #haplo_path = make_output_file('tab')
     labels = ['GENE', 'HM', 'HT']
     df = pd.DataFrame(gene_hetrozygous_dis.values(), columns=labels)
-    df.to_csv(haplo_path, sep='\t', index=False)
-    output_path = make_output_file('html')
+    #df.to_csv(haplo_path, sep='\t', index=False)
+    output_path = make_output_file(format)
+    attachment_filename = f'{species}_heterozygous.{format}'
 
     #Plot Creation
-    create_heterozygous_plot(haplo_path, output_path, chain)
+    generate_report(format,df, output_path, chain)
 
     if os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
-        return send_report(output_path, format)
+        return send_report(output_path, format,attachment_filename)
     else:
         raise BadRequest('No output from report')
 
 
+def generate_report(format, df, output_file, chain="IGH"):
+    # Generate plot 
+    if format == "html":
+        create_heterozygous_plot_html(df, output_file, chain)
+    elif format == "pdf":
+        create_heterozygous_plot_pdf(df, output_file, chain)
