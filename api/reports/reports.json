@@ -115,52 +115,6 @@
         "html"
       ]
     },
-    "rep_genotype": {
-      "title": "Genotype List",
-      "description": "Report of the inferred genotypes for up to 20 samples",
-      "thumbnail": "genotype_list.png",
-      "params": [
-        {
-          "id": "per_sample",
-          "type": "select",
-          "label": "Show graphs for:",
-          "options": [
-            "Each sample",
-            "Individual (representative sample for each subject)"
-          ]
-        },
-        {
-          "id": "sort_order",
-          "type": "select",
-          "label": "Gene Sort Order",
-          "options": [
-            "Locus",
-            "Alphabetic"
-          ]
-        },
-        {
-          "id": "geno_hap",
-          "type": "select",
-          "label": "Show genomic alleles",
-          "options": [
-            "Fully and partially haplotyped",
-            "Only if fully haplotyped"
-          ]
-        }
-      ],
-      "filter_params": true,
-      "scope": [
-        "rep_sample",
-        "gen_sample"
-      ],
-      "format": [
-        "pdf",
-        "html"
-      ],
-      "limits": {
-        "max_samples": 20
-      }
-    },
     "haplo_heatmap": {
       "title": "Haplotype Heatmap",
       "description": "Heatmap showing the inferred haplotype derived from each selected sample. Only samples that can be haplotyped with the selected gene will be shown.",
@@ -244,7 +198,8 @@
       ],
       "format": [
         "pdf",
-        "xls"
+        "xls",
+        "html"
       ]
     },
     "heterozygosity": {
@@ -281,6 +236,7 @@
         "rep_sample"
       ],
       "format": [
+        "pdf",
         "html"
       ]
     },
@@ -328,7 +284,8 @@
         "gen_sample"
       ],
       "format": [
-        "html"
+        "html",
+        "pdf"
       ]
     },
     "gene_frequencies": {
@@ -369,6 +326,7 @@
         "rep_sample"
       ],
       "format": [
+        "html",
         "pdf"
       ]
     },

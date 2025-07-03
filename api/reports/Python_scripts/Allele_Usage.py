@@ -81,3 +81,53 @@ def create_allele_usage_plot(gene_segment, chain="IGH"):
     )
 
     return fig
+
+
+import matplotlib.pyplot as plt
+
+def create_allele_usage_plot_pdf(gene_segment, chain="IGH"):
+    import matplotlib.ticker as ticker
+
+    # Validate input
+    if not isinstance(gene_segment, pd.DataFrame):
+        raise ValueError("Input must be a pandas DataFrame")
+    if not all(col in gene_segment.columns for col in ['GENE', 'COUNT']):
+        raise ValueError("Input DataFrame must have 'GENE' and 'COUNT' columns")
+    if chain not in ["IGH", "IGK", "IGL", "TRB", "TRA"]:
+        raise ValueError("Invalid chain value")
+
+    # Define colors
+    pastel_blue = '#BAE1FF'
+
+    # Determine gene segment (V, D, or J)
+    chain_prefix = chain[0]
+    nth = 4 if gene_segment['GENE'].str.startswith(chain_prefix).any() else 1
+    gene_segment['SEGMENT'] = gene_segment['GENE'].str[nth - 1]
+
+    # Get unique segments
+    unique_segments = sorted(gene_segment['SEGMENT'].unique())
+
+    if len(unique_segments) == 0:
+        raise ValueError("No segments found in the data")
+
+    # Create figure with subplots
+    fig, axes = plt.subplots(1, len(unique_segments), figsize=(18, 8), sharey=False, constrained_layout=True)
+
+    if len(unique_segments) == 1:
+        axes = [axes]  # Ensure axes is iterable
+
+    for ax, segment in zip(axes, unique_segments):
+        segment_data = gene_segment[gene_segment['SEGMENT'] == segment]
+        ax.barh(segment_data['GENE'], segment_data['COUNT'], color=pastel_blue, edgecolor="black", alpha=0.7)
+        ax.set_title(f"{chain}{segment}", fontsize=18, fontweight="bold", loc="center")  # Explicitly center title
+        ax.set_xlabel("Count", fontsize=14)
+        ax.set_ylabel("Gene", fontsize=14)  # Ensure y-axis labels for each subplot
+        ax.tick_params(axis='y', labelsize=10, left=True)  # Ensure y-axis ticks appear
+        ax.set_yticks(range(len(segment_data['GENE'])))
+        ax.set_yticklabels(segment_data['GENE'], fontsize=8)  # Ensure labels are readable
+
+    plt.suptitle(f"Allele Usage for {chain}", fontsize=22, fontweight='bold')
+
+
+    return plt
+

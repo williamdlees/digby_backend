@@ -8,15 +8,14 @@ from db.vdjbase_model import AllelesSample, Gene, Allele
 from db.vdjbase_airr_model import Sample, Patient
 from db.genomic_db import Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence, Gene as GenomicGene
 from db.genomic_airr_model import Sample as GenomicSample
-import os
+#import os
 from api.vdjbase.vdjbase import apply_rep_filter_params
 import pandas as pd
 from api.reports.Python_scripts.Allelle_Appearance import create_upset_plot
 import time
 from datetime import datetime
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import json
+#import plotly.graph_objects as go
+#from plotly.subplots import make_subplots
 import itertools
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
@@ -167,15 +166,17 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     }
 
     output_path = make_output_file(format)
-    
+            
     print(f"Creating plots for {len(multi_allele_matrices)} genes...")
-    result = create_upset_plot(multi_allele_matrices, output_path)
+    if format == 'pdf':
+        result = create_upset_plot(multi_allele_matrices, output_path)
+    if format == 'html':
+        result = create_upset_plot(multi_allele_matrices, output_path)
     print(f"Plot creation took {time.time() - plot_start:.2f} seconds")
 
     end_time = time.time()
     total_time = end_time - start_time
     
-    print(f"\nAnalysis completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Total execution time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
     
     if result:

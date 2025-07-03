@@ -10,9 +10,63 @@ from api.vdjbase.vdjbase import apply_rep_filter_params, get_multiple_order_file
 import pandas as pd
 from api.reports.Python_scripts.Gene_Frequencies import create_gene_frequencies_plot
 
+import time
+import threading
+import traceback
+from dataclasses import dataclass
+from typing import Optional
+from werkzeug.exceptions import BadRequest
+
+@dataclass
+class ProcessTimer:
+    process_name: str
+    test_mode: bool
+    process_id: int
+    start_time: float
+    last_step_time: float
+    total_pages: Optional[int] = None
+    
+    @classmethod
+    def start(cls, name: str, test_mode: bool = False):
+        start = time.time()
+        return cls(
+            process_name=name,
+            test_mode=test_mode,
+            process_id=threading.get_ident(),
+            start_time=start,
+            last_step_time=start
+        )
+    
+    def log_step(self, step_name: str):
+        current = time.time()
+        elapsed = current - self.last_step_time
+        total = current - self.start_time
+        print(f"{step_name}: {elapsed:.2f}s (Total: {total:.2f}s)")
+        self.last_step_time = current
+    
+    def set_pages(self, total: int):
+        self.total_pages = total
+        print(f"/nGenerating {total} pages...")
+    
+    def log_page(self, page_num: int):
+        if not self.total_pages:
+            return
+        print(f"Page {page_num}/{self.total_pages} completed in {time.time() - self.last_step_time:.2f}s")
+        self.last_step_time = time.time()
+    
+    def finish(self):
+        print(f"\n{'-'*20}")
+        mode = 'TEST' if self.test_mode else 'Production'
+        total = time.time() - self.start_time
+        print(f"{mode} {self.process_name} completed in {total:.2f}s")
+        print(f"{'-'*20}\n")
+
+
 SAMPLE_CHUNKS = 400
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
+    timer = ProcessTimer.start('Total Report Generation', test_mode=False)
+    timer.log_step("Starting report generation")
     if len(rep_samples) == 0:
         raise BadRequest('No repertoire-derived genotypes were selected.')
 
@@ -58,20 +112,22 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     ])
 
     input_path = make_output_file('tab')
-    genes_frequencies_df.to_csv(input_path, sep='\t', index=False)
+    #genes_frequencies_df.to_csv(input_path, sep='\t', index=False)
 
     output_path = make_output_file(format)
     attachment_filename = f'{species}_gene_frequency.{format}'
 
     # Create the plot using the new function
     create_gene_frequencies_plot(
-        input_file=input_path,
+        input=genes_frequencies_df,
         output_file=output_path,
         chain=chain,
         format=format
     )
-
+    timer.log_step("Plot created")
+    
     if os.path.isfile(output_path) and os.path.getsize(output_path) != 0:
         return send_report(output_path, format, attachment_filename)
     else:
         raise BadRequest('No output from report')
+    timer.finish()

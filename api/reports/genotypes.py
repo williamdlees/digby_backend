@@ -92,7 +92,70 @@ def process_genomic_genotype(sample_name, wanted_genes, session, functional, ful
     return pd.DataFrame(geno_list)
 
 
+def unfiltered_process_repseq_genotype(wanted_genes, session, functional):
+    
+    alleles = session.query(Sample.sample_name, Allele.name, Gene.name, AllelesSample) \
+        .join(AllelesSample, AllelesSample.sample_id == Sample.id) \
+        .join(Allele, AllelesSample.allele_id == Allele.id) \
+        .join(Gene, Allele.gene_id == Gene.id)
+
+    if len(wanted_genes) > 0:
+        alleles = alleles.filter(Gene.name.in_(wanted_genes))
+
+    if functional:
+        alleles = alleles.filter(Gene.pseudo_gene == False)
+
+    alleles = alleles.all()
+    
+ 
+    
+    genolists = []
+    genes = dict()
+    
+    for sample_name,allele, gene, allelessample in alleles:
+        
+        if sample_name not in genes:
+            genes[sample_name] = dict()
+
+        if gene not in genes[sample_name]:
+            genes[sample_name][gene] = {'alleles': [], 'count': [], 'fc': [], 'fs': []}
+
+        if '*' in allele:
+            allele_name = allele.split('*')[1]
+        elif '.' in allele:         # cirelli format
+            if allele[-2:-1] == '.' and allele[-1].isalpha():
+                allele_name = '01_' + allele[-1]
+            elif '_' in allele.replace('LJI.Rh_', ''):
+                allele_name = '01_' + allele.replace('LJI.Rh_', '').split('_')[-1]
+            else:
+                allele_name = '01'
+        else:
+            allele_name = allele    # don't expect this to happen
+
+        if allele_name not in genes[sample_name][gene]['alleles']:
+            genes[sample_name][gene]['alleles'].append(allele_name)
+            genes[sample_name][gene]['count'].append(str(allelessample.count))
+            genes[sample_name][gene]['fc'].append(str(allelessample.freq_by_clone))
+            genes[sample_name][gene]['fs'].append(str(allelessample.freq_by_seq))
+            genes[sample_name][gene]['kdiff'] = str(allelessample.kdiff)
+            genes[sample_name][gene]['total_count'] = str(allelessample.total_count)
+        else:
+            print(f"Allele {allele_name} seen multiply in genotype")
+        
+    #genolists = []
+    #for sample_name in genes:
+    #    geno_list = fake_genotype(sample_name, genes[sample_name])
+    #    genolists.append(pd.DataFrame(geno_list)) ##
+    genolists = [
+        pd.DataFrame(fake_genotype(sample_name, genes[sample_name]))
+        for sample_name in genes
+    ]
+    genolists = pd.concat(genolists)
+
+    return genolists
+
 def process_repseq_genotype(sample_name, wanted_genes, session, functional):
+    
     alleles = session.query(Sample.sample_name, Allele.name, Gene.name, AllelesSample) \
         .filter(Sample.sample_name == sample_name) \
         .join(AllelesSample, AllelesSample.sample_id == Sample.id) \
@@ -106,9 +169,13 @@ def process_repseq_genotype(sample_name, wanted_genes, session, functional):
         alleles = alleles.filter(Gene.pseudo_gene == False)
 
     alleles = alleles.all()
-
+    
+    # import pdb
+    # pdb.set_trace()
+    
     genes = {}
     for sample_name, allele, gene, allelessample in alleles:
+            
         if gene not in genes:
             genes[gene] = {'alleles': [], 'count': [], 'fc': [], 'fs': []}
 

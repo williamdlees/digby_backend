@@ -11,6 +11,7 @@ import json
 
 __all__ = ['create_upset_plot']
 
+
 def create_upset_plot(matrices, output_file, genes_to_plot=None):
     """
     Create UpSet plot for given matrices
@@ -20,115 +21,152 @@ def create_upset_plot(matrices, output_file, genes_to_plot=None):
     :param genes_to_plot: Gene or list of genes to plot. If None, plots all genes. Defaults to None.
     :return: Boolean indicating success
     """
-    file_ext = os.path.splitext(output_file)[1].lower()
-
-    if file_ext not in ['.pdf', '.html']:
+    if not output_file.endswith(('.pdf', '.html')):
         raise ValueError("Output file must be either .pdf or .html")
 
-    # Handle genes_to_plot filtering
-    if genes_to_plot is not None:
-        # Convert genes_to_plot to a list if it's a string
-        if isinstance(genes_to_plot, str):
-            genes_to_plot = [genes_to_plot]
-        
-        # Filter matrices to only include specified genes
+    if genes_to_plot:
+        genes_to_plot = {genes_to_plot} if isinstance(genes_to_plot, str) else set(genes_to_plot)
         matrices = {k: v for k, v in matrices.items() if k in genes_to_plot}
         
-        # Check if any matching genes were found
         if not matrices:
             print(f"No matching genes found. Available genes: {list(matrices.keys())}")
             return False
 
     try:
-        if file_ext == '.pdf':
-            return _create_pdf_upset(matrices, output_file)
-        else:
-            return _create_html_upset(matrices, output_file)
+        return _create_pdf_upset(matrices, output_file) if output_file.endswith('.pdf') else _create_html_upset(matrices, output_file)
     except Exception as e:
-        print(f"Error creating upset plot: {str(e)}")
+        print(f"Error creating upset plot: {e}")
         return False
 
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.pyplot as plt
+import pandas as pd
+from upsetplot import plot
+
+import time
+import threading
+import traceback
+from dataclasses import dataclass
+from typing import Optional
+from werkzeug.exceptions import BadRequest
+from collections import defaultdict
+
+import time
+@dataclass
+class ProcessTimer:
+    process_name: str
+    test_mode: bool
+    process_id: int
+    start_time: float
+    last_step_time: float
+    total_pages: Optional[int] = None
     
+    @classmethod
+    def start(cls, name: str, test_mode: bool = False):
+        start = time.time()
+        return cls(
+            process_name=name,
+            test_mode=test_mode,
+            process_id=threading.get_ident(),
+            start_time=start,
+            last_step_time=start
+        )
+    
+    def log_step(self, step_name: str):
+        current = time.time()
+        elapsed = current - self.last_step_time
+        total = current - self.start_time
+        print(f"{step_name}: {elapsed:.2f}s (Total: {total:.2f}s)")
+        self.last_step_time = current
+    
+    def set_pages(self, total: int):
+        self.total_pages = total
+        print(f"/nGenerating {total} pages...")
+    
+    def log_page(self, page_num: int):
+        if not self.total_pages:
+            return
+        print(f"Page {page_num}/{self.total_pages} completed in {time.time() - self.last_step_time:.2f}s")
+        self.last_step_time = time.time()
+    
+    def finish(self):
+        print(f"\n{'-'*20}")
+        mode = 'TEST' if self.test_mode else 'Production'
+        total = time.time() - self.start_time
+        print(f"{mode} {self.process_name} completed in {total:.2f}s")
+        print(f"{'-'*20}\n")
+
+
 def _create_pdf_upset(matrices, output_file):
-    """Internal function to create PDF upset plots with sorted intersection sizes"""
+    #timer = ProcessTimer.start('Total Report Generation', test_mode=False)
+    #timer.log_step('Start')
     FIXED_WIDTH = 20
     FIXED_HEIGHT = 15
     SYMBOL_COLOR = '#0066CC'
     MAX_ALLELE_LENGTH = 40
 
     def clean_allele_name(name):
-        """Clean allele names to ensure consistency"""
-        # Remove any duplicate '01_' prefixes
-        while '01_01_' in name:
-            name = name.replace('01_01_', '01_')
-        return name
+        return name.replace('01_01_', '01_')
 
+    matrices = {
+        gene: matrix.rename(columns=lambda col: clean_allele_name(col))
+        for gene, matrix in matrices.items()
+    }
+    #timer.log_step('Clean Allele Names')
     with PdfPages(output_file) as pdf:
         for gene, matrix in matrices.items():
             plt.clf()
-            plt.close('all')
+            #plt.close('all')
+            fig = plt.figure(figsize=(FIXED_WIDTH, FIXED_HEIGHT), dpi=300)
 
-            fig = plt.figure()
-            fig.set_size_inches(FIXED_WIDTH, FIXED_HEIGHT, forward=True)
+            # Assign symbols for long allele names
+            allele_symbols = {
+                allele: f'A{i+1}' for i, allele in enumerate(matrix.columns)
+                if len(str(allele)) > MAX_ALLELE_LENGTH
+            }
+            legend_needed = bool(allele_symbols)
 
-            # Clean column names
-            matrix.columns = [clean_allele_name(col) for col in matrix.columns]
-
-            # Create symbols for long allele names
-            allele_symbols = {}
-            legend_needed = False
-            for i, allele in enumerate(matrix.columns):
-                if len(str(allele)) > MAX_ALLELE_LENGTH:
-                    allele_symbols[allele] = f'A{i+1}'
-                    legend_needed = True
-
-            # Create a copy of matrix with symbolic names if needed
             if legend_needed:
-                matrix_copy = matrix.copy()
-                matrix_copy.columns = [allele_symbols.get(col, col) for col in matrix.columns]
-                upset_data = matrix_copy.value_counts()
+                col_map = [allele_symbols.get(col, col) for col in matrix.columns]
+                matrix.columns = col_map
+                pattern_str = matrix.astype(int).astype(str).agg(''.join, axis=1)
+                upset_data = pattern_str.value_counts()
+                pattern_tuples = upset_data.index.map(lambda s: tuple(c == '1' for c in s))
+                upset_data.index = pd.MultiIndex.from_tuples(pattern_tuples, names=matrix.columns.tolist())
             else:
                 upset_data = matrix.value_counts()
 
-            # Sort the upset data by intersection sizes
-            intersection_sizes = {}
-            for pattern in upset_data.index:
-                active_cols = [i for i, is_active in enumerate(pattern) if is_active]
-                subset = matrix.iloc[:, active_cols]
-                intersection_size = subset.all(axis=1).sum()
-                intersection_sizes[pattern] = intersection_size
-
-            # Sort the patterns by intersection size, and then by the pattern itself for consistency
-            sorted_patterns = sorted(upset_data.index,
-                                    key=lambda x: (-intersection_sizes[x], x))
+            # Sort by frequency and fallback to key
+            intersection_sizes = upset_data.to_dict()
+            sorted_patterns = sorted(upset_data.index, key=lambda x: (-intersection_sizes[x], x))
             upset_data = upset_data.reindex(sorted_patterns)
 
-            # Create the plot
-            axes = plot(upset_data,
-                        sort_by=None,
-                        show_counts=True,
-                        element_size=25 if len(matrix.columns) > 30 else 40,
-                        fig=fig)
+            # Plot
+            axes = plot(
+                upset_data,
+                sort_by=None,
+                show_counts=True,
+                element_size=25 if matrix.shape[1] > 30 else 40,
+                fig=fig
+            )
 
             if len(fig.axes) >= 2:
                 intersection_ax = fig.axes[1]
-                current_pos = intersection_ax.get_position()
-                intersection_ax.set_position([0.8, current_pos.y0, current_pos.width, current_pos.height])
+                pos = intersection_ax.get_position()
+                intersection_ax.set_position([0.8, pos.y0, pos.width, pos.height])
 
-            fig.set_size_inches(FIXED_WIDTH, FIXED_HEIGHT, forward=True)
+            fig.set_size_inches(FIXED_WIDTH, FIXED_HEIGHT)
             plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15)
 
             if legend_needed:
-                legend_text = []
-                for allele, symbol in sorted(allele_symbols.items()):
-                    legend_text.append(f'{symbol}: {allele}')
-
-                plt.figtext(0.02, 0.02, 'Legend:\n' + '\n'.join(legend_text),
-                            fontsize=7, family='monospace',
-                            color=SYMBOL_COLOR,
-                            bbox=dict(facecolor='white', alpha=0.8,
-                                      edgecolor=SYMBOL_COLOR, linewidth=1),
-                            verticalalignment='bottom')
+                legend_text = '\n'.join(f'{sym}: {allele}' for allele, sym in sorted(allele_symbols.items()))
+                plt.figtext(
+                    0.02, 0.02, 'Legend:\n' + legend_text,
+                    fontsize=7, family='monospace',
+                    color=SYMBOL_COLOR,
+                    bbox=dict(facecolor='white', alpha=0.8, edgecolor=SYMBOL_COLOR, linewidth=1),
+                    verticalalignment='bottom'
+                )
 
             plt.suptitle(gene, y=0.95, fontsize=14, fontweight='bold')
 
@@ -136,28 +174,17 @@ def _create_pdf_upset(matrices, output_file):
                 if ax.get_xaxis().get_visible():
                     ax.tick_params(axis='x', rotation=45, labelsize=10)
                 ax.tick_params(axis='y', labelsize=10)
-
                 for label in ax.get_yticklabels():
-                    label_text = label.get_text()
-                    if label_text.strip() in allele_symbols.values():
+                    if label.get_text().strip() in allele_symbols.values():
                         label.set_color(SYMBOL_COLOR)
                     label.set_fontsize(8)
                     label.set_fontweight('bold')
-
-            pdf.savefig(fig,
-                        dpi=300,
-                        orientation='landscape',
-                        bbox_inches=None)
-
+            pdf.savefig(fig, dpi=300, orientation='landscape')
             plt.close(fig)
 
     return True
 
-# Previous imports and setup remain the same...
 
-    # Previous imports and setup remain the same...
-# Previous imports and setup remain the same...
-# Previous imports and setup remain the same...
 def _create_html_upset(matrices, output_file):
     """Create an HTML UpSet plot that matches the PDF output layout"""
     import plotly.graph_objects as go
