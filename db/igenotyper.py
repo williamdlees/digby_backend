@@ -30,7 +30,13 @@ def to_int(row, field):
         try:
             return int(row[field])
         except ValueError:
-            print(f"Error: {field} is not an integer in {row}")
+            try:
+                ret = float(row[field])
+                if abs(ret - int(ret)) > 0.0001:
+                    raise ValueError(f"{field} is not an integer in {row}")
+                return int(ret)
+            except ValueError:
+                print(f"Error: {field} is not an integer in {row}")
             return 0
     else:
         return 0
@@ -286,6 +292,7 @@ def create_features(row, session, sample, reference_features, seq):
             feature_id = session.query(Feature).count()
             start = end = 0
             if reference_features:
+                ref_seq = sample.ref_seq.name
                 start = reference_features[ref_seq][seq.gene.name]['GENE']['start']
                 end = reference_features[ref_seq][seq.gene.name]['GENE']['end']
 

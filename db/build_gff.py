@@ -1,9 +1,77 @@
 from db.genomic_db import RefSeq, Feature, Sequence, SequenceFeature, Details
 from sqlalchemy import or_, and_
 import os
+from Bio import Align
 
 from receptor_utils import simple_bio_seq as simple
 from db.cigar import Cigar
+
+
+def aligned_diff(novel_seq: str, ref_seq: str):
+    aligner = Align.PairwiseAligner()
+    aligner.mode = 'global'
+    aligner.open_gap_score = -5
+    aligner.extend_gap_score = -1
+    aligner.match_score = 2
+    aligner.mismatch_score = 0
+    aligner.target_end_gap_score = 1
+
+    best_alignment = aligner.align(novel_seq, ref_seq)[0]
+
+    # return 0-based start, end and score
+    return best_alignment[0], best_alignment[1], best_alignment.score
+
+
+def create_cigar_from_alignment(alignment):
+    """
+    Create a CIGAR string from a pairwise alignment.
+
+    Args:
+        alignment: A tuple with (query_aligned, reference_aligned) from aligned_diff function
+
+    Returns:
+        A string representing the CIGAR operations
+    """
+    query_aligned, ref_aligned = alignment[0], alignment[1]
+
+    cigar_ops = []
+    current_op = None
+    count = 0
+
+    # Walk through the alignment paths
+    for q_char, r_char in zip(query_aligned, ref_aligned):
+        # Match or mismatch (both are 'M' in CIGAR)
+        if q_char != '-' and r_char != '-':
+            op = 'M'
+        # Insertion in query (gap in reference)
+        elif q_char != '-' and r_char == '-':
+            op = 'I'
+        # Deletion in query (gap in query)
+        elif q_char == '-' and r_char != '-':
+            op = 'D'
+        else:
+            # This shouldn't happen in normal alignments
+            continue
+
+        # If we're continuing the same operation, increment the count
+        if op == current_op:
+            count += 1
+        else:
+            # If we're changing operations, save the previous one
+            if current_op:
+                cigar_ops.append(f"{count}{current_op}")
+            # Start counting the new operation
+            current_op = op
+            count = 1
+
+    # Add the final operation
+    if current_op:
+        cigar_ops.append(f"{count}{current_op}")
+
+    # Join all operations to create the CIGAR string
+    cigar_string = "".join(cigar_ops)
+
+    return cigar_string
 
 
 def build_gff(session, dataset_dir):
@@ -144,17 +212,24 @@ def feature_gff_rec(feature, feature_name, ref_seq, sequence, session):
     # IGenotyper records will always have a cigar string
     
     cigar_string = feature.feature_cigar
-
+    
     if len(sequence.sequence) > 0 and cigar_string and cigar_string != '':
         if 'D' in cigar_string:
             sequence.sequence = sequence.sequence.replace('-', '')
         
         seq = sequence.sequence
+        cigar_string = Cigar(cigar_string)
+
+        if len(seq) != cigar_string.__len__():
+            print(f'Warning: sequence length {len(seq)} does not match cigar length {cigar_string.__len__()} for feature {feature.name} in refseq {ref_seq.name}. Probable length mismatch between reference sequence and bed file coords')
+            alignment = aligned_diff(seq, feature.feature_seq)
+            cigar_string = create_cigar_from_alignment(alignment)
+            
         if feature.strand != ref_seq.sense:
             seq = simple.reverse_complement(seq)
 
         if ref_seq.sense == '-':
-            cigar_string = Cigar(cigar_string)._reverse_cigar()
+            cigar_string = cigar_string._reverse_cigar()
 
         return '%s\t0\t%s\t%d\t255\t%s\t*\t0\t0\t%s\t*\tNM:Z:%s\n' % (
             sequence.name, ref_seq.name, feature.start, cigar_string, seq, legend)
