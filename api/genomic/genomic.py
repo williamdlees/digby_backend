@@ -610,6 +610,9 @@ def find_genomic_sequences(required_cols, genomic_datasets, species, genomic_fil
                 elif isinstance(v, Decimal):
                     s[k] = int(v)
 
+            if 'dataset' in required_cols:
+                s['dataset'] = dataset
+
             ret.append(s)
 
     return ret, required_cols, alias_dict
