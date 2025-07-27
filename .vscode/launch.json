@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Python: Flask",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "flask",
             "env": {
@@ -23,7 +23,7 @@
         },
         {
             "name": "make_genomic_db - digby_private_data/IGK",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
             "args": ["Human", "IGK"],
@@ -33,7 +33,7 @@
         },
         {
             "name": "make_genomic_db - digby_private_data/IGH",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
             "args": ["Human", "IGH"],
@@ -43,7 +43,7 @@
         },
         {
             "name": "make_genomic_db - digby_private_data/IGHC",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
             "args": ["Human", "IGHC"],
@@ -53,7 +53,7 @@
         },
         {
             "name": "make_genomic_db - digby_private_data/IGL",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
             "args": ["Human", "IGL"],
@@ -63,7 +63,7 @@
         },
         {
             "name": "make_genomic_db - digby_private_data/rhesus_IGH",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_genomic_db.py",
             "args": ["Rhesus_Macaque", "IGH"],
@@ -73,7 +73,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_data/TRB",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "TRB"],
@@ -83,7 +83,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_data/IGL",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGL"],
@@ -93,7 +93,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_data/IGK",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGK"],
@@ -103,7 +103,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_private_data/IGH",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGH"],
@@ -113,7 +113,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_private_data/IGK",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGK"],
@@ -123,7 +123,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_private_data/TRB",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "TRB"],
@@ -133,7 +133,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_dev_data/IGK",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGK"],
@@ -143,7 +143,7 @@
         },
         {
             "name": "make_airr_seq_db - digby_private_data/rh IGH",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
             "args": ["Human", "IGH"],
@@ -153,7 +153,7 @@
         },
         {
             "name": "vdjbase_create_airr_classes.py",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/vdjbase_create_airr_classes.py",
             "cwd": "${workspaceFolder}",
@@ -162,7 +162,7 @@
         },
         {
             "name": "vdjbase_create_filters.py",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/vdjbase_create_filters.py",
             "cwd": "${workspaceFolder}",
@@ -171,7 +171,7 @@
         },
         {
             "name": "genomic_create_filters.py",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/genomic_create_filters.py",
             "cwd": "${workspaceFolder}",
@@ -180,7 +180,7 @@
         },
         {
             "name": "vdjbase_create_digby_panel_cols.py",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/db/vdjbase_create_digby_panel_cols.py",
             "cwd": "${workspaceFolder}",
@@ -189,7 +189,7 @@
         },
         {
             "name": "genomic_create_digby_panel_cols.py",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/genomic_create_digby_panel_cols.py",
             "cwd": "${workspaceFolder}",

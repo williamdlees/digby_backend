@@ -216,7 +216,7 @@ def process_study(dataset_dir, reference_features, session, study, study_name, r
 def create_subject(session, study_obj, subject_name, row):
     check_required_fields('patient', row)
 
-    row['synthetic'] = 'T' in row['synthetic'].upper()
+    row['synthetic'] = 'F' in row['synthetic'].upper()
 
     try:
         species_rec = json.loads(row['species'])
