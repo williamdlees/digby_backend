@@ -82,8 +82,9 @@ class AscsInChainApi(Resource):
         if ds in genomic_dbs[species]:
             session = genomic_dbs[species][ds].session
             genes = session.query(GenomicGene.name).filter(GenomicGene.type == chain).all()
-            ret.extend([g[0] for g in genes if g not in ret])
+            ret.extend(genes)
 
+        ret = sorted(set([g[0] for g in genes]))
         return ret
 
 
