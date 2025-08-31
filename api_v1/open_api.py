@@ -1,7 +1,8 @@
 import json
 from datetime import datetime
-from flask import Blueprint, request, jsonify, Response
-from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Genotype, Locus, Sample, \
+import dateutil
+from flask import Blueprint, request, Response
+from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Sample, \
     SampleMetadataResponse, Repertoire, DataProcessing, SampleProcessing, CellProcessing, NucleicAcidProcessing, SequencingRun, LibraryGenerationMethod, TemplateClass, \
     CompleteSequences, PhysicalLinkage, SequencingData, FileTypeEnum, ReadDirectionEnum, PairedReadDirectionEnum, Subject, SexEnum, SubjectGenotype, GenotypeSet, Diagnosis, \
     Study, KeywordsStudyEnum, GenotypeClassListItem, AllSubjectsGenotypeResponse, AllSamplesMetadataResponse
@@ -332,6 +333,7 @@ def create_repertoire_obj(subject_info):
     return rep_object
 
 
+
 def create_data_processing_list(subject_info):
     """Create a list of DataProcessing objects from subject information."""
     subject_info = fill_missing_required_fields(DataProcessing,  subject_info)
@@ -374,7 +376,7 @@ def create_sample_processing_list(subject_info):
                                              tissue=Ontology(id=subject_info.get("tissue_id", ""), label=subject_info.get("tissue_label", "")),
                                              anatomic_site=subject_info.get("anatomic_site"),
                                              disease_state_sample=subject_info.get("disease_state_sample"),
-                                             collection_time_point_relative=int(subject_info.get("collection_time_point_relative")) if subject_info.get("collection_time_point_relative") else 0,
+                                             collection_time_point_relative=float(subject_info.get("collection_time_point_relative")) if subject_info.get("collection_time_point_relative") else 0,
                                              collection_time_point_relative_unit=Ontology(id=subject_info.get("collection_time_point_relative_unit_id", ""), label=subject_info.get("collection_time_point_relative_unit_label", "")),
                                              collection_time_point_reference=subject_info.get("collection_time_point_reference"),
                                              biomaterial_provider=subject_info.get("biomaterial_provider"),
@@ -391,7 +393,7 @@ def create_sample_processing_list(subject_info):
                                              cell_processing_protocol=subject_info.get("cell_processing_protocol"),
                                              template_class=TemplateClass(subject_info.get("template_class").upper()),
                                              template_quality=subject_info.get("template_quality"),
-                                             template_amount=int(subject_info.get("template_amount")) if subject_info.get("template_amount") else 0,
+                                             template_amount=float(subject_info.get("template_amount")) if subject_info.get("template_amount") else 0,
                                              template_amount_unit=Ontology(id=subject_info.get("template_amount_unit_id", ""), label=subject_info.get("template_amount_unit_label", "")),
                                              library_generation_method=library_generation_method,
                                              library_generation_protocol=subject_info.get("library_generation_protocol"),
@@ -403,7 +405,7 @@ def create_sample_processing_list(subject_info):
                                              total_reads_passing_qc_filter=subject_info.get("total_reads_passing_qc_filter"),
                                              sequencing_platform=subject_info.get("sequencing_platform"),
                                              sequencing_facility=subject_info.get("sequencing_facility"),
-                                             sequencing_run_date=subject_info.get("sequencing_run_date"),
+                                             sequencing_run_date=create_date(subject_info, "sequencing_run_date"),
                                              sequencing_kit=subject_info.get("sequencing_kit"),
                                              sequencing_files=create_sequencing_data_object(subject_info)
                                              )
@@ -542,11 +544,15 @@ def create_keyword_study_list(subject_info):
 
 def create_date(subject_info, field):
     """Create a datetime object from subject information and field."""
-    if subject_info.get(field) == "":
+    if not subject_info[field]:
         return None
-    
     else:
-        return datetime.now()
+        try:
+            dateutil.parser.parse(subject_info.get(field))
+        except (ValueError, TypeError):
+            return None
+
+        return subject_info.get(field)
 
 
 def get_default_value(field_type: Any) -> Any:
