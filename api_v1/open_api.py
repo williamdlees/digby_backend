@@ -552,6 +552,11 @@ def create_date(subject_info, field):
         except (ValueError, TypeError):
             return None
 
+        # check for timezone and remove if present
+
+        if '.' in subject_info.get(field):
+            return subject_info.get(field).split('.')[0]
+        
         return subject_info.get(field)
 
 
