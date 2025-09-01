@@ -1055,7 +1055,7 @@ class AllSubjectsGenotypeApi(Resource):
                 genotype_sets.append({
                     'subject_name': subject_name,
                     'GenotypeSet': {
-                        'receptor_genotype_set_id': 'Genomic_genotype_set_' + subject_name,
+                        'receptor_genotype_set_id': 'airrseq_genotype_set_' + subject_name,
                         'genotype_class_list': genotypes
                     }
                 })

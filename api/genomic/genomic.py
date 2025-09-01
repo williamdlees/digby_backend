@@ -968,6 +968,8 @@ class AllSubjectsGenotypeApi(Resource):
 
         all_subjects = []
         for dataset in genomic_dbs[species].keys():
+            if dataset not in ['IGH', 'IGK', 'IGL', 'TRA', 'TRB', 'TRD', 'TRG']:
+                continue        # MiAIRR only supports these loci (ie not IGHC)
             session = genomic_dbs[species][dataset].get_session()
             subjects = session.query(Patient.patient_name).all()
             all_subjects.extend(subjects)
