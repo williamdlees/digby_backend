@@ -167,7 +167,7 @@ class AscSeqs(Resource):
             session = vdjbase_dbs[species][ds].session
             vdjbase_alleles = session.query(VDJbaseAllele.name, VDJbaseAllele.seq) \
                 .join(VDJbaseGene) \
-                .filter(VDJbaseGene.type == chain, VDJbaseGene.name == asc, 'Del' not in VDJbaseAllele.name) \
+                .filter(VDJbaseGene.type == chain, VDJbaseGene.name == asc, ~VDJbaseAllele.name.contains('Del')) \
                 .all()
             
             for a, seq_gapped in vdjbase_alleles:
