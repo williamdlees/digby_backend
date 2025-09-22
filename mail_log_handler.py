@@ -25,6 +25,11 @@ class FlaskMailLogHandler(logging.Handler):
             app = Flask(__name__)
         else:
             app = current_app
+
+        if 'mail' not in app.extensions:
+            print('Flask-Mail is not initialized. Logging to mail not available.')
+            return
+        
         with app.app_context():
             self.mail.send(
                 Message(

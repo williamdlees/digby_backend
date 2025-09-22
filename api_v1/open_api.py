@@ -1,10 +1,11 @@
 import json
 from datetime import datetime
-from flask import Blueprint, request, jsonify, Response
-from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Genotype, Locus, Sample, \
+import dateutil
+from flask import Blueprint, request, Response
+from schema.models import Enum, date, Ontology, ErrorResponse, SpeciesResponse, Dataset, DatasetsResponse, SubjectDataset, SubjectDatasetResponse, Sample, \
     SampleMetadataResponse, Repertoire, DataProcessing, SampleProcessing, CellProcessing, NucleicAcidProcessing, SequencingRun, LibraryGenerationMethod, TemplateClass, \
     CompleteSequences, PhysicalLinkage, SequencingData, FileTypeEnum, ReadDirectionEnum, PairedReadDirectionEnum, Subject, SexEnum, SubjectGenotype, GenotypeSet, Diagnosis, \
-    Study, KeywordsStudyEnum, GenotypeClassListItem, AllSubjectsGenotypeResponse, AllSamplesMetadataResponse
+    Study, KeywordsStudyEnum, GenotypeClassListItem, AllSubjectsGenotypeResponse, AllSamplesMetadataResponse, PCRTarget
 from pydantic.fields import FieldInfo
 from pydantic import BaseModel
 from typing import Any, Union, get_args, get_origin
@@ -321,9 +322,9 @@ def create_repertoire_obj(subject_info):
     """Create a Repertoire object from subject information."""
     subject_info = fill_missing_required_fields(Repertoire,  subject_info)
 
-    rep_object = Repertoire(repertoire_id=subject_info.get("sample_name"), 
-                            repertoire_name=subject_info.get("repertoire_name", None),
-                            repertoire_description=subject_info.get("repertoire_description", None),
+    rep_object = Repertoire(repertoire_id=subject_info["sample_name"], 
+                            repertoire_name=subject_info["repertoire_name"],
+                            repertoire_description=subject_info["repertoire_description"],
                             study=create_study_object(subject_info),
                             subject=create_subject_objects(subject_info),
                             sample=create_sample_processing_list(subject_info),
@@ -332,24 +333,25 @@ def create_repertoire_obj(subject_info):
     return rep_object
 
 
+
 def create_data_processing_list(subject_info):
     """Create a list of DataProcessing objects from subject information."""
     subject_info = fill_missing_required_fields(DataProcessing,  subject_info)
 
     data_processing_list = []
-    data_processing_obj = DataProcessing(data_processing_id=subject_info.get("data_processing_id"),
+    data_processing_obj = DataProcessing(data_processing_id=subject_info["data_processing_id"],
                                          # primary_annotation is not required but is not nullable ... feels like a bug in the schema
-                                         primary_annotation=subject_info.get("primary_annotation") if subject_info.get("primary_annotation") else False,
-                                         software_versions=subject_info.get("software_versions"),
-                                         paired_reads_assembly=subject_info.get("paired_reads_assembly"),
-                                         quality_thresholds=subject_info.get("quality_thresholds"),
-                                         primer_match_cutoffs=subject_info.get("primer_match_cutoffs"),
-                                         collapsing_method=subject_info.get("collapsing_method"),
-                                         data_processing_protocols=subject_info.get("data_processing_protocols"),
-                                         data_processing_files=[subject_info.get("data_processing_files")] if subject_info.get("data_processing_files") else None,
-                                         germline_database=subject_info.get("germline_database"),
-                                         germline_set_ref=subject_info.get("germline_set_ref"),
-                                         analysis_provenance_id=subject_info.get("analysis_provenance_id"))
+                                         primary_annotation=subject_info["primary_annotation"] if subject_info["primary_annotation"] else False,
+                                         software_versions=subject_info["software_versions"],
+                                         paired_reads_assembly=subject_info["paired_reads_assembly"],
+                                         quality_thresholds=subject_info["quality_thresholds"],
+                                         primer_match_cutoffs=subject_info["primer_match_cutoffs"],
+                                         collapsing_method=subject_info["collapsing_method"],
+                                         data_processing_protocols=subject_info["data_processing_protocols"],
+                                         data_processing_files=[subject_info["data_processing_files"]] if subject_info["data_processing_files"] else None,
+                                         germline_database=subject_info["germline_database"],
+                                         germline_set_ref=subject_info["germline_set_ref"],
+                                         analysis_provenance_id=subject_info["analysis_provenance_id"])
     
     data_processing_list.append(data_processing_obj)
     return data_processing_list
@@ -363,48 +365,48 @@ def create_sample_processing_list(subject_info):
     subject_info = fill_missing_required_fields(SequencingRun,  subject_info)
 
     try:
-        library_generation_method = LibraryGenerationMethod(subject_info.get("library_generation_method"))
+        library_generation_method = LibraryGenerationMethod(subject_info["library_generation_method"])
     except Exception:
         library_generation_method = LibraryGenerationMethod("other")
 
     sample_processing_list = []
-    sample_processing_obj = SampleProcessing(sample_processing_id=subject_info.get("sample_processing_id", None),
-                                             sample_id=subject_info.get("sample_id"),
-                                             sample_type=subject_info.get("sample_type"),
-                                             tissue=Ontology(id=subject_info.get("tissue_id", ""), label=subject_info.get("tissue_label", "")),
-                                             anatomic_site=subject_info.get("anatomic_site"),
-                                             disease_state_sample=subject_info.get("disease_state_sample"),
-                                             collection_time_point_relative=int(subject_info.get("collection_time_point_relative")) if subject_info.get("collection_time_point_relative") else 0,
-                                             collection_time_point_relative_unit=Ontology(id=subject_info.get("collection_time_point_relative_unit_id", ""), label=subject_info.get("collection_time_point_relative_unit_label", "")),
-                                             collection_time_point_reference=subject_info.get("collection_time_point_reference"),
-                                             biomaterial_provider=subject_info.get("biomaterial_provider"),
-                                             tissue_processing=subject_info.get("tissue_processing"),
-                                             cell_subset=Ontology(id=subject_info.get("cell_subset_id", ""), lable=subject_info.get("cell_subset_label", "")),
-                                             cell_phenotype=subject_info.get("cell_phenotype"),
-                                             cell_species=Ontology(id=subject_info.get("cell_species_id", ""), lable=subject_info.get("cell_species_label", "")),
-                                             single_cell=str_to_bool((subject_info.get("single_cell"))),
-                                             cell_number=subject_info.get("cell_number") if subject_info.get("cell_number") else 0,
-                                             cells_per_reaction=subject_info.get("cells_per_reaction") if subject_info.get("cells_per_reaction") else 0,
-                                             cell_storage=str_to_bool(subject_info.get("cell_storage")),
-                                             cell_quality=subject_info.get("cell_quality"),
-                                             cell_isolation=subject_info.get("cell_isolation"),
-                                             cell_processing_protocol=subject_info.get("cell_processing_protocol"),
-                                             template_class=TemplateClass(subject_info.get("template_class").upper()),
-                                             template_quality=subject_info.get("template_quality"),
-                                             template_amount=int(subject_info.get("template_amount")) if subject_info.get("template_amount") else 0,
-                                             template_amount_unit=Ontology(id=subject_info.get("template_amount_unit_id", ""), label=subject_info.get("template_amount_unit_label", "")),
+    sample_processing_obj = SampleProcessing(sample_processing_id=subject_info["sample_processing_id"],
+                                             sample_id=subject_info["sample_id"],
+                                             sample_type=subject_info["sample_type"],
+                                             tissue=Ontology(id=subject_info["tissue_id"], label=subject_info["tissue_label"]),
+                                             anatomic_site=subject_info["anatomic_site"],
+                                             disease_state_sample=subject_info["disease_state_sample"],
+                                             collection_time_point_relative=float(subject_info["collection_time_point_relative"]) if subject_info["collection_time_point_relative"] else 0,
+                                             collection_time_point_relative_unit=Ontology(id=subject_info["collection_time_point_relative_unit_id"], label=subject_info["collection_time_point_relative_unit_label"]),
+                                             collection_time_point_reference=subject_info["collection_time_point_reference"],
+                                             biomaterial_provider=subject_info["biomaterial_provider"],
+                                             tissue_processing=subject_info["tissue_processing"],
+                                             cell_subset=Ontology(id=subject_info["cell_subset_id"], lable=subject_info["cell_subset_label"]),
+                                             cell_phenotype=subject_info["cell_phenotype"],
+                                             cell_species=Ontology(id=subject_info["cell_species_id"], lable=subject_info["cell_species_label"]),
+                                             single_cell=str_to_bool((subject_info["single_cell"])),
+                                             cell_number=subject_info["cell_number"] if subject_info["cell_number"] else 0,
+                                             cells_per_reaction=subject_info["cells_per_reaction"] if subject_info["cells_per_reaction"] else 0,
+                                             cell_storage=str_to_bool(subject_info["cell_storage"]),
+                                             cell_quality=subject_info["cell_quality"],
+                                             cell_isolation=subject_info["cell_isolation"],
+                                             cell_processing_protocol=subject_info["cell_processing_protocol"],
+                                             template_class=TemplateClass(subject_info["template_class"].upper()),
+                                             template_quality=subject_info["template_quality"],
+                                             template_amount=float(subject_info["template_amount"]) if subject_info["template_amount"] else 0,
+                                             template_amount_unit=Ontology(id=subject_info["template_amount_unit_id"], label=subject_info["template_amount_unit_label"]),
                                              library_generation_method=library_generation_method,
-                                             library_generation_protocol=subject_info.get("library_generation_protocol"),
-                                             library_generation_kit_version=subject_info.get("library_generation_kit_version"),
-                                             pcr_target=subject_info.get("pcr_target"),
+                                             library_generation_protocol=subject_info["library_generation_protocol"],
+                                             library_generation_kit_version=subject_info["library_generation_kit_version"],
+                                             pcr_target=build_pcr_target(subject_info),
                                              complete_sequences=create_complete_sequences_enum(subject_info),
-                                             physical_linkage=PhysicalLinkage(subject_info.get("physical_linkage")),
-                                             sequencing_run_id=subject_info.get("sequencing_run_id"),
-                                             total_reads_passing_qc_filter=subject_info.get("total_reads_passing_qc_filter"),
-                                             sequencing_platform=subject_info.get("sequencing_platform"),
-                                             sequencing_facility=subject_info.get("sequencing_facility"),
-                                             sequencing_run_date=subject_info.get("sequencing_run_date"),
-                                             sequencing_kit=subject_info.get("sequencing_kit"),
+                                             physical_linkage=PhysicalLinkage(subject_info["physical_linkage"]),
+                                             sequencing_run_id=subject_info["sequencing_run_id"],
+                                             total_reads_passing_qc_filter=subject_info["total_reads_passing_qc_filter"],
+                                             sequencing_platform=subject_info["sequencing_platform"],
+                                             sequencing_facility=subject_info["sequencing_facility"],
+                                             sequencing_run_date=create_date(subject_info, "sequencing_run_date"),
+                                             sequencing_kit=subject_info["sequencing_kit"],
                                              sequencing_files=create_sequencing_data_object(subject_info)
                                              )
     
@@ -413,10 +415,24 @@ def create_sample_processing_list(subject_info):
     return sample_processing_list
 
 
+def build_pcr_target(subject_info):
+    targets = []
+    for locus in subject_info['pcr_target_locus'].split(','):
+        if locus.strip().upper() in ['IGH', 'IGK', 'IGL', 'TRA', 'TRB', 'TRG', 'TRD']:
+            targets.append(PCRTarget(pcr_target_locus=locus.strip().upper(), 
+                                     forward_pcr_primer_target_location=subject_info['forward_pcr_primer_target_location'], 
+                                     reverse_pcr_primer_target_location=subject_info['reverse_pcr_primer_target_location']))
+    if not targets:
+        targets = [PCRTarget(pcr_target_locus=None,
+                             forward_pcr_primer_target_location=subject_info['forward_pcr_primer_target_location'], 
+                             reverse_pcr_primer_target_location=subject_info['reverse_pcr_primer_target_location'])]
+    return targets
+
+
 def create_complete_sequences_enum(subject_info):
     """Create a CompleteSequences enum from subject information."""
     try:
-        return CompleteSequences(subject_info.get("complete_sequences"))
+        return CompleteSequences(subject_info["complete_sequences"])
     except Exception:
         return CompleteSequences("partial")
 
@@ -425,16 +441,16 @@ def create_sequencing_data_object(subject_info):
     """Create a SequencingData object from subject information."""
     subject_info = fill_missing_required_fields(SequencingData,  subject_info)
 
-    sequencing_data_obj = SequencingData(sequencing_data_id=subject_info.get("sequencing_data_id") if subject_info.get("sequencing_data_id") is not None else "",
-                                         file_type=FileTypeEnum(subject_info.get("file_type")) if subject_info.get("file_type") else None,
-                                         filename=subject_info.get("filename"),
-                                         read_direction=ReadDirectionEnum(subject_info.get("read_direction")) if subject_info.get("read_direction") else None,
-                                         read_length=int(subject_info.get("read_length")) if subject_info.get("read_length") else None,
-                                         paired_filename=subject_info.get("paired_filename"),
-                                         paired_read_direction=PairedReadDirectionEnum(subject_info.get("paired_read_direction")) if subject_info.get("paired_read_direction") else None,
-                                         paired_read_length=int(subject_info.get("paired_read_length")) if subject_info.get("paired_read_length") else None,
-                                         index_filename=subject_info.get("index_filename"),
-                                         index_length=subject_info.get("index_length"),
+    sequencing_data_obj = SequencingData(sequencing_data_id=None,
+                                         file_type=FileTypeEnum(subject_info["file_type"]) if subject_info["file_type"] else None,
+                                         filename=subject_info["filename"],
+                                         read_direction=ReadDirectionEnum(subject_info["read_direction"]) if subject_info["read_direction"] else None,
+                                         read_length=int(subject_info["read_length"]) if subject_info["read_length"] else None,
+                                         paired_filename=subject_info["paired_filename"],
+                                         paired_read_direction=PairedReadDirectionEnum(subject_info["paired_read_direction"]) if subject_info["paired_read_direction"] else None,
+                                         paired_read_length=int(subject_info["paired_read_length"]) if subject_info["paired_read_length"] else None,
+                                         index_filename=None,
+                                         index_length=None,
                                          )
     
     return sequencing_data_obj
@@ -451,22 +467,22 @@ def create_subject_objects(subject_info):
     """Create Subject objects from subject information."""
     subject_info = fill_missing_required_fields(Subject,  subject_info)
 
-    subject_object = Subject(subject_id=subject_info.get("subject_id"),
-                             synthetic=subject_info.get("synthetic"),
-                             species=Ontology(id=subject_info.get("species_id", ""), label=subject_info.get("species_label", "")),
-                             organism=Ontology(id=subject_info.get("organism_id", ""), label=subject_info.get("organism_label", "")), 
+    subject_object = Subject(subject_id=subject_info["subject_id"],
+                             synthetic=subject_info["synthetic"],
+                             species=Ontology(id=subject_info["species_id"], label=subject_info["species_label"]),
+                             organism=Ontology(id=subject_info["organism_id"], label=subject_info["organism_label"]), 
                              sex=create_Sex_Enum(subject_info),
-                             age_min=subject_info.get("age_min"),
-                             age_max=subject_info.get("age_max"),
-                             age_unit=Ontology(id=subject_info.get("age_unit_id", ""), label=subject_info.get("age_unit_label", "")),
-                             age_event=subject_info.get("age_event"),
-                             age=subject_info.get("age"),
-                             ancestry_population=subject_info.get("ancestry_population"),
-                             ethnicity=subject_info.get("ethnicity"),
-                             race=subject_info.get("race", None),
-                             strain_name=subject_info.get("strain_name", None),
-                             linked_subjects=subject_info.get("linked_subjects", None),
-                             link_type=subject_info.get("link_type", None),
+                             age_min=subject_info["age_min"],
+                             age_max=subject_info["age_max"],
+                             age_unit=Ontology(id=subject_info["age_unit_id"], label=subject_info["age_unit_label"]),
+                             age_event=subject_info["age_event"],
+                             age=subject_info["age"],
+                             ancestry_population=subject_info["ancestry_population"],
+                             ethnicity=subject_info["ethnicity"],
+                             race=subject_info["race"],
+                             strain_name=subject_info["strain_name"],
+                             linked_subjects=subject_info["linked_subjects"],
+                             link_type=subject_info["link_type"],
                              diagnosis=create_diagnosis_list(subject_info),
                              genotype=create_subject_genotype_obj(subject_info))
 
@@ -476,14 +492,14 @@ def create_subject_objects(subject_info):
 def create_Sex_Enum(subject_info):
     """Create a Sex enum from subject information."""
     try:
-        return SexEnum(subject_info.get("sex"))
+        return SexEnum(subject_info["sex"])
     except Exception:
         return None
 
 
 def create_subject_genotype_obj(subject_info):
     """Create a SubjectGenotype object from subject information."""
-    subject_genotype_obj = SubjectGenotype(receptor_genotype_set=GenotypeSet(receptor_genotype_set_id=subject_info.get("receptor_genotype_set_id") if subject_info.get("receptor_genotype_set_id") is not None else "",
+    subject_genotype_obj = SubjectGenotype(receptor_genotype_set=GenotypeSet(receptor_genotype_set_id=subject_info["receptor_genotype_set_id"] if subject_info["receptor_genotype_set_id"] is not None else "",
                                                                              genotype_class_list=create_genotype_model_list(subject_info)))
     return subject_genotype_obj
 
@@ -500,14 +516,14 @@ def create_diagnosis_list(subject_info):
     subject_info = fill_missing_required_fields(Diagnosis,  subject_info)
 
     diagnosis_list = []
-    diagnosis_object = Diagnosis(study_group_description=subject_info.get("study_group_description"),
-                                 disease_diagnosis=Ontology(id=subject_info.get("disease_diagnosis_id", ""), lable=subject_info.get("disease_diagnosis_label", "")),
-                                 disease_length=subject_info.get("disease_length"),
-                                 disease_stage=subject_info.get("disease_stage"),
-                                 prior_therapies=subject_info.get("prior_therapies"),
-                                 immunogen=subject_info.get("immunogen"),
-                                 intervention=subject_info.get("intervention"),
-                                 medical_history=subject_info.get("medical_history"))
+    diagnosis_object = Diagnosis(study_group_description=subject_info["study_group_description"],
+                                 disease_diagnosis=Ontology(id=subject_info["disease_diagnosis_id"], label=subject_info["disease_diagnosis_label"]),
+                                 disease_length=subject_info["disease_length"],
+                                 disease_stage=subject_info["disease_stage"],
+                                 prior_therapies=subject_info["prior_therapies"],
+                                 immunogen=subject_info["immunogen"],
+                                 intervention=subject_info["intervention"],
+                                 medical_history=subject_info["medical_history"])
     diagnosis_list.append(diagnosis_object)
     return diagnosis_list
 
@@ -516,18 +532,18 @@ def create_study_object(subject_info):
     """Create a Study object from subject information."""
     subject_info = fill_missing_required_fields(Study,  subject_info)
 
-    study_object = Study(study_id=subject_info.get("study_id"),
-                         study_title=subject_info.get("study_title"),
-                         study_type=Ontology(id=subject_info.get("study_type_id"), label=subject_info.get("study_type_lable")),
-                         study_description=subject_info.get("study_description", None),
-                         inclusion_exclusion_criteria=subject_info.get("inclusion_exclusion_criteria", ""),
-                         grants=subject_info.get("grants", ""),
-                         study_contact=subject_info.get("study_contact", None),
-                         collected_by=subject_info.get("collected_by", ""),
-                         lab_name=subject_info.get("lab_name", ""),
-                         lab_address=subject_info.get("lab_address", ""),
-                         submitted_by=subject_info.get("submitted_by", ""),
-                         pub_ids=subject_info.get("pub_ids", ""),
+    study_object = Study(study_id=subject_info["study_id"],
+                         study_title=subject_info["study_title"],
+                         study_type=Ontology(id=subject_info["study_type_id"], label=subject_info["study_type_label"]),
+                         study_description=subject_info["study_description"],
+                         inclusion_exclusion_criteria=subject_info["inclusion_exclusion_criteria"],
+                         grants=subject_info["grants"],
+                         study_contact=subject_info["study_contact"],
+                         collected_by=subject_info["collected_by"],
+                         lab_name=subject_info["lab_name"],
+                         lab_address=subject_info["lab_address"],
+                         submitted_by=subject_info["submitted_by"],
+                         pub_ids=subject_info["pub_ids"],
                          keywords_study=create_keyword_study_list(subject_info),
                          adc_publish_date=create_date(subject_info, "adc_publish_date"),
                          adc_update_date=create_date(subject_info, "adc_update_date"),
@@ -542,11 +558,20 @@ def create_keyword_study_list(subject_info):
 
 def create_date(subject_info, field):
     """Create a datetime object from subject information and field."""
-    if subject_info.get(field) == "":
+    if not subject_info[field]:
         return None
-    
     else:
-        return datetime.now()
+        try:
+            dateutil.parser.parse(subject_info[field])
+        except (ValueError, TypeError):
+            return None
+
+        # check for timezone and remove if present
+
+        if '.' in subject_info[field]:
+            return subject_info[field].split('.')[0]
+        
+        return subject_info[field]
 
 
 def get_default_value(field_type: Any) -> Any:

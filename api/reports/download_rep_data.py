@@ -105,7 +105,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     elif 'Ungapped' in params['type'] or 'Gapped' in params['type']:
         required_cols = ['name', 'seq', 'dataset']
-        seqs = find_sequences(params, rep_samples, species, required_cols)
+        seqs, _ = find_sequences(params, rep_samples, species, required_cols)
 
         recs = []
         for seq in seqs:

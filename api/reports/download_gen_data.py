@@ -27,7 +27,7 @@ def zipdir(path, ziph, arc_root):
 
 def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_samples, params):
     if len(genomic_samples) == 0:
-        raise BadRequest('No repertoire-derived genotypes were selected.')
+        raise BadRequest('No genomic samples were selected.')
 
     if 'Sample info' in params['type']:
         headers = genomic_sample_filters.keys()
