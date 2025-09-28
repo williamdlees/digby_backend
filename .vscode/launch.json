@@ -146,8 +146,18 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/make_vdjbase_db.py",
-            "args": ["Human", "IGH"],
+            "args": ["Rhesus Macaque", "IGH"],
             "cwd": "D:/Research/digby_private_data/AIRR-seq/Rhesus Macaque/IGH",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "make_airr_seq_db - digby_private_data/rh IGL",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/make_vdjbase_db.py",
+            "args": ["Rhesus Macaque", "IGL"],
+            "cwd": "D:/Research/digby_private_data/AIRR-seq/Rhesus Macaque/IGL",
             "console": "integratedTerminal",
             "justMyCode": false
         },

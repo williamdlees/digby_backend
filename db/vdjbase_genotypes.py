@@ -481,9 +481,10 @@ def process_tigger_genotype(sample, processed_gene_types, pipeline_names, sessio
     :type session: obj
     """
     print(sample.genotype)
+    genotyped_count = 0    
     genotype = simple.read_csv(sample.genotype, delimiter='\t')
     for row in genotype:
-        genotyped_count = 0
+
         gene = row["gene"]
         gene_type = gene[3]
 
