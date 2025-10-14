@@ -194,11 +194,10 @@ class AllSamplesInfoApi(Resource):
 
         metadata_list = []
 
-        for dataset in genomic_dbs[species].keys():
-            session = genomic_dbs[species][dataset].get_session()
-            samples = session.query(Sample.sample_name).all()
-            for sample in samples:
-                metadata_list.append(get_sample_info(species, dataset, sample[0]))
+        session = genomic_dbs[species][dataset].get_session()
+        samples = session.query(Sample.sample_name).all()
+        for sample in samples:
+            metadata_list.append(get_sample_info(species, dataset, sample[0]))
 
         if not metadata_list:
             return None, 404

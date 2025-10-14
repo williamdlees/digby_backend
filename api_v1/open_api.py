@@ -211,7 +211,7 @@ def get_all_subjects_genotype(type, species):
         return error_response.model_dump_json(), 400
 
     if type not in ['genomic', 'airrseq']:
-        error_response = ErrorResponse(message="dataset type not valid")
+        error_response = ErrorResponse(message="invalid dataset type")
         return error_response.model_dump_json(), 400
 
     if type == "genomic":
@@ -272,7 +272,7 @@ def get_sample_metadata(type, species, dataset, sample):
             error_response = ErrorResponse(message=str(e))
             return error_response.model_dump_json(), 500
     else:
-        error_response = ErrorResponse(message=str("type not  exists"))
+        error_response = ErrorResponse(message=str("invalid dataset type"))
         return error_response.model_dump_json(), 500
 
 
