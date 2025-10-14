@@ -341,7 +341,6 @@ class AllSamplesInfoApi(Resource):
         cache_filename = f"{app.config['OUTPUT_PATH']}/airrseq_all_samples_info_{species}_{dataset}.pickle"
         if os.path.isfile(cache_filename):
             # check that the file is newer than the last revision dates of the databases
-            # check that the file is newer than the last revision dates of the databases
             last_revision_time = None
             revision_times = [genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys() if genomic_dbs[species][dataset].created]
             if revision_times:
@@ -359,11 +358,10 @@ class AllSamplesInfoApi(Resource):
 
         metadata_list = []
 
-        for dataset in vdjbase_dbs[species].keys():
-            session = vdjbase_dbs[species][dataset].get_session()
-            samples = session.query(Sample.sample_name).all()
-            for sample in samples:
-                metadata_list.append(get_sample_info(species, dataset, sample[0]))
+        session = vdjbase_dbs[species][dataset].get_session()
+        samples = session.query(Sample.sample_name).all()
+        for sample in samples:
+            metadata_list.append(get_sample_info(species, dataset, sample[0]))
 
         if not metadata_list:
             return None, 404

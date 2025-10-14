@@ -36,7 +36,7 @@ def custom_jsonify(obj):
         return o
     
     return Response(
-        json.dumps(encode_obj(obj)),
+        json.dumps(encode_obj(obj), indent=4),
         mimetype='application/json'
     )
 
@@ -272,7 +272,7 @@ def get_sample_metadata(type, species, dataset, sample):
             error_response = ErrorResponse(message=str(e))
             return error_response.model_dump_json(), 500
     else:
-        error_response = ErrorResponse(message=str("type not  exists"))
+        error_response = ErrorResponse(message=str("No such type"))
         return error_response.model_dump_json(), 500
 
 
@@ -310,7 +310,7 @@ def get_all_samples_metadata(type, species, dataset):
             error_response = ErrorResponse(message=str(e))
             return error_response.model_dump_json(), 500
     else:
-        error_response = ErrorResponse(message=str("type not  exists"))
+        error_response = ErrorResponse(message=str("No such type"))
         return error_response.model_dump_json(), 500
 
     repertoires = [create_repertoire_obj(s) for s in sample_info[0]]
@@ -322,16 +322,19 @@ def create_repertoire_obj(subject_info):
     """Create a Repertoire object from subject information."""
     subject_info = fill_missing_required_fields(Repertoire,  subject_info)
 
-    rep_object = Repertoire(repertoire_id=subject_info["sample_name"], 
+    repertoire_id = f"{subject_info['patient_name']}_{subject_info['study_id']}_{subject_info['pcr_target_locus']}"
+    if subject_info['repertoire_id']:
+        repertoire_id += '_' + subject_info['repertoire_id']
+
+    rep_object = Repertoire(repertoire_id=repertoire_id, 
                             repertoire_name=subject_info["repertoire_name"],
                             repertoire_description=subject_info["repertoire_description"],
                             study=create_study_object(subject_info),
                             subject=create_subject_objects(subject_info),
                             sample=create_sample_processing_list(subject_info),
-                            data_processing=create_data_processing_list(subject_info))
-    
+                            data_processing=create_data_processing_list(subject_info)
+                            )
     return rep_object
-
 
 
 def create_data_processing_list(subject_info):
