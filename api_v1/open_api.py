@@ -36,7 +36,7 @@ def custom_jsonify(obj):
         return o
     
     return Response(
-        json.dumps(encode_obj(obj)),
+        json.dumps(encode_obj(obj), indent=4),
         mimetype='application/json'
     )
 
