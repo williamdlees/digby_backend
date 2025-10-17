@@ -3,14 +3,12 @@ import custom_logging
 import yaml
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, request, flash, Blueprint, redirect, url_for, send_from_directory
+from flask import Flask, Blueprint, send_from_directory
 from flask_migrate import Migrate
-from flask_security import Security, SQLAlchemyUserDatastore, login_required
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
-from flask_admin import Admin
 from flask_cors import CORS
-from flask_security.utils import hash_password
+
 from flask_swagger_ui import get_swaggerui_blueprint
 from extensions import celery
 
@@ -65,14 +63,6 @@ custom_logging.init_logging(app, mail)
 vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
 genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/db'))
 madc_index = madc_init(app)
-
-admin_obj = Admin(app, template_mode='bootstrap3')
-
-from security.useradmin import *
-from security.security import *
-
-user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-security = Security(app, user_datastore, confirm_register_form=ExtendedRegisterForm)
 
 from api.restx import api
 from api.genomic.genomic import ns as genomic
@@ -131,15 +121,6 @@ from flask_jwt_extended import JWTManager
 app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
 jwt = JWTManager(app)
 
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if user_datastore.find_role('Admin') is None:
-        return redirect(url_for('create_user'))
-
-    return render_template('index.html', current_user=current_user)
-
-
 @app.route('/static/<path:path>', methods=['GET', 'POST'])
 def static(path):
     if '/gff' in path:
@@ -151,16 +132,3 @@ def static(path):
 def send_from_gff(path):
     return send_from_directory(app.config['STATIC_PATH'], path)
 
-
-
-
-@app.route('/export_vdjbase_metadata', methods=['GET', 'POST'])
-@login_required
-def export_vdjbase_metadata():
-    return db.vdjbase_export.export_metadata()
-
-
-@app.route('/create_igsnp/<species>/<dataset>/', methods=['GET', 'POST'])
-@login_required
-def create_igsnp(species, dataset):
-    return do_igsnper(species, dataset)
