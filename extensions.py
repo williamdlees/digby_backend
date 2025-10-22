@@ -41,8 +41,16 @@ class FlaskCelery(Celery):
         return SQLAlchemy(app)
 
 
-
-celery = FlaskCelery('tasks', broker='pyamqp://guest@localhost//', backend='redis://localhost:6379/0')
+celery = FlaskCelery(
+    'tasks',
+    broker='pyamqp://guest@localhost//',
+    backend='redis://localhost:6379/0',
+    broker_connection_retry_on_startup=True,
+    broker_transport_options={
+        'socket_timeout': 5,
+        'socket_connect_timeout': 5,
+    }
+)
 
 
 @celery.task(bind=True, time_limit=600)
