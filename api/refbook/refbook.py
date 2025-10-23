@@ -77,15 +77,16 @@ class AscsInChainApi(Resource):
 
         if ds in vdjbase_dbs[species]:
             session = vdjbase_dbs[species][ds].session
-            genes = session.query(VDJbaseGene.name).filter(VDJbaseGene.type == chain).all()
+            genes = session.query(VDJbaseGene.name).filter(VDJbaseGene.type == chain).filter(VDJbaseGene.pseudo_gene == 0).all()
             ret.extend([g[0] for g in genes])
 
         if ds in genomic_dbs[species]:
             session = genomic_dbs[species][ds].session
-            genes = session.query(GenomicGene.name).filter(GenomicGene.type == chain).all()
+            genes = session.query(GenomicGene.name).filter(GenomicGene.type == chain).filter(GenomicGene.pseudo_gene == 0).all()
             ret.extend(genes)
 
         ret = sorted(set([g[0] for g in genes]))
+        ret = [g for g in ret if '/OR' not in g] # filter orphons
         return ret
 
 
