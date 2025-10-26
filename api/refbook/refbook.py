@@ -21,14 +21,14 @@ def chains_in_loc(loc):
     return ret
 
 
-@ns.route('/species_and_chains')
+@ns.route('/species_and_loci')
 @api.response(404, 'No species available!')
 class SpeciesApi(Resource):
     @digby_protected()
     def get(self):
-        """ Returns the list of species and chains for which information is held """
+        """ Returns the list of species and loci for which information is held """
 
-        ret = {'species': [], 'chains': {}}
+        ret = {'species': [], 'loci': {}}
 
         genomic_sp = get_genomic_species()
 
@@ -36,10 +36,9 @@ class SpeciesApi(Resource):
             ret['species'].append(sp)
             for rec in get_genomic_datasets(sp):
                 loc = rec['dataset']
-                if 'IGHC' not in loc:
-                    if sp not in ret['chains']:
-                        ret['chains'][sp] = []
-                    ret['chains'][sp].extend(chains_in_loc(loc))
+                if sp not in ret['loci']:
+                    ret['loci'][sp] = []
+                ret['loci'][sp].append(loc)
 
         vdjbase_sp = get_vdjbase_species()
 
@@ -49,80 +48,80 @@ class SpeciesApi(Resource):
             for rec in get_vdjbase_datasets(sp):
                 loc = rec['dataset']
                 if 'IGHC' not in loc:
-                    if sp not in ret['chains']:
-                        ret['chains'][sp] = []
-                    for ch in chains_in_loc(loc):
-                        if ch not in ret['chains'][sp]:
-                            ret['chains'][sp].append(ch)
+                    if sp not in ret['loci']:
+                        ret['loci'][sp] = []
+                    ret['loci'][sp].append(loc)
 
         return ret
 
 
-@ns.route('/ascs_in_chain/<string:species>/<string:chain>')
-@api.response(404, 'Species or chain not found')
-class AscsInChainApi(Resource):
+@ns.route('/ascs_in_locus/<string:species>/<string:locus>')
+@api.response(404, 'Species or locus not found')
+class AscsInLocusApi(Resource):
     @digby_protected()
-    def get(self, species, chain):
-        """ Returns the list of ASCs in a given chain for a given species """
+    def get(self, species, locus):
+        """ Returns the list of ASCs in a given locus for a given species """
 
-        species_chains = SpeciesApi.get(self)
-        
-        if species not in species_chains['species']:
+        species_loci = SpeciesApi.get(self)
+
+        if species not in species_loci['species']:
             return {'message': 'Species not found'}, 404
-        if chain not in species_chains['chains'][species]:
-            return {'message': 'Chain not found'}, 404
+        if locus not in species_loci['loci'][species]:
+            return {'message': 'Locus not found'}, 404
 
-        ret = []
-        ds = chain[:3]
+        ascs = []
+        genomic = False
+        airr_seq = False
 
-        if ds in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][ds].session
-            genes = session.query(VDJbaseGene.name).filter(VDJbaseGene.type == chain).filter(VDJbaseGene.pseudo_gene == 0).all()
-            ret.extend([g[0] for g in genes])
+        if locus in vdjbase_dbs[species]:
+            session = vdjbase_dbs[species][locus].session
+            genes = session.query(VDJbaseGene.name).filter(VDJbaseGene.pseudo_gene == 0).all()
+            ascs.extend([g[0] for g in genes])
+            airr_seq = True
 
-        if ds in genomic_dbs[species]:
-            session = genomic_dbs[species][ds].session
-            genes = session.query(GenomicGene.name).filter(GenomicGene.type == chain).filter(GenomicGene.pseudo_gene == 0).all()
-            ret.extend(genes)
+        if locus in genomic_dbs[species]:
+            session = genomic_dbs[species][locus].session
+            genes = session.query(GenomicGene.name).filter(GenomicGene.pseudo_gene == 0).all()
+            ascs.extend(genes)
+            genomic = True
 
-        ret = sorted(set([g[0] for g in genes]))
-        ret = [g for g in ret if '/OR' not in g] # filter orphons
-        return ret
+        ascs = sorted(set([g[0] for g in genes]))
+        ascs = [g for g in ascs if '/OR' not in g] # filter orphons
+        return {'ascs': ascs, 'genomic': genomic, 'airr_seq': airr_seq}
 
 
-@ns.route('/ascs_overview/<string:species>/<string:chain>/<string:asc>')
-@api.response(404, 'Species or chain not found')
+@ns.route('/ascs_overview/<string:species>/<string:locus>/<string:asc>')
+@api.response(404, 'Species or locus not found')
 class AscsOverview(Resource):
     @digby_protected()
-    def get(self, species, chain, asc):
+    def get(self, species, locus, asc):
         """ Returns data for the overview refbook component """
 
-        species_chains = SpeciesApi.get(self)
-        
-        if species not in species_chains['species']:
+        species_loci = SpeciesApi.get(self)
+
+        if species not in species_loci['species']:
             return {'message': 'Species not found'}, 404
-        if chain not in species_chains['chains'][species]:
-            return {'message': 'Chain not found'}, 404
-        
+        if locus not in species_loci['loci'][species]:
+            return {'message': 'Locus not found'}, 404
+
         ret = {}
         alleles = {}
 
-        ds = chain[:3]
-        if ds in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][ds].session
+        if locus in vdjbase_dbs[species]:
+            session = vdjbase_dbs[species][locus].session
             vdjbase_alleles = session.query(VDJbaseAllele.name, VDJbaseAllele.novel, VDJbaseAllele.appears) \
                 .join(VDJbaseGene) \
-                .filter(VDJbaseGene.type == chain, VDJbaseGene.name == asc) \
+                .filter(VDJbaseGene.name == asc) \
                 .all()
             
             for a, novel, appearances in vdjbase_alleles:
                 alleles[a] = {'VDJbase': appearances, 'Genomic': 0, 'novel': novel}
-        
-        if ds in genomic_dbs[species]:
-            session = genomic_dbs[species][ds].session
+
+        if locus in genomic_dbs[species]:
+            session = genomic_dbs[species][locus].session
             genomic_alleles = session.query(GenomicSequence.name, GenomicSequence.novel, GenomicSequence.appearances) \
                 .join(GenomicGene) \
-                .filter(GenomicGene.type == chain, GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
+                .filter(GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
                 .all()
             
             for a, novel, appearances in genomic_alleles:
@@ -145,41 +144,40 @@ class AscsOverview(Resource):
         return ret
 
 
-@ns.route('/asc_seqs/<string:species>/<string:chain>/<string:asc>')
-@api.response(404, 'Species or chain not found')
+@ns.route('/asc_seqs/<string:species>/<string:locus>/<string:asc>')
+@api.response(404, 'Species or locus not found')
 class AscSeqs(Resource):
     @digby_protected()
-    def get(self, species, chain, asc):
+    def get(self, species, locus, asc):
         """ Returns sequences of all alleles in an ASC """
 
-        species_chains = SpeciesApi.get(self)
-        
-        if species not in species_chains['species']:
+        species_loci = SpeciesApi.get(self)
+
+        if species not in species_loci['species']:
             return {'message': 'Species not found'}, 404
-        if chain not in species_chains['chains'][species]:
-            return {'message': 'Chain not found'}, 404
-        
+        if locus not in species_loci['loci'][species]:
+            return {'message': 'Locus not found'}, 404
+
         ret = {}
         alleles = []
         recs = []
 
-        ds = chain[:3]
-        if ds in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][ds].session
+        if locus in vdjbase_dbs[species]:
+            session = vdjbase_dbs[species][locus].session
             vdjbase_alleles = session.query(VDJbaseAllele.name, VDJbaseAllele.seq) \
                 .join(VDJbaseGene) \
-                .filter(VDJbaseGene.type == chain, VDJbaseGene.name == asc, ~VDJbaseAllele.name.contains('Del')) \
+                .filter(VDJbaseGene.name == asc, ~VDJbaseAllele.name.contains('Del')) \
                 .all()
             
             for a, seq_gapped in vdjbase_alleles:
                 recs.append({'name': a, 'seq_gapped': seq_gapped.upper(), 'seq': seq_gapped.upper().replace('.', '')})
                 alleles.append(a)
-        
-        if ds in genomic_dbs[species]:
-            session = genomic_dbs[species][ds].session
+
+        if locus in genomic_dbs[species]:
+            session = genomic_dbs[species][locus].session
             genomic_alleles = session.query(GenomicSequence.name, GenomicSequence.gapped_sequence, GenomicSequence.sequence) \
                 .join(GenomicGene) \
-                .filter(GenomicGene.type == chain, GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
+                .filter(GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
                 .all()
             
             for a, gapped, ungapped in genomic_alleles:
@@ -188,26 +186,23 @@ class AscSeqs(Resource):
 
         return {'alleles': recs}
 
-@ns.route('/asc_usage/<string:species>/<string:chain>/<string:asc>')
-@api.response(404, 'Species or chain not found')
+@ns.route('/asc_usage/<string:species>/<string:locus>/<string:asc>')
+@api.response(404, 'Species or locus not found')
 class AscUsage(Resource):
     @digby_protected()
-    def get(self, species, chain, asc):
+    def get(self, species, locus, asc):
         """ Returns usage statistics for all alleles in an ASC """
 
-        species_chains = SpeciesApi.get(self)
-        
-        if species not in species_chains['species']:
-            return {'message': 'Species not found'}, 404
-        if chain not in species_chains['chains'][species]:
-            return {'message': 'Chain not found'}, 404
-        
-        
-        ds = chain[:3]
+        species_loci = SpeciesApi.get(self)
 
-        if ds in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][ds].session
-            
+        if species not in species_loci['species']:
+            return {'message': 'Species not found'}, 404
+        if locus not in species_loci['loci'][species]:
+            return {'message': 'Locus not found'}, 404
+
+        if locus in vdjbase_dbs[species]:
+            session = vdjbase_dbs[species][locus].session
+
             totals = (
                 session.query(
                     VDJbaseAllelesSample.patient_id,
@@ -239,7 +234,6 @@ class AscUsage(Resource):
                 .join(VDJbaseGene, VDJbaseGene.id == VDJbaseAllele.gene_id)
                 .group_by(VDJbaseAllele.name)
                 .filter(
-                    VDJbaseGene.type == chain,
                     VDJbaseGene.name == asc,
                     VDJbaseAllelesSample.count.isnot(None)
                 )
@@ -250,26 +244,24 @@ class AscUsage(Resource):
 
         return {'alleles': recs}
 
-@ns.route('/asc_zygousity/<string:species>/<string:chain>/<string:asc>')
-@api.response(404, 'Species or chain not found')
+@ns.route('/asc_zygousity/<string:species>/<string:locus>/<string:asc>')
+@api.response(404, 'Species or locus not found')
 class AscZygosity(Resource):
     @digby_protected()
-    def get(self, species, chain, asc):
+    def get(self, species, locus, asc):
         """ Returns zygosity statistics for all subjects in a given ASC """
 
-        species_chains = SpeciesApi.get(self)
-        
-        if species not in species_chains['species']:
+        species_loci = SpeciesApi.get(self)
+
+        if species not in species_loci['species']:
             return {'message': 'Species not found'}, 404
-        if chain not in species_chains['chains'][species]:
-            return {'message': 'Chain not found'}, 404
-        
+        if locus not in species_loci['loci'][species]:
+            return {'message': 'Locus not found'}, 404
+
         recs = []
 
-        ds = chain[:3]
-
-        if ds in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][ds].session
+        if locus in vdjbase_dbs[species]:
+            session = vdjbase_dbs[species][locus].session
 
             alleles_per_sample = (
                 session.query(
@@ -281,13 +273,11 @@ class AscZygosity(Resource):
                 .join(VDJbaseGene, VDJbaseGene.id == VDJbaseAllele.gene_id)
                 #.join(VDJbaseSample, VDJbaseSample.sample_id == VDJbaseAllelesSample.sample_id)
                 .filter(
-                    VDJbaseGene.type == chain,
                     VDJbaseGene.name == asc,
                 )
                 .group_by(VDJbaseAllelesSample.sample_id)
                 .all()
             )
-
             
             for sample_id, alleles in alleles_per_sample:
                 allele_list = alleles.split(',') if alleles else []
