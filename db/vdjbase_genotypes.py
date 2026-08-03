@@ -60,11 +60,12 @@ def process_genotypes(ds_dir, species, dataset, session):
             print('Error: no genotype file for sample %s - removing from sample list' % sample.sample_name)
             session.delete(sample)
 
-        # fix up filenames for the live database
         if sample.genotype:
             sample.genotype = sample.genotype.replace('\\', '/').replace(ds_dir + '/', '')
+            sample.genotype = 'samples/' + sample.genotype.split('/samples/')[1]
         if sample.asc_genotype:
             sample.asc_genotype = sample.asc_genotype.replace('\\', '/').replace(ds_dir + '/', '')
+            sample.asc_genotype = 'samples/' + sample.asc_genotype.split('/samples/')[1]
             
     session.commit()
 
