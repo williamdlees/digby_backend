@@ -541,6 +541,8 @@ class SamplesApi(Resource):
                     ret = sorted(ret, key=lambda x: ((x[f] is None or x[f] == ''), x[f]), reverse=(spec['order'] == 'desc'))
 
         if args['page_size']:
+            if 'page_number' not in args or args['page_number'] is None:
+                return 404, None
             first = (args['page_number']) * args['page_size']
             ret = ret[first:first + args['page_size']]
 
