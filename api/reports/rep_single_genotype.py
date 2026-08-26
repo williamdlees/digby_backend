@@ -36,6 +36,9 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     if len(genotype) == 0:
         raise BadRequest('Genotype data for sample %s/%s is not available' % (sample['dataset'], sample['sample_name']))
 
+    if sample['dataset'] == 'IGHC':
+        raise BadRequest('Sorry, genotype report is not available for IGHC samples')
+
     sample_path = make_output_file('tsv')
     genotype.to_csv(sample_path, sep='\t', index=False)
 
