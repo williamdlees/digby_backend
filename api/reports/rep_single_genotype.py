@@ -21,11 +21,13 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
 
     html = (format == 'html')
 
+    genomic = False
     if len(rep_samples) > 0:
         sample = rep_samples[0]
         session = vdjbase_dbs[species][sample['dataset']].get_session()
         genotype = process_repseq_genotype(sample['sample_name'], [], session, False)
     else:
+        genomic = True
         sample = genomic_samples[0]
         sample['pcr_target_locus'] = sample['dataset']
         session = genomic_dbs[species][sample['dataset']].get_session()
@@ -38,7 +40,7 @@ def run(format, species, genomic_datasets, genomic_samples, rep_datasets, rep_sa
     genotype.to_csv(sample_path, sep='\t', index=False)
 
     locus_order = ('sort_order' in params and params['sort_order'] == 'Locus')
-    gene_order_file = get_order_file(species, sample['dataset'], locus_order=locus_order)
+    gene_order_file = get_order_file(species, sample['dataset'], locus_order=locus_order, genomic=genomic)
 
     report_path = personal_genotype(sample['sample_name'], sample_path, sample['pcr_target_locus'], gene_order_file, html)
 
