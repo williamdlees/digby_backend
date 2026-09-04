@@ -341,6 +341,7 @@ class AllSamplesInfoApi(Resource):
         cache_filename = f"{app.config['OUTPUT_PATH']}/airrseq_all_samples_info_{species}_{dataset}.pickle"
         if os.path.isfile(cache_filename):
             # check that the file is newer than the last revision dates of the databases
+            # check that the file is newer than the last revision dates of the databases
             last_revision_time = None
             revision_times = [genomic_dbs[species][dataset].created for dataset in genomic_dbs[species].keys() if genomic_dbs[species][dataset].created]
             if revision_times:
@@ -541,7 +542,7 @@ class SamplesApi(Resource):
 
         if args['page_size']:
             if 'page_number' not in args or args['page_number'] is None:
-                return None, 404
+                return 404, None
             first = (args['page_number']) * args['page_size']
             ret = ret[first:first + args['page_size']]
 

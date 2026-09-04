@@ -310,6 +310,9 @@ class SequencesAPI(Resource):
         """ Returns nucleotide sequences from selected reference or multiple references (separate multiple reference names with ',')  """
         args = filter_arguments.parse_args(request)
 
+        if args is None or 'cols' not in args or args['cols'] is None:
+            return None, 404
+
         required_cols = json.loads(args['cols'])
         genomic_datasets = genomic_datasets.split(',')
         ret, required_cols, _ = find_genomic_sequences(required_cols, genomic_datasets, species, json.loads(args['filter']) if args['filter'] else [])
