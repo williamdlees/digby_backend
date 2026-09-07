@@ -447,6 +447,9 @@ class SequencesAPI(Resource):
                 })
 
         if args['page_size']:
+            if 'page_number' not in args or args['page_number'] is None:
+                return BadRequest('page_number must be specified if page_size is specified')
+            
             first = (args['page_number']) * args['page_size']
             ret = ret[first: first + args['page_size']]
 
@@ -664,11 +667,17 @@ class SubjectsAPI(Resource):
         """ Returns a list of subjects in the selected datasets  """
         args = filter_arguments.parse_args(request)
 
-        required_cols = json.loads(args['cols']) if 'cols' in args and args['cols'] else list(genomic_sample_filters.keys())
+        required_cols = list(genomic_sample_filters.keys())
 
-        for col in required_cols:
-            if col not in genomic_sample_filters.keys():
-                raise BadRequest('Bad filter string %s' % args['filter'])
+        try:
+            if 'cols' in args and args['cols']:
+                required_cols = json.loads(args['cols'])
+
+            for col in required_cols:
+                if col not in genomic_sample_filters.keys():
+                    raise BadRequest('Bad filter string %s' % args['filter'])
+        except:
+            raise BadRequest('Bad request')
 
         if 'study_name' not in required_cols:
             required_cols = ['study_name'] + required_cols
@@ -763,6 +772,9 @@ class SubjectsAPI(Resource):
         total_size = len(ret)
 
         if args['page_size']:
+            if 'page_number' not in args or args['page_number'] is None:
+                return BadRequest('page_number must be specified if page_size is specified')
+                        
             first = (args['page_number']) * args['page_size']
             ret = ret[first : first + args['page_size']]
 
