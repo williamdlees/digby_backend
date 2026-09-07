@@ -1,24 +1,130 @@
-from app import vdjbase_dbs, app, genomic_dbs
+from app import vdjbase_dbs, genomic_dbs
 from flask import request
 from flask_restx import Resource, reqparse
 from api.restx import api
 from api.system.system import digby_protected
-from sqlalchemy import or_, func, cast, Float
+from sqlalchemy import or_, func, cast, Float, distinct
+from copy import deepcopy
+from functools import lru_cache
+
+from receptor_utils import sequence_alignment
 
 from api.vdjbase.vdjbase import get_vdjbase_species, find_datasets as get_vdjbase_datasets
 from api.genomic.genomic import get_genomic_species, get_genomic_datasets
 from db.vdjbase_model import Gene as VDJbaseGene, Allele as VDJbaseAllele, AllelesSample as VDJbaseAllelesSample
-from db.genomic_db import Gene as GenomicGene, Sequence as GenomicSequence
-from db.vdjbase_airr_model import Sample as VDJbaseSample
+from db.genomic_db import Gene as GenomicGene, Sequence as GenomicSequence, SampleSequence as GenomicSampleSequence
+from db.genomic_airr_model import Sample as GenomicSample, Study as GenomicStudy
+from db.vdjbase_airr_model import Sample as VDJbaseSample, Study as VDJbaseStudy
 
 ns = api.namespace('refbook', description='Refbook related operations')
 
 
-def chains_in_loc(loc):
-    ret = [loc + 'V', loc + 'J']
-    if loc in ['IGH', 'TRB', 'TRA']:
-        ret.append(loc + 'D')
-    return ret
+_species_and_loci_cache = None
+
+
+def species_and_loci():
+    """ The species/loci catalogue, merged across the genomic and AIRR-seq databases. """
+    global _species_and_loci_cache
+
+    if _species_and_loci_cache is not None:
+        return deepcopy(_species_and_loci_cache)
+
+    ret = {'species': [], 'loci': {}}
+
+    for get_species, get_datasets in ((get_genomic_species, get_genomic_datasets),
+                                      (get_vdjbase_species, get_vdjbase_datasets)):
+        for sp in get_species():
+            if sp not in ret['species']:
+                ret['species'].append(sp)
+            for rec in get_datasets(sp):
+                loc = rec['dataset']
+                # a locus held in both databases must still appear once
+                if loc not in ret['loci'].setdefault(sp, []):
+                    ret['loci'][sp].append(loc)
+
+    # the open dataset set is fixed when the app starts, so this cannot go stale
+    _species_and_loci_cache = ret
+    return deepcopy(ret)
+
+
+def check_species_locus(species, locus):
+    """ Returns a 404 response if the species/locus pair is unknown, otherwise None. """
+    catalogue = species_and_loci()
+
+    if species not in catalogue['species']:
+        return {'message': 'Species not found'}, 404
+    if locus not in catalogue['loci'].get(species, []):
+        return {'message': 'Locus not found'}, 404
+
+    return None
+
+
+SOURCES = ('genomic', 'airrseq')
+
+
+def requested_sources():
+    """ The databases this request should read, from a `sources` query parameter. """
+    raw = request.args.get('sources')
+    if not raw:
+        return set(SOURCES)
+
+    wanted = {s.strip().lower() for s in raw.split(',')} & set(SOURCES)
+    return wanted or set(SOURCES)
+
+
+def requested_list(name):
+    """ A comma-separated query parameter as a list, or None when absent. """
+    raw = request.args.get(name)
+    if raw is None:
+        return None
+    return [value.strip() for value in raw.split(',') if value.strip()]
+
+
+def applicable(session, Study, Sample, projects, samples):
+    """ The part of a project/sample selection that exists in one database. """
+    known_projects = []
+    if projects:
+        known_projects = [name for (name,) in
+                          session.query(Study.study_name)
+                          .filter(Study.study_name.in_(projects)).all()]
+
+    known_samples = []
+    if samples:
+        known_samples = [name for (name,) in
+                         session.query(Sample.sample_name)
+                         .filter(Sample.sample_name.in_(samples)).all()]
+
+    return known_projects, known_samples, bool(known_projects or known_samples)
+
+
+def _filter_samples(query, Study, Sample, projects, samples, session):
+    """ Narrow a query already joined to Sample by project and by sample name. """
+    if session is not None:
+        projects, samples, _ = applicable(session, Study, Sample, projects, samples)
+
+    if projects:
+        query = query.join(Study, Study.id == Sample.study_id) \
+                     .filter(Study.study_name.in_(projects))
+    if samples:
+        query = query.filter(Sample.sample_name.in_(samples))
+    return query
+
+
+def sample_filter(query, projects, samples, session=None):
+    return _filter_samples(query, VDJbaseStudy, VDJbaseSample, projects, samples, session)
+
+
+def genomic_sample_filter(query, projects, samples, session=None):
+    return _filter_samples(query, GenomicStudy, GenomicSample, projects, samples, session)
+
+
+def dataset_session(dbs, species, locus, sources=None, source=None):
+    """ Session for one dataset, or None if this database holds nothing for that species/locus. """
+    if sources is not None and source is not None and source not in sources:
+        return None
+
+    dataset = dbs.get(species, {}).get(locus)
+    return dataset.session if dataset is not None else None
 
 
 @ns.route('/species_and_loci')
@@ -28,31 +134,122 @@ class SpeciesApi(Resource):
     def get(self):
         """ Returns the list of species and loci for which information is held """
 
-        ret = {'species': [], 'loci': {}}
+        return species_and_loci()
 
-        genomic_sp = get_genomic_species()
 
-        for sp in genomic_sp:
-            ret['species'].append(sp)
-            for rec in get_genomic_datasets(sp):
-                loc = rec['dataset']
-                if sp not in ret['loci']:
-                    ret['loci'][sp] = []
-                ret['loci'][sp].append(loc)
+@ns.route('/projects/<string:species>/<string:locus>')
+@api.response(404, 'Species or locus not found')
+class ProjectsApi(Resource):
+    @digby_protected()
+    def get(self, species, locus):
+        """ Returns the projects held for a species and locus, per database """
 
-        vdjbase_sp = get_vdjbase_species()
+        error = check_species_locus(species, locus)
+        if error:
+            return error
 
-        for sp in vdjbase_sp:
-            if sp not in ret['species']:
-                ret['species'].append(sp)
-            for rec in get_vdjbase_datasets(sp):
-                loc = rec['dataset']
-                if 'IGHC' not in loc:
-                    if sp not in ret['loci']:
-                        ret['loci'][sp] = []
-                    ret['loci'][sp].append(loc)
+        sources = requested_sources()
+        found = {}
 
-        return ret
+        # different studies on each side, so the list depends on the sources asked for
+        for source, dbs, Study, Sample in (
+                ('airrseq', vdjbase_dbs, VDJbaseStudy, VDJbaseSample),
+                ('genomic', genomic_dbs, GenomicStudy, GenomicSample)):
+            session = dataset_session(dbs, species, locus, sources, source)
+            if session is None:
+                continue
+
+            rows = session.query(Study.study_name, Study.study_id, func.count(Sample.id)) \
+                .join(Sample, Sample.study_id == Study.id) \
+                .group_by(Study.study_name, Study.study_id) \
+                .all()
+
+            for name, accession, count in rows:
+                entry = found.setdefault(name, {'name': name, 'accession': accession,
+                                                'samples': 0, 'sources': [],
+                                                'by_source': {}})
+                entry['samples'] += count
+                entry['sources'].append(source)
+                # kept split as well as totalled: a project in both databases is
+                entry['by_source'][source] = count
+
+        projects = sorted(found.values(), key=lambda p: _project_order(p['name']))
+        return {'projects': projects}
+
+
+def _project_order(name):
+    """ P2 before P10: the names are a letter and a number, not plain strings. """
+    digits = ''.join(c for c in name if c.isdigit())
+    return (name[:1], int(digits) if digits else 0, name)
+
+
+@ns.route('/samples/<string:species>/<string:locus>')
+@api.response(404, 'Species or locus not found')
+class SamplesApi(Resource):
+    @digby_protected()
+    def get(self, species, locus):
+        """ Returns the samples held for a species and locus, per database """
+
+        error = check_species_locus(species, locus)
+        if error:
+            return error
+
+        sources = requested_sources()
+        projects = requested_list('projects')
+        found = {}
+
+        for source, dbs, Study, Sample in (
+                ('airrseq', vdjbase_dbs, VDJbaseStudy, VDJbaseSample),
+                ('genomic', genomic_dbs, GenomicStudy, GenomicSample)):
+            session = dataset_session(dbs, species, locus, sources, source)
+            if session is None:
+                continue
+
+            query = session.query(Sample.sample_name, Study.study_name) \
+                .join(Study, Study.id == Sample.study_id)
+            if projects:
+                query = query.filter(Study.study_name.in_(projects))
+
+            for name, project in query.all():
+                entry = found.setdefault(name, {'name': name, 'project': project, 'sources': []})
+                entry['sources'].append(source)
+
+        samples = sorted(found.values(), key=lambda s: s['name'])
+        return {'samples': samples}
+
+
+@ns.route('/summary')
+class RefbookSummary(Resource):
+    @digby_protected()
+    def get(self):
+        """ Headline counts for the landing page """
+        catalogue = species_and_loci()
+        samples, projects, datasets = 0, set(), 0
+
+        for species in catalogue['species']:
+            for locus in catalogue['loci'][species]:
+                names = set()
+                # joined through Sample, not read off Study directly: a study row
+                session = dataset_session(vdjbase_dbs, species, locus, None, 'airrseq')
+                if session is not None:
+                    rows = (session.query(VDJbaseSample.sample_name, VDJbaseStudy.study_name)
+                            .join(VDJbaseStudy, VDJbaseStudy.id == VDJbaseSample.study_id).all())
+                    names.update(n for n, _ in rows)
+                    projects.update(p for _, p in rows)
+
+                session = dataset_session(genomic_dbs, species, locus, None, 'genomic')
+                if session is not None:
+                    rows = (session.query(GenomicSample.sample_name, GenomicStudy.study_name)
+                            .join(GenomicStudy, GenomicStudy.id == GenomicSample.study_id).all())
+                    names.update(n for n, _ in rows)
+                    projects.update(p for _, p in rows)
+
+                if names:
+                    datasets += 1
+                samples += len(names)
+
+        return {'samples': samples, 'projects': len(projects), 'datasets': datasets,
+                'species': len(catalogue['species'])}
 
 
 @ns.route('/ascs_in_locus/<string:species>/<string:locus>')
@@ -62,53 +259,61 @@ class AscsInLocusApi(Resource):
     def get(self, species, locus):
         """ Returns the list of ASCs in a given locus for a given species """
 
-        species_loci = SpeciesApi.get(self)
+        error = check_species_locus(species, locus)
+        if error:
+            return error
 
-        if species not in species_loci['species']:
-            return {'message': 'Species not found'}, 404
-        if locus not in species_loci['loci'][species]:
-            return {'message': 'Locus not found'}, 404
+        sources = requested_sources()
 
         ascs = []
         genomic = False
         airr_seq = False
-
-        if locus in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][locus].session
-            genes = session.query(VDJbaseGene.name).filter(VDJbaseGene.pseudo_gene == 0).all()
+        segments = {}
+        
+        session = dataset_session(vdjbase_dbs, species, locus, sources, 'airrseq')
+        if session is not None:
+            genes = session.query(VDJbaseGene.name, VDJbaseGene.type) \
+                .join(VDJbaseAllele, VDJbaseAllele.gene_id == VDJbaseGene.id) \
+                .filter(VDJbaseGene.pseudo_gene == 0).distinct().all()
             ascs.extend([g[0] for g in genes])
+            segments.update({g[0]: segment_of_type(g[1]) for g in genes})
             airr_seq = True
 
-        if locus in genomic_dbs[species]:
-            session = genomic_dbs[species][locus].session
-            genes = session.query(GenomicGene.name).filter(GenomicGene.pseudo_gene == 0).all()
-            ascs.extend(genes)
+        session = dataset_session(genomic_dbs, species, locus, sources, 'genomic')
+        if session is not None:
+            genes = session.query(GenomicGene.name, GenomicGene.type) \
+                .join(GenomicSequence, GenomicSequence.gene_id == GenomicGene.id) \
+                .filter(GenomicGene.pseudo_gene == 0).distinct().all()
+            ascs.extend([g[0] for g in genes])
+            segments.update({g[0]: segment_of_type(g[1]) for g in genes})
             genomic = True
 
-        ascs = sorted(set([g[0] for g in genes]))
+        ascs = sorted(set(ascs))
         ascs = [g for g in ascs if '/OR' not in g] # filter orphons
-        return {'ascs': ascs, 'genomic': genomic, 'airr_seq': airr_seq}
+        return {'ascs': ascs, 'segments': {g: segments[g] for g in ascs},
+                'genomic': genomic, 'airr_seq': airr_seq}
 
 
-@ns.route('/ascs_overview/<string:species>/<string:locus>/<string:asc>')
+@ns.route('/ascs_overview/<string:species>/<string:locus>/<path:asc>')
 @api.response(404, 'Species or locus not found')
 class AscsOverview(Resource):
     @digby_protected()
     def get(self, species, locus, asc):
         """ Returns data for the overview refbook component """
 
-        species_loci = SpeciesApi.get(self)
+        error = check_species_locus(species, locus)
+        if error:
+            return error
 
-        if species not in species_loci['species']:
-            return {'message': 'Species not found'}, 404
-        if locus not in species_loci['loci'][species]:
-            return {'message': 'Locus not found'}, 404
+        sources = requested_sources()
+        projects = requested_list('projects')
+        samples = requested_list('samples')
 
         ret = {}
         alleles = {}
 
-        if locus in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][locus].session
+        session = dataset_session(vdjbase_dbs, species, locus, sources, 'airrseq')
+        if session is not None:
             vdjbase_alleles = session.query(VDJbaseAllele.name, VDJbaseAllele.novel, VDJbaseAllele.appears) \
                 .join(VDJbaseGene) \
                 .filter(VDJbaseGene.name == asc) \
@@ -117,8 +322,8 @@ class AscsOverview(Resource):
             for a, novel, appearances in vdjbase_alleles:
                 alleles[a] = {'VDJbase': appearances, 'Genomic': 0, 'novel': novel}
 
-        if locus in genomic_dbs[species]:
-            session = genomic_dbs[species][locus].session
+        session = dataset_session(genomic_dbs, species, locus, sources, 'genomic')
+        if session is not None:
             genomic_alleles = session.query(GenomicSequence.name, GenomicSequence.novel, GenomicSequence.appearances) \
                 .join(GenomicGene) \
                 .filter(GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
@@ -130,78 +335,339 @@ class AscsOverview(Resource):
                 else:
                     alleles[a]['Genomic'] = appearances
 
+        wanted = requested_list('alleles')
+        if wanted:
+            alleles = {name: rec for name, rec in alleles.items() if name in wanted}
+
+        # Counted here rather than read from Allele.appears, a whole-dataset
+        carriers_airrseq = {}
+        carriers_genomic = {}
+        observed_airrseq = {}
+        observed_genomic = {}
+        airrseq_scoped = False
+        genomic_scoped = False
+        airrseq_cohort = set()
+        genomic_cohort = set()
+        airrseq_session = genomic_session = None
+
+        # Pass one: who is in each cohort. One column per sample, so it is cheap,
+        airrseq_session = dataset_session(vdjbase_dbs, species, locus, sources, 'airrseq')
+        if airrseq_session is not None:
+            in_scope = sample_filter(airrseq_session.query(VDJbaseSample.sample_name),
+                                     projects, samples, airrseq_session).all()
+            airrseq_cohort = {name for (name,) in in_scope}
+            _, _, airrseq_scoped = applicable(airrseq_session, VDJbaseStudy, VDJbaseSample,
+                                              projects, samples)
+
+        genomic_session = dataset_session(genomic_dbs, species, locus, sources, 'genomic')
+        if genomic_session is not None:
+            in_scope = genomic_sample_filter(genomic_session.query(GenomicSample.sample_name),
+                                             projects, samples, genomic_session).all()
+            genomic_cohort = {name for (name,) in in_scope}
+            _, _, genomic_scoped = applicable(genomic_session, GenomicStudy, GenomicSample,
+                                              projects, samples)
+
+        # Pass two. Names are only needed for the intersection, so where no sample
+        shared_cohort = airrseq_cohort & genomic_cohort
+        need_names = bool(shared_cohort)
+
+        if airrseq_session is not None:
+            base = (
+                airrseq_session.query(VDJbaseAllele.name, VDJbaseSample.sample_name)
+                .select_from(VDJbaseAllelesSample)
+                .join(VDJbaseAllele, VDJbaseAllele.id == VDJbaseAllelesSample.allele_id)
+                .join(VDJbaseGene, VDJbaseGene.id == VDJbaseAllele.gene_id)
+                .join(VDJbaseSample, VDJbaseSample.id == VDJbaseAllelesSample.sample_id)
+                .filter(VDJbaseGene.name == asc)
+            )
+            if need_names:
+                for allele_name, sample_name in sample_filter(base, projects, samples,
+                                                              airrseq_session).all():
+                    carriers_airrseq.setdefault(allele_name, set()).add(sample_name)
+            else:
+                counted = base.with_entities(
+                    VDJbaseAllele.name, func.count(distinct(VDJbaseAllelesSample.sample_id))
+                ).group_by(VDJbaseAllele.name)
+                observed_airrseq = dict(sample_filter(counted, projects, samples,
+                                                      airrseq_session).all())
+
+        if genomic_session is not None:
+            base = (
+                genomic_session.query(GenomicSequence.name, GenomicSample.sample_name)
+                .select_from(GenomicSampleSequence)
+                .join(GenomicSequence, GenomicSequence.id == GenomicSampleSequence.sequence_id)
+                .join(GenomicGene, GenomicGene.id == GenomicSequence.gene_id)
+                .join(GenomicSample, GenomicSample.id == GenomicSampleSequence.sample_id)
+                .filter(GenomicGene.name == asc)
+            )
+            if need_names:
+                for allele_name, sample_name in genomic_sample_filter(base, projects, samples,
+                                                                      genomic_session).all():
+                    carriers_genomic.setdefault(allele_name, set()).add(sample_name)
+            else:
+                counted = base.with_entities(
+                    GenomicSequence.name, func.count(distinct(GenomicSampleSequence.sample_id))
+                ).group_by(GenomicSequence.name)
+                observed_genomic = dict(genomic_sample_filter(counted, projects, samples,
+                                                              genomic_session).all())
+
+        if need_names:
+            observed_airrseq = {name: len(rows) for name, rows in carriers_airrseq.items()}
+            observed_genomic = {name: len(rows) for name, rows in carriers_genomic.items()}
+
         ret['total'] = len(alleles)
         ret['novel'] = sum(rec['novel'] for rec in alleles.values())
         ret['baseline'] = ret['total'] - ret['novel']
         alleles = dict(sorted(alleles.items()))
         ret['alleles'] = list(alleles.keys())
         # these counts may not be exactly what we want, I am not sure what to do if there are samples
-        # for which we don't have both genomic and airr-seq results
-        ret['genomic_only_counts'] = [rec['Genomic'] if rec['VDJbase'] == 0 else 0 for rec in alleles.values()]
-        ret['vdjbase_only_counts'] = [rec['VDJbase'] if rec['Genomic'] == 0 else 0 for rec in alleles.values()]
-        ret['both_counts'] = [min(rec['Genomic'], rec['VDJbase']) if rec['Genomic'] > 0 and rec['VDJbase'] > 0 else 0 for rec in alleles.values()]
+        ret['genomic_only_counts'] = [
+            len(carriers_genomic.get(name, set()) - carriers_airrseq.get(name, set()))
+            for name in alleles]
+        ret['vdjbase_only_counts'] = [
+            len(carriers_airrseq.get(name, set()) - carriers_genomic.get(name, set()))
+            for name in alleles]
+        ret['both_counts'] = [
+            len(carriers_genomic.get(name, set()) & carriers_airrseq.get(name, set()))
+            for name in alleles]
+
+        # The per-database totals, which the buckets above no longer hide.
+        ret['genomic_counts'] = [observed_genomic.get(name, 0) for name in alleles]
+        ret['vdjbase_counts'] = [observed_airrseq.get(name, 0) for name in alleles]
+        ret['scoped'] = {'genomic': genomic_scoped, 'airrseq': airrseq_scoped}
+
+        # the shared count separates "no allele is shared" from "these cohorts
+        ret['cohort'] = {
+            'genomic': len(genomic_cohort),
+            'airrseq': len(airrseq_cohort),
+            'shared': len(genomic_cohort & airrseq_cohort),
+        }
 
         return ret
 
 
-@ns.route('/asc_seqs/<string:species>/<string:locus>/<string:asc>')
+def collect_asc_sequences(species, locus, asc, sources=None, allele_names=None,
+                          keep_reference=False):
+    """ Every allele sequence for one ASC, merged across the requested databases. """
+    alleles = []
+    recs = []
+
+    session = dataset_session(vdjbase_dbs, species, locus, sources, 'airrseq')
+    if session is not None:
+        vdjbase_alleles = session.query(VDJbaseAllele.name, VDJbaseAllele.seq) \
+            .join(VDJbaseGene) \
+            .filter(VDJbaseGene.name == asc, ~VDJbaseAllele.name.contains('Del')) \
+            .all()
+
+        for a, seq_gapped in vdjbase_alleles:
+            if not seq_gapped:      # a row with no sequence would crash on .upper()
+                continue
+            recs.append({'name': a, 'seq_gapped': seq_gapped.upper(),
+                         'seq': seq_gapped.upper().replace('.', '')})
+            alleles.append(a)
+
+    session = dataset_session(genomic_dbs, species, locus, sources, 'genomic')
+    if session is not None:
+        genomic_alleles = session.query(GenomicSequence.name, GenomicSequence.gapped_sequence, GenomicSequence.sequence) \
+            .join(GenomicGene) \
+            .filter(GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
+            .all()
+
+        for a, gapped, ungapped in genomic_alleles:
+            if a in alleles or not gapped:
+                continue
+            recs.append({'name': a, 'seq_gapped': gapped.upper(),
+                         'seq': (ungapped or gapped.replace('.', '')).upper()})
+
+    if allele_names:
+        wanted = [rec for rec in recs if rec['name'] in allele_names]
+
+        # one sequence has nothing to be read against: keep the gene's first allele
+        if keep_reference and len(wanted) < 2 and recs:
+            reference = min(recs, key=lambda rec: rec['name'])
+            if reference not in wanted:
+                wanted = [reference] + wanted
+
+        recs = wanted
+
+    return recs
+
+
+SEGMENTS = ('V', 'D', 'J', 'C')
+
+
+def segment_of_type(gene_type):
+    """ The segment a gene's stored type says it is: IGHV -> V, IGHC -> C. """
+    code = (gene_type or '')[3:4].upper()
+    return code if code in SEGMENTS else '?'
+
+
+def segment_of(asc):
+    """ The segment read off an ASC name (IGHV1-2 -> V), where nothing better is at hand. """
+    segment = (asc or '')[3:4].upper()
+    return segment if segment in SEGMENTS else '?'
+
+
+def dataset_stamp(species, locus):
+    """ A build stamp for the databases behind one species/locus. """
+    stamp = []
+    for dbs in (vdjbase_dbs, genomic_dbs):
+        dataset = dbs.get(species, {}).get(locus)
+        stamp.append(str(dataset.created) if dataset is not None else None)
+    return tuple(stamp)
+
+
+# Holds every ASC at once (~1,140, ~7MB). A smaller cache is worse than none:
+NAME_LIMIT = 26
+
+
+def _fnv1a(text):
+    """FNV-1a 32-bit, mirrored byte-for-byte in gene-naming.ts."""
+    h = 0x811C9DC5
+    for ch in text:
+        h ^= ord(ch) & 0xFFFF
+        h = (h * 0x01000193) & 0xFFFFFFFF
+    return h
+
+
+def _suffix_token(suffix):
+    """Three base36 characters of that hash - stable for an allele, whatever else is loaded."""
+    b36 = '0123456789abcdefghijklmnopqrstuvwxyz'
+    h = _fnv1a(suffix)
+    out = ''
+    for _ in range(3):
+        out += b36[h % 36]
+        h //= 36
+    return out
+
+
+def abbreviate_names(names):
+    """ Map allele names to short display labels, and back. """
+    labels = {}
+    used = set()
+
+    # sorted, so a #2 lands on the same allele as in the client's shortenAlleleNames
+    for name in sorted(names):
+        if len(name) <= NAME_LIMIT:
+            label = name
+        else:
+            # the first _ AFTER the allele: a gene name can carry one (IGHV4-NL_1*01)
+            star = name.find('*')
+            cut = name.find('_', star + 1) if star >= 0 else name.find('_')
+            if cut >= 0:
+                suffix = name[cut + 1:]
+                # the count alone collides: 231 of 793 long names share a stem
+                label = f'{name[:cut]}+{len(suffix.split("_"))}~{_suffix_token(suffix)}'
+            else:
+                label = name[:NAME_LIMIT - 1] + '~'
+
+        # labels index the alignment rows, so they have to stay distinct
+        candidate, n = label, 2
+        while candidate in used:
+            candidate = f'{label}#{n}'
+            n += 1
+
+        used.add(candidate)
+        labels[candidate] = name
+
+    return labels
+
+
+@lru_cache(maxsize=4096)
+def _render_alignment(species, locus, asc, stamp, codon_wrap, sources, allele_names):
+    """ Rendered alignment for one ASC. Memoised: see dataset_stamp for invalidation. """
+    by_name = {r['name']: r['seq_gapped']
+               for r in collect_asc_sequences(species, locus, asc, sources,
+                                              list(allele_names) if allele_names else None,
+                                              keep_reference=True)}
+    if not by_name:
+        return None
+
+    labels = abbreviate_names(by_name)
+    sequences = {label: by_name[name] for label, name in labels.items()}
+
+    alignment = sequence_alignment.create_alignment(
+        sequences, sequence_type=segment_of(asc), codon_wrap=codon_wrap)
+
+    # only the abbreviated ones are worth listing
+    legend = {label: name for label, name in labels.items() if label != name}
+    return alignment, legend
+
+
+wrap_arguments = reqparse.RequestParser()
+wrap_arguments.add_argument('wrap', type=int, location='args',
+                            help='Codons per row, 5 to 60')
+
+
+@ns.route('/asc_alignment/<string:species>/<string:locus>/<path:asc>')
+@api.response(404, 'Species or locus not found')
+class AscAlignment(Resource):
+    @digby_protected()
+    @api.expect(wrap_arguments, validate=True)
+    def get(self, species, locus, asc):
+        """ Returns a formatted alignment of every allele in an ASC """
+
+        error = check_species_locus(species, locus)
+        if error:
+            return error
+
+        sources = requested_sources()
+
+        # create_alignment reads codons against a V, D or J frame and raises on
+        # anything else; a constant gene carries no segment letter in its name
+        if segment_of(asc) not in ('V', 'D', 'J'):
+            return {'message': 'Alignments are available for V, D and J genes only'}, 400
+
+        codon_wrap = max(5, min(60, wrap_arguments.parse_args().get('wrap') or 20))
+
+        alleles = requested_list('alleles')
+        rendered = _render_alignment(species, locus, asc, dataset_stamp(species, locus),
+                                     codon_wrap, frozenset(sources),
+                                     frozenset(alleles) if alleles else None)
+
+        if rendered is None:
+            return {'message': f'No sequences for {asc}'}, 404
+
+        alignment, legend = rendered
+        return {'asc': asc, 'segment': segment_of(asc), 'codon_wrap': codon_wrap,
+                'alignment': alignment, 'legend': legend}
+
+
+@ns.route('/asc_seqs/<string:species>/<string:locus>/<path:asc>')
 @api.response(404, 'Species or locus not found')
 class AscSeqs(Resource):
     @digby_protected()
     def get(self, species, locus, asc):
         """ Returns sequences of all alleles in an ASC """
 
-        species_loci = SpeciesApi.get(self)
+        error = check_species_locus(species, locus)
+        if error:
+            return error
 
-        if species not in species_loci['species']:
-            return {'message': 'Species not found'}, 404
-        if locus not in species_loci['loci'][species]:
-            return {'message': 'Locus not found'}, 404
+        sources = requested_sources()
 
-        ret = {}
-        alleles = []
-        recs = []
+        return {'alleles': collect_asc_sequences(species, locus, asc, sources, requested_list('alleles'))}
 
-        if locus in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][locus].session
-            vdjbase_alleles = session.query(VDJbaseAllele.name, VDJbaseAllele.seq) \
-                .join(VDJbaseGene) \
-                .filter(VDJbaseGene.name == asc, ~VDJbaseAllele.name.contains('Del')) \
-                .all()
-            
-            for a, seq_gapped in vdjbase_alleles:
-                recs.append({'name': a, 'seq_gapped': seq_gapped.upper(), 'seq': seq_gapped.upper().replace('.', '')})
-                alleles.append(a)
-
-        if locus in genomic_dbs[species]:
-            session = genomic_dbs[species][locus].session
-            genomic_alleles = session.query(GenomicSequence.name, GenomicSequence.gapped_sequence, GenomicSequence.sequence) \
-                .join(GenomicGene) \
-                .filter(GenomicGene.name == asc, or_(GenomicSequence.functional == 'Functional', GenomicSequence.functional == 'ORF')) \
-                .all()
-            
-            for a, gapped, ungapped in genomic_alleles:
-                if a not in alleles:
-                    recs.append({'name': a, 'seq_gapped': gapped.upper(), 'seq': ungapped.upper()})
-
-        return {'alleles': recs}
-
-@ns.route('/asc_usage/<string:species>/<string:locus>/<string:asc>')
+@ns.route('/asc_usage/<string:species>/<string:locus>/<path:asc>')
 @api.response(404, 'Species or locus not found')
 class AscUsage(Resource):
     @digby_protected()
     def get(self, species, locus, asc):
         """ Returns usage statistics for all alleles in an ASC """
 
-        species_loci = SpeciesApi.get(self)
+        error = check_species_locus(species, locus)
+        if error:
+            return error
 
-        if species not in species_loci['species']:
-            return {'message': 'Species not found'}, 404
-        if locus not in species_loci['loci'][species]:
-            return {'message': 'Locus not found'}, 404
+        sources = requested_sources()
+        projects = requested_list('projects')
+        samples = requested_list('samples')
+        alleles = requested_list('alleles')
 
-        if locus in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][locus].session
+        vdjbase_alleles = []
+
+        session = dataset_session(vdjbase_dbs, species, locus, sources, 'airrseq')
+        if session is not None:
 
             totals = (
                 session.query(
@@ -218,7 +684,7 @@ class AscUsage(Resource):
                 func.nullif(cast(totals.c.total, Float), 0.0)
             )
 
-            vdjbase_alleles = (
+            usage_query = (
                 session.query(
                     VDJbaseAllele.name,
                     func.group_concat(VDJbaseSample.sample_name).label("samples"),
@@ -232,11 +698,18 @@ class AscUsage(Resource):
                     & (VDJbaseAllelesSample.sample_id == totals.c.sample_id),
                 )
                 .join(VDJbaseGene, VDJbaseGene.id == VDJbaseAllele.gene_id)
-                .group_by(VDJbaseAllele.name)
                 .filter(
                     VDJbaseGene.name == asc,
                     VDJbaseAllelesSample.count.isnot(None)
                 )
+            )
+
+            if alleles:
+                usage_query = usage_query.filter(VDJbaseAllele.name.in_(alleles))
+
+            vdjbase_alleles = (
+                sample_filter(usage_query, projects, samples, session)
+                .group_by(VDJbaseAllele.name)
                 .all()
             )
 
@@ -244,46 +717,111 @@ class AscUsage(Resource):
 
         return {'alleles': recs}
 
-@ns.route('/asc_zygousity/<string:species>/<string:locus>/<string:asc>')
+@ns.route('/asc_zygousity/<string:species>/<string:locus>/<path:asc>')
 @api.response(404, 'Species or locus not found')
 class AscZygosity(Resource):
     @digby_protected()
     def get(self, species, locus, asc):
         """ Returns zygosity statistics for all subjects in a given ASC """
 
-        species_loci = SpeciesApi.get(self)
+        error = check_species_locus(species, locus)
+        if error:
+            return error
 
-        if species not in species_loci['species']:
-            return {'message': 'Species not found'}, 404
-        if locus not in species_loci['loci'][species]:
-            return {'message': 'Locus not found'}, 404
+        sources = requested_sources()
+        projects = requested_list('projects')
+        samples = requested_list('samples')
+        alleles = requested_list('alleles')
 
-        recs = []
+        # keyed on sample name and unioned: the unit is the subject, and one
+        carried = {}
 
-        if locus in vdjbase_dbs[species]:
-            session = vdjbase_dbs[species][locus].session
+        session = dataset_session(vdjbase_dbs, species, locus, sources, 'airrseq')
+        if session is not None:
 
-            alleles_per_sample = (
+            zygosity_query = (
                 session.query(
-                    VDJbaseAllelesSample.sample_id,
-                    #VDJbaseSample.sample_name,
+                    VDJbaseSample.sample_name,
                     func.group_concat(func.distinct(VDJbaseAllele.name)).label("alleles"),
                 )
+                # without this the first selected column decides the FROM, and the
+                .select_from(VDJbaseAllelesSample)
                 .join(VDJbaseAllele, VDJbaseAllele.id == VDJbaseAllelesSample.allele_id)
                 .join(VDJbaseGene, VDJbaseGene.id == VDJbaseAllele.gene_id)
-                #.join(VDJbaseSample, VDJbaseSample.sample_id == VDJbaseAllelesSample.sample_id)
+                .join(VDJbaseSample, VDJbaseSample.id == VDJbaseAllelesSample.sample_id)
                 .filter(
                     VDJbaseGene.name == asc,
                 )
-                .group_by(VDJbaseAllelesSample.sample_id)
+            )
+
+            if alleles:
+                carriers = (
+                    session.query(VDJbaseAllelesSample.sample_id)
+                    .join(VDJbaseAllele, VDJbaseAllele.id == VDJbaseAllelesSample.allele_id)
+                    .filter(VDJbaseAllele.name.in_(alleles))
+                    .subquery()
+                )
+                zygosity_query = zygosity_query.filter(VDJbaseSample.id.in_(carriers))
+
+            alleles_per_sample = (
+                sample_filter(zygosity_query, projects, samples, session)
+                .group_by(VDJbaseSample.id)
                 .all()
             )
-            
-            for sample_id, alleles in alleles_per_sample:
-                allele_list = alleles.split(',') if alleles else []
-                recs.append({
-                    "name": sample_id,
-                    "sets": list(allele_list)
-                })
+
+            # not `alleles`: that name holds the caller's filter
+            for sample_name, carried_names in alleles_per_sample:
+                if carried_names:
+                    carried.setdefault(sample_name, set()).update(carried_names.split(','))
+
+        # genomic carries the same information; only usage is AIRR-seq-only
+        session = dataset_session(genomic_dbs, species, locus, sources, 'genomic')
+        if session is not None:
+
+            genomic_query = (
+                session.query(
+                    GenomicSample.sample_name,
+                    func.group_concat(func.distinct(GenomicSequence.name)).label("alleles"),
+                )
+                # as above: let the association table decide the FROM, so the
+                .select_from(GenomicSampleSequence)
+                .join(GenomicSequence, GenomicSequence.id == GenomicSampleSequence.sequence_id)
+                .join(GenomicGene, GenomicGene.id == GenomicSequence.gene_id)
+                .join(GenomicSample, GenomicSample.id == GenomicSampleSequence.sample_id)
+                .filter(
+                    GenomicGene.name == asc,
+                    or_(GenomicSequence.functional == 'Functional',
+                        GenomicSequence.functional == 'ORF'),
+                )
+            )
+
+            if alleles:
+                carriers = (
+                    session.query(GenomicSampleSequence.sample_id)
+                    .join(GenomicSequence,
+                          GenomicSequence.id == GenomicSampleSequence.sequence_id)
+                    .filter(GenomicSequence.name.in_(alleles))
+                    .subquery()
+                )
+                genomic_query = genomic_query.filter(GenomicSample.id.in_(carriers))
+
+            genomic_per_sample = (
+                genomic_sample_filter(genomic_query, projects, samples, session)
+                .group_by(GenomicSample.id)
+                .all()
+            )
+
+            for sample_name, carried_names in genomic_per_sample:
+                if carried_names:
+                    carried.setdefault(sample_name, set()).update(carried_names.split(','))
+
+        # the subqueries pick carriers, not what to draw
+        if alleles:
+            wanted = set(alleles)
+            carried = {name: sets & wanted for name, sets in carried.items()}
+            carried = {name: sets for name, sets in carried.items() if sets}
+
+        recs = [{'name': name, 'sets': sorted(sets)}
+                for name, sets in sorted(carried.items())]
 
         return {'samples': recs}

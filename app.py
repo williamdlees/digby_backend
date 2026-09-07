@@ -69,6 +69,8 @@ from api.genomic.genomic import ns as genomic
 from api.vdjbase.vdjbase import ns as vdjbase
 from api.reports.reports import ns as reports
 from api.refbook.refbook import ns as refbook
+from api.refbook.sunburst import ns as refbook_sunburst
+from api.refbook.tree import ns as refbook_tree
 from api.system.system import ns as system, digby_protected
 
 from db.genomic_db import *
@@ -85,6 +87,8 @@ api.add_namespace(vdjbase)
 api.add_namespace(reports)
 api.add_namespace(system)
 api.add_namespace(refbook)
+api.add_namespace(refbook_sunburst)
+api.add_namespace(refbook_tree)
 app.register_blueprint(blueprint)
 
 from api_v1.open_api import api_bp
