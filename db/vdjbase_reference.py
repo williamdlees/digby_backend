@@ -1,4 +1,6 @@
 import os.path
+import csv
+import re
 import os
 from Bio import SeqIO
 import importlib.util
@@ -21,6 +23,64 @@ def read_reference(filename):
     return records
 
 
+snp_in_name = re.compile(r'^[acgtACGT]([0-9]+)[acgtACGT-]$')
+ins_in_name = re.compile(r'^([0-9]+)[acgtACGT]+([0-9]+)$')
+
+
+def mark_snp_positions(allele_name, sequence):
+    """ Lower-case the SNP and insertion positions named in the allele, as the
+        pipeline does. Alleles are matched on sequence, so an all-upper reference
+        never matches the same allele arriving from a repertoire. """
+    if '_' not in allele_name:
+        return sequence
+
+    positions = []
+    for tok in allele_name.split('_')[1:]:
+        snp = snp_in_name.match(tok)
+        ins = ins_in_name.match(tok)
+        if snp:
+            positions.append(int(snp.group(1)))
+        elif ins:
+            positions.extend(range(int(ins.group(1)), int(ins.group(2)) + 1))
+
+    if not positions:
+        return sequence
+
+    seq = list(sequence)
+    for pos in positions:
+        if 0 < pos <= len(seq):
+            seq[pos - 1] = seq[pos - 1].lower()
+    return ''.join(seq)
+
+
+def read_reference_table(filename):
+    """ iuis_allele, asc, sequence, gapped_sequence -> {allele: (asc, gapped_sequence)} """
+    recs = {}
+    with open(filename, newline='') as fi:
+        for row in csv.DictReader(fi, delimiter='\t'):
+            name = row['iuis_allele'].strip()
+            if name:
+                seq = (row['gapped_sequence'] or row['sequence']).strip()
+                recs[name] = (row['asc'].strip() or None, mark_snp_positions(name, seq))
+    return recs
+
+
+def asc_of_ambiguous(allele_name, table):
+    """ The cluster of an ambiguous name like IGHV1-69*01_12_13, if the alleles it
+        spans agree on one. """
+    if '*' not in allele_name:
+        return None
+
+    gene, rest = allele_name.split('*', 1)
+    groups = {table[f'{gene}*{part}'][0] for part in rest.split('_')
+              if part.isdigit() and f'{gene}*{part}' in table}
+
+    if len(groups) > 1:
+        raise DbCreationError(f'{allele_name} spans alleles in different clusters: {sorted(groups)}')
+
+    return groups.pop() if groups else None
+
+
 def import_reference_alleles(reference_dir, session, species):
     result = []
     if os.path.isfile(os.path.join(reference_dir, 'gene_order.py')):
@@ -33,29 +93,57 @@ def import_reference_alleles(reference_dir, session, species):
     added_genes = []
     extra_locus = len(gene_order.LOCUS_ORDER)
     extra_alpha = len(gene_order.ALPHA_ORDER)
+
+    # the reference table, then the FASTA for anything it does not name: the FR1
+    # ambiguous names (IGHV1-69*01_12_13) are only in the FASTA, and the genotype
+    # and ogrdbstats loaders match them as literal strings
+    table = {}
+    for file in sorted(os.listdir(reference_dir)):
+        if file.startswith('reference_table_') and file.endswith('.tsv'):
+            table.update(read_reference_table(os.path.join(reference_dir, file)))
+
+    from_table = from_fasta = 0
+
+    for allele, (asc, sequence) in table.items():
+        gene_name = allele.split('*')[0] if '*' in allele else allele
+
+        if gene_name not in added_genes:
+            (extra_alpha, extra_locus) = add_gene(extra_alpha, extra_locus, gene_name, gene_order, session, species)
+            added_genes.append(gene_name)
+
+        save_allele(allele, gene_name, sequence, session, asc=asc, asc_inferred=False)
+        from_table += 1
+
     for file in os.listdir(reference_dir):
         if os.path.splitext(file)[1] == '.fasta':
             recs = read_reference(os.path.join(reference_dir, file))
 
             for allele, sequence in recs.items():
+                if allele in table:
+                    continue
+
                 gene_name = allele.split('*')[0] if '*' in allele else allele
 
                 if gene_name not in added_genes:
                     (extra_alpha, extra_locus) = add_gene(extra_alpha, extra_locus, gene_name, gene_order, session, species)
                     added_genes.append(gene_name)
 
-                save_allele(allele, gene_name, sequence, session)
+                save_allele(allele, gene_name, sequence, session, asc=asc_of_ambiguous(allele, table))
+                from_fasta += 1
 
         session.commit()
+
+    session.commit()
 
     if len(added_genes) == 0:
         raise DbCreationError('No genes added from reference set - skipped')
 
-    result.append('Reference alleles added')
+    result.append(f'Reference alleles added: {from_table} from the reference table, '
+                  f'{from_fasta} from FASTA, {len(added_genes)} genes')
     return result
 
 
-def save_allele(allele_name, gene_name, sequence, session):
+def save_allele(allele_name, gene_name, sequence, session, asc=None, asc_inferred=None):
     similar = session.query(Allele).filter(Allele.seq == str(sequence)).one_or_none()
 
     if similar is not None:
@@ -63,6 +151,11 @@ def save_allele(allele_name, gene_name, sequence, session):
             similar.similar = '|%s|' % allele_name
         else:
             similar.similar += ', ' + '|%s|' % allele_name
+
+        # a name collapsed into `similar` still belongs to a cluster
+        if asc and not similar.asc:
+            similar.asc = asc
+            similar.asc_inferred = asc_inferred
     else:
         g = session.query(Gene).filter(Gene.name == gene_name).one_or_none()
         a = Allele(
@@ -77,6 +170,8 @@ def save_allele(allele_name, gene_name, sequence, session):
             max_kdiff=0,
             similar='',
             pipeline_name='',
+            asc=asc,
+            asc_inferred=asc_inferred,
         )
         session.add(a)
     session.flush()

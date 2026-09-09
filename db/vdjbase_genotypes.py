@@ -62,10 +62,13 @@ def process_genotypes(ds_dir, species, dataset, session):
 
         if sample.genotype:
             sample.genotype = sample.genotype.replace('\\', '/').replace(ds_dir + '/', '')
-            sample.genotype = 'samples/' + sample.genotype.split('/samples/')[1]
+            # only when ds_dir did not match and the path is still absolute
+            if '/samples/' in sample.genotype:
+                sample.genotype = 'samples/' + sample.genotype.split('/samples/')[1]
         if sample.asc_genotype:
             sample.asc_genotype = sample.asc_genotype.replace('\\', '/').replace(ds_dir + '/', '')
-            sample.asc_genotype = 'samples/' + sample.asc_genotype.split('/samples/')[1]
+            if '/samples/' in sample.asc_genotype:
+                sample.asc_genotype = 'samples/' + sample.asc_genotype.split('/samples/')[1]
             
     session.commit()
 
@@ -195,7 +198,8 @@ def read_ambiguous_alleles_file(ds_dir, result, session):
 
 
 allele_pattern = re.compile("^[0-9]{2}$")
-mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c]$")
+# a deletion is written g10- : the replacement position is a dash, not a base
+mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c-]$")
 ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
 gene_pattern = re.compile(".+\.[0-9]{2}$")
 nt_pattern = re.compile("[A,G,T,C,a,g,t,c]+")
@@ -786,6 +790,8 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
             similar='',
             pipeline_name=pipeline_name,
             closest_ref = first_allele,
+            asc = first_allele.asc if first_allele is not None else None,
+            asc_inferred = first_allele is not None and first_allele.asc is not None,
         )
 
         session.add(allele)

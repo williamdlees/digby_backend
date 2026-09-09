@@ -95,6 +95,17 @@ def study_data_db_init(vdjbase_db_path):
                         con.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
                         sqlite_dbs[species][locus].session.commit()
 
+                # same for the allele cluster. Both columns in one `with`:
+                # leaving the block closes the connection
+                allele_cols = [col['name'] for col in inspector.get_columns('Allele')]
+                missing = [(name, decl) for name, decl in (('asc', 'text'), ('asc_inferred', 'boolean'))
+                           if name not in allele_cols]
+                if missing:
+                    with sqlite_dbs[species][locus].connection as con:
+                        for col_name, decl in missing:
+                            con.execute(f'ALTER TABLE Allele ADD COLUMN {col_name} {decl}')
+                        sqlite_dbs[species][locus].session.commit()
+
 
     # sort datasets of each species
 

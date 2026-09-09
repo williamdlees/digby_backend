@@ -457,7 +457,8 @@ def merge_attributes(meta_records, table_fields):
                     for v in vals:
                         if v and str(v) not in res:
                             res.append(str(v))
-                            meta_records[table][attr] = ','.join(res)
+                    # outside the loop: an all-empty field stayed a list, which sqlite cannot bind
+                    meta_records[table][attr] = ','.join(res)
                 elif row_spec[attr]['type'] == 'integer':
                     meta_records[table][attr] = 0
                     for v in vals:

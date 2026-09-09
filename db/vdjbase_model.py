@@ -50,7 +50,7 @@ class Allele(Base):
     __tablename__ = 'allele'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(30), nullable=False)
+    name = Column(String(255), nullable=False)            # a novel allele's name lists every SNP: the longest in Human IGH is 185 characters
     pipeline_name = Column(String(30), nullable=False)    # the name assigned by the pipeline, e.g. *bp01
     seq = Column(Text)
     seq_len = Column(String(50), nullable=False)
@@ -62,6 +62,8 @@ class Allele(Base):
     novel = Column(Boolean, nullable=False)
     max_kdiff = Column(DECIMAL, nullable=False)
     closest_ref_id = Column(ForeignKey('allele.id'), index=True)
+    asc = Column(String(50))          # allele similarity cluster, from the reference table
+    asc_inferred = Column(Boolean)    # True when taken from closest_ref rather than read from the table
     alias_1 = Column(String(50))      # alias columns used for names in other reference sets
     alias_2 = Column(String(50))
     alias_3 = Column(String(50))
