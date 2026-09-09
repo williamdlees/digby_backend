@@ -421,6 +421,9 @@ class AscsOverview(Resource):
         alleles = dict(sorted(alleles.items()))
         ret['alleles'] = list(alleles.keys())
         # these counts may not be exactly what we want, I am not sure what to do if there are samples
+        # Three exclusive buckets over every sample the allele was seen in: the
+        # repertoire and not the genome, the genome and not the repertoire, and
+        # both. A sample with only one kind of data lands in that kind's bucket.
         ret['genomic_only_counts'] = [
             len(carriers_genomic.get(name, set()) - carriers_airrseq.get(name, set()))
             for name in alleles]
