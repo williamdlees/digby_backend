@@ -203,6 +203,8 @@ mut_pattern = re.compile("^[A,G,T,C,a,g,t,c][0-9]+[A,G,T,C,a,g,t,c-]$")
 ext_mut_pattern = re.compile("^[0-9]+[A,G,T,C,a,g,t,c]+[0-9]+$")
 gene_pattern = re.compile(".+\.[0-9]{2}$")
 nt_pattern = re.compile("[A,G,T,C,a,g,t,c]+")
+# an insertion: i<position><bases>, the bases going in after <position>
+ins_pattern = re.compile("^i[0-9]+[A,G,T,C,a,g,t,c]+$")
 
 
 def parse_allele(allele):
@@ -239,7 +241,7 @@ def parse_allele(allele):
                 ambig_alleles.append(r)
             elif re.search(mut_pattern, r):
                 allele_snps.append(r)
-            elif re.search(ext_mut_pattern, r):
+            elif re.search(ext_mut_pattern, r) or re.search(ins_pattern, r):
                 ext_snps.append(r)
             else:
                 base_allele += '_' + r  # this is a piece that isn't part of the tigger naming scheme and must therefore
@@ -704,7 +706,7 @@ def new_allele(allele_name, base_allele_name, pipeline_name, allele_snps, sessio
     reps = reps[1:]
 
     for r in reps:
-        if re.search(allele_pattern, r) or re.search(gene_pattern, r) or re.search(mut_pattern, r) or re.search(ext_mut_pattern, r):
+        if re.search(allele_pattern, r) or re.search(gene_pattern, r) or re.search(mut_pattern, r) or re.search(ext_mut_pattern, r) or re.search(ins_pattern, r):
             break
 
         allele_parts.append(r)
@@ -905,6 +907,15 @@ def create_merged_sequence(allele_name, ambiguous_alleles, base_allele_name, seq
                 if len(seq) > len(new_seq):
                     new_seq += seq[len(new_seq) - len(seq):]
                 seq = new_seq
+                is_novel_allele = True
+
+            elif re.search(ins_pattern, r):
+                final_allele_name += '_' + r
+                # i9gtg: gtg goes in after position 9, and the positions named by
+                # the other terms are all in the pre-insertion frame
+                off = re.search(nt_pattern, r[1:]).span()[0] + 1
+                place = int(r[1:off])
+                seq = seq[:place] + r[off:] + seq[place:]
                 is_novel_allele = True
             else:
                 print(f'Error processing allele {allele_name}: unrecognised term in allele designation: {r} was ignored')

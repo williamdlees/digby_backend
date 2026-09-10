@@ -1,6 +1,5 @@
 import os.path
 import csv
-import re
 import os
 from Bio import SeqIO
 import importlib.util
@@ -23,36 +22,6 @@ def read_reference(filename):
     return records
 
 
-snp_in_name = re.compile(r'^[acgtACGT]([0-9]+)[acgtACGT-]$')
-ins_in_name = re.compile(r'^([0-9]+)[acgtACGT]+([0-9]+)$')
-
-
-def mark_snp_positions(allele_name, sequence):
-    """ Lower-case the SNP and insertion positions named in the allele, as the
-        pipeline does. Alleles are matched on sequence, so an all-upper reference
-        never matches the same allele arriving from a repertoire. """
-    if '_' not in allele_name:
-        return sequence
-
-    positions = []
-    for tok in allele_name.split('_')[1:]:
-        snp = snp_in_name.match(tok)
-        ins = ins_in_name.match(tok)
-        if snp:
-            positions.append(int(snp.group(1)))
-        elif ins:
-            positions.extend(range(int(ins.group(1)), int(ins.group(2)) + 1))
-
-    if not positions:
-        return sequence
-
-    seq = list(sequence)
-    for pos in positions:
-        if 0 < pos <= len(seq):
-            seq[pos - 1] = seq[pos - 1].lower()
-    return ''.join(seq)
-
-
 def read_reference_table(filename):
     """ iuis_allele, asc, sequence, gapped_sequence -> {allele: (asc, gapped_sequence)} """
     recs = {}
@@ -60,8 +29,10 @@ def read_reference_table(filename):
         for row in csv.DictReader(fi, delimiter='\t'):
             name = row['iuis_allele'].strip()
             if name:
-                seq = (row['gapped_sequence'] or row['sequence']).strip()
-                recs[name] = (row['asc'].strip() or None, mark_snp_positions(name, seq))
+                # lower case throughout, as read_fasta stores it: alleles are
+                # matched on sequence, and a case difference is a miss
+                seq = (row['gapped_sequence'] or row['sequence']).strip().lower()
+                recs[name] = (row['asc'].strip() or None, seq)
     return recs
 
 
