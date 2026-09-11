@@ -62,6 +62,8 @@ custom_logging.init_logging(app, mail)
 
 vdjbase_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/VDJbase/db'))
 genomic_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/Genomic/db'))
+qtl_dbs = study_data_db_init(os.path.join(app.config['STATIC_PATH'], 'study_data/QTL/db')) \
+    if os.path.isdir(os.path.join(app.config['STATIC_PATH'], 'study_data/QTL/db')) else {}
 madc_index = madc_init(app)
 
 from api.restx import api
@@ -71,6 +73,14 @@ from api.reports.reports import ns as reports
 from api.refbook.refbook import ns as refbook
 from api.refbook.sunburst import ns as refbook_sunburst
 from api.refbook.tree import ns as refbook_tree
+from api.qtl.qtl import ns as qtl
+# tree and region build their namespace with api.namespace(), which registers it
+# on import, so importing them is all the wiring they need. Bind them under a
+# different name: `import api.refbook.tree` would rebind `api` here to the
+# package, shadowing the Api object imported from api.restx.
+from api.qtl import region as _qtl_region          # noqa: F401
+from api.qtl import pairing as _qtl_pairing        # noqa: F401
+from api.qtl import summary as _qtl_summary        # noqa: F401
 from api.system.system import ns as system, digby_protected
 
 from db.genomic_db import *
@@ -89,6 +99,7 @@ api.add_namespace(system)
 api.add_namespace(refbook)
 api.add_namespace(refbook_sunburst)
 api.add_namespace(refbook_tree)
+api.add_namespace(qtl)
 app.register_blueprint(blueprint)
 
 from api_v1.open_api import api_bp
