@@ -92,8 +92,11 @@ def study_data_db_init(vdjbase_db_path):
                 cols = inspector.get_columns('Sample')
                 if 'asc_genotype' not in [col['name'] for col in cols]:
                     with sqlite_dbs[species][locus].connection as con:
-                        con.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
-                        sqlite_dbs[species][locus].session.commit()
+                        try:
+                            con.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
+                            sqlite_dbs[species][locus].session.commit()
+                        except:
+                            pass
 
 
     # sort datasets of each species
