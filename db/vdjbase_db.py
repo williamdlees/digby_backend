@@ -3,8 +3,9 @@
 from os.path import join, isdir, isfile
 from os import listdir
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
 
 from db.vdjbase_maint import create_single_database
 from db.vdjbase_model import Details
@@ -84,6 +85,9 @@ def study_data_db_init(vdjbase_db_path):
                         print('Species %s not found in species lookup' % species)
 
     # temp fix: add asc_genotype column to sample table if not there already
+    # don't use a 'with' block because exiting the block would close the long-lived connection
+    # causing a later ResourceClosed error.
+    # TODO: remove when all tables have been rebuilt with these columns
 
     for species in sqlite_dbs:
         for locus in sqlite_dbs[species]:
@@ -96,27 +100,27 @@ def study_data_db_init(vdjbase_db_path):
                 continue
 
             cols = inspector.get_columns('Sample')
+
             if 'asc_genotype' not in [col['name'] for col in cols]:
-                # Not `with ... as con`: exiting that block closes the connection,
-                # and this dataset's long-lived session is bound to it, so every
-                # later query raised ResourceClosedError. The branch only runs when
-                # the column is missing, so it broke the first start after a
-                # database was rebuilt and looked fine on the next one.
-                sqlite_dbs[species][locus].connection.execute(
-                    'ALTER TABLE Sample ADD COLUMN asc_genotype text')
-                sqlite_dbs[species][locus].session.commit()
+                try:
+                    sqlite_dbs[species][locus].connection.execute('ALTER TABLE Sample ADD COLUMN asc_genotype text')
+                    sqlite_dbs[species][locus].session.commit()
+                except OperationalError as e:
+                    print(f"Error {e} adding asc_genotype column to {species} {locus} sample table")
+                    pass
 
-                # same for the allele cluster. Both columns in one `with`:
-                # leaving the block closes the connection
-                allele_cols = [col['name'] for col in inspector.get_columns('Allele')]
-                missing = [(name, decl) for name, decl in (('asc', 'text'), ('asc_inferred', 'boolean'))
-                           if name not in allele_cols]
-                if missing:
-                    with sqlite_dbs[species][locus].connection as con:
-                        for col_name, decl in missing:
-                            con.execute(f'ALTER TABLE Allele ADD COLUMN {col_name} {decl}')
-                        sqlite_dbs[species][locus].session.commit()
-
+            # same for the allele cluster. 
+            allele_cols = [col['name'] for col in inspector.get_columns('Allele')]
+            missing = [(name, decl) for name, decl in (('asc', 'text'), ('asc_inferred', 'boolean'))
+                        if name not in allele_cols]
+            if missing:
+                try:
+                    for col_name, decl in missing:
+                        sqlite_dbs[species][locus].connection.execute(f'ALTER TABLE Allele ADD COLUMN {col_name} {decl}')
+                    sqlite_dbs[species][locus].session.commit()
+                except OperationalError as e:
+                    print(f"Error {e} adding {col_name} column to {species} {locus} allele table")
+                    pass
 
     # sort datasets of each species
 

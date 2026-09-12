@@ -813,6 +813,9 @@ class SequencesApi(Resource):
             ret = sorted(ret, key=lambda x: allele_sort_key(x['name']))
 
         if args['page_size']:
+            if 'page_number' not in args or args['page_number'] is None:
+                return BadRequest('page_number must be specified if page_size is specified')
+            
             first = (args['page_number']) * args['page_size']
             ret = ret[first: first + args['page_size']]
 
