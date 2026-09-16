@@ -4,6 +4,7 @@ import os.path
 import shutil
 import csv
 import glob
+import sys
 from zipfile import ZipFile
 
 from receptor_utils.simple_bio_seq import write_csv
@@ -18,6 +19,11 @@ class GeneParsingException(Exception):
 
 
 annotation_records = {}
+
+
+# an annotation row carries whole sequences and their per-position matches:
+# Position_Matches reaches 180k characters, well past the 128k default
+csv.field_size_limit(sys.maxsize)
 
 
 def read_csv(filename):

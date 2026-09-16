@@ -64,29 +64,30 @@ BED_KINDS = {
 }
 
 
-def _annotation_dir():
-    """Where the BED annotation lives.
+def _annotation_dir(species, locus):
+    """Where the BED annotation for one locus lives.
 
-    Configured, never hardcoded: these files are a versioned release of an
-    external annotation, not repository content. `QTL_ANNOTATION_PATH` in
-    `secret.cfg` (or the environment) wins; otherwise the deployment is expected
-    to place the release beside the databases it annotates.
+    Per species and locus, beside the database it annotates: a release is written
+    against one locus's coordinate frame, so a single shared directory lets one
+    locus overwrite another's files. `QTL_ANNOTATION_PATH` in `secret.cfg` (or the
+    environment) still wins, and names a directory for one locus only.
     """
     return (app.config.get('QTL_ANNOTATION_PATH')
             or os.environ.get('QTL_ANNOTATION_PATH')
-            or os.path.join(app.config['STATIC_PATH'], 'study_data/QTL/annotation'))
+            or os.path.join(app.config['STATIC_PATH'],
+                            'study_data/QTL/db', species, locus, 'annotation'))
 
 
 _cache = {}
 
 
-def _bed(name):
+def _bed(species, locus, name):
     """One BED file as `(contig, start, end, gene)`, in 1-based inclusive coords.
 
     Static release files, so they are read once and kept. Each is a few hundred
     rows; the whole set is under 100 kB.
     """
-    directory = _annotation_dir()
+    directory = _annotation_dir(species, locus)
     if not os.path.isdir(directory):
         # returning nothing here would report every variant as intergenic, which
         # is a wrong answer rather than a missing one
@@ -130,8 +131,8 @@ def _release(directory):
         return None
 
 
-def _overlapping(name, contig, start, end):
-    return [row for row in _bed(name)
+def _overlapping(species, locus, name, contig, start, end):
+    return [row for row in _bed(species, locus, name)
             if row[0] == contig and row[1] <= end and row[2] >= start]
 
 
@@ -189,13 +190,13 @@ class QtlRegionApi(Resource):
 
         asc = request.args.get('asc')
 
-        directory = _annotation_dir()
+        directory = _annotation_dir(species, locus)
         annotated = os.path.isdir(directory)
 
         genes, features = [], []
         if annotated:
             for name, (feature, kind) in BED_KINDS.items():
-                for _, first, last, gene in _overlapping(name, record.contig, start, end):
+                for _, first, last, gene in _overlapping(species, locus, name, record.contig, start, end):
                     row = {'name': gene, 'start': first, 'end': last,
                            'feature': feature, 'kind': kind}
                     (genes if kind == 'gene' else features).append(row)
@@ -270,12 +271,12 @@ def _self_check():
     # 1. The elements of a V gene tile its body exactly: UTR, L-PART1, intron,
     #    L-PART2, V-REGION, heptamer, spacer, nonamer, end to end with no gap and
     #    no overlap. Reading the BED as half-open opens a 1 bp gap at every join.
-    for gene, contig in (('IGLV3-16', 'chr22'), ('IGKV1-17', 'chr2')):
+    for gene, contig, locus in (('IGLV3-16', 'chr22', 'IGL'), ('IGKV1-17', 'chr2', 'IGK')):
         parts = sorted((first, last, kind)
                        for name, (_, kind) in BED_KINDS.items() if kind != 'gene'
-                       for c, first, last, g in _bed(name)
+                       for c, first, last, g in _bed('Human', locus, name)
                        if g == gene and c == contig)
-        body = [row for row in _bed('gene') if row[3] == gene and row[0] == contig]
+        body = [row for row in _bed('Human', locus, 'gene') if row[3] == gene and row[0] == contig]
         assert len(body) == 1, gene
         assert parts[0][0] == body[0][1] and parts[-1][1] == body[0][2], (gene, parts)
         for (_, last, kind), (first, _, nxt) in zip(parts, parts[1:]):
@@ -284,15 +285,15 @@ def _self_check():
     # 2. Two variants whose annotation is independently published. The spacer one
     #    sits on the interval's last base under the correct frame and outside it
     #    under the wrong one, which is what makes it a test rather than a sample.
-    def feature_at(contig, pos, gene):
+    def feature_at(contig, pos, gene, locus='IGL'):
         return {kind for name, (_, kind) in BED_KINDS.items()
-                for c, first, last, g in _bed(name)
+                for c, first, last, g in _bed('Human', locus, name)
                 if c == contig and g == gene and first <= pos <= last}
 
     assert 'spacer' in feature_at('chr22', 23170898, 'IGLV3-16')
     assert 'gene' in feature_at('chr22', 23170898, 'IGLV3-16')
     assert not feature_at('chr22', 22756855, 'IGLV9-49')      # 48 bp upstream, outside
-    body = [r for r in _bed('gene') if r[3] == 'IGLV9-49'][0]
+    body = [r for r in _bed('Human', 'IGL', 'gene') if r[3] == 'IGLV9-49'][0]
     assert body[1] - 22756855 == 49, body    # the database says 48: see the docstring
 
     print('coordinate frame OK')

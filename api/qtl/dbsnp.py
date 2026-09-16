@@ -34,8 +34,8 @@ import os
 
 from app import app
 
-# The map lives outside the repository, beside the annotation release it shares a
-# reference with. `QTL_DBSNP_PATH` overrides the location.
+# The map lives outside the repository, beside the database and the annotation
+# release for its locus. `QTL_DBSNP_PATH` overrides the location.
 FILENAME = 'GRCh38_igh_dbSNP_id.tsv.gz'
 
 # The locus-relative contig the map is written against. A variant on any other
@@ -43,16 +43,17 @@ FILENAME = 'GRCh38_igh_dbSNP_id.tsv.gz'
 CONTIG = 'igh'
 
 
-def _directory():
+def _directory(species, locus):
     return (app.config.get('QTL_DBSNP_PATH')
             or os.environ.get('QTL_DBSNP_PATH')
-            or os.path.join(app.config['STATIC_PATH'], 'study_data/QTL/dbsnp'))
+            or os.path.join(app.config['STATIC_PATH'],
+                            'study_data/QTL/db', species, locus, 'dbsnp'))
 
 
 _cache = {}
 
 
-def _load():
+def _load(species, locus):
     """`{pos_1based: (grch38_contig, grch38_pos_1based, [rsid, ...])}`.
 
     Read once and kept: a static release of about 245,000 rows. Absent, this
@@ -60,7 +61,7 @@ def _load():
     with no map are different answers, and only one of them should be shown as
     "no identifier".
     """
-    directory = _directory()
+    directory = _directory(species, locus)
     path = os.path.join(directory, FILENAME)
     stamp = os.path.getmtime(path) if os.path.exists(path) else None
 
@@ -100,39 +101,39 @@ def _load():
     return table
 
 
-def available():
-    """Whether the map is configured at all."""
-    return _load() is not None
+def available(species, locus):
+    """Whether the map is configured for this locus at all."""
+    return _load(species, locus) is not None
 
 
-def release():
+def release(species, locus):
     """What the map says about itself, for provenance beside the identifiers."""
     try:
-        with open(os.path.join(_directory(), 'RELEASE.txt')) as handle:
+        with open(os.path.join(_directory(species, locus), 'RELEASE.txt')) as handle:
             return handle.readline().strip() or None
     except OSError:
         return None
 
 
-def lookup(contig, pos):
+def lookup(species, locus, contig, pos):
     """What dbSNP calls the variant at this 1-based locus position.
 
     Returns None when there is no map, so a caller can tell "not configured"
     from "configured and this variant is not in dbSNP", which is `mapped: False`.
     """
-    table = _load()
+    table = _load(species, locus)
     if table is None:
         return None
     if contig != CONTIG or pos is None:
         # said plainly rather than returning an empty result: the light chains
         # are already on chromosome coordinates and this map has nothing to add
         return {'mapped': False, 'applies': False, 'rsids': [],
-                'grch38': None, 'source': release()}
+                'grch38': None, 'source': release(species, locus)}
 
     entry = table.get(pos)
     if entry is None:
         return {'mapped': False, 'applies': True, 'rsids': [],
-                'grch38': None, 'source': release()}
+                'grch38': None, 'source': release(species, locus)}
 
     chrom, gpos, rsids = entry
     return {
@@ -141,5 +142,5 @@ def lookup(contig, pos):
         'rsids': rsids,
         # 1-based, the frame dbSNP, Ensembl and UCSC all use
         'grch38': {'contig': chrom, 'pos': gpos},
-        'source': release(),
+        'source': release(species, locus),
     }

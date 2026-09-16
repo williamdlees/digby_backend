@@ -434,7 +434,7 @@ def _genotype_counts(session, record):
     return {int(genotype): count for genotype, count in rows}
 
 
-def _variant_payload(session, record):
+def _variant_payload(session, species, locus, record):
     """A variant's identity, and every ASC scan it appeared in.
 
     Shared by the two ways in: from a Manhattan point, where the locus is already
@@ -489,7 +489,7 @@ def _variant_payload(session, record):
         'min_genotype_group': smallest,
         # what the world outside VDJbase calls this variant, when it can be said.
         # IGH is named for a locus-relative contig, so it takes a map.
-        'dbsnp': dbsnp.lookup(record.contig, record.pos),
+        'dbsnp': dbsnp.lookup(species, locus, record.contig, record.pos),
         'thresholds': _thresholds(session),
         'has_genotypes': session.query(Dosage.id)
             .filter(Dosage.variant_id == record.id).first() is not None,
@@ -512,7 +512,7 @@ class QtlVariantApi(Resource):
         if record is None:
             return {'message': f'No such variant: {variant}'}, 404
 
-        payload = _variant_payload(session, record)
+        payload = _variant_payload(session, species, locus, record)
         payload['locus'] = locus
         return payload
 
@@ -546,7 +546,7 @@ class QtlVariantLookupApi(Resource):
             if record is None:
                 continue
 
-            payload = _variant_payload(session, record)
+            payload = _variant_payload(session, species, locus, record)
             payload['locus'] = locus
             return payload
 
