@@ -613,12 +613,15 @@ class QtlVariantUsageApi(Resource):
             'association': None if association is None else {
                 'beta': association.beta, 'se': association.se,
                 'p_value': association.p_value, 'neglog10_p': association.neglog10_p,
-                'n': association.n, 'significant': bool(association.significant),
+                # n, min_genotype_group and well_powered are per variant, not per
+                # association: they describe the genotype classes, which do not
+                # change with the ASC being tested
+                'n': record.n, 'significant': bool(association.significant),
                 # the pipeline documents the extreme tail as anti-conservative, so
                 # the smallest genotype class travels with the p-value
-                'min_genotype_group': association.min_genotype_group,
-                'well_powered': (bool(association.well_powered)
-                                 if association.well_powered is not None else None),
+                'min_genotype_group': record.min_genotype_group,
+                'well_powered': (bool(record.well_powered)
+                                 if record.well_powered is not None else None),
             },
         }
 
