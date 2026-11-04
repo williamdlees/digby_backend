@@ -263,19 +263,18 @@ class DownloadStudyScript(Resource):
         if species_id not in madc_index or dataset not in madc_index[species_id]:
             return None, 404
 
-        script = f'# Download script for study {study_id}\n# Please note that the server has a download limit, to prevent abuse. If the HTTP code 503 is returned, the server is rate-limited and it will provide an indication of when you can retry.\n'
+        files = [('https://madc.vdjbase.org/airr/v1/rearrangement/' + repertoire_id, f'{study_id}_{dataset}_{repertoire_id}.tsv.gz')
+                 for repertoire_id, row in madc_index[species_id][dataset].items() if row['study_id'] == study_id]
 
-        count = 1
-        for repertoire_id, row in madc_index[species_id][dataset].items():
-            if row['study_id'] == study_id:
-                script += 'curl -w "HTTP code: %{response_code}" https://madc.vdjbase.org/airr/v1/rearrangement/' + repertoire_id + f' > {study_id}_{dataset}_{repertoire_id}.tsv.gz\n'
-                count += 1
+        return study_script(study_id, files, f'{study_id}_{dataset}_download.sh')
 
-        mem = BytesIO()
-        mem.write(script.encode('utf-8'))
-        mem.seek(0)
 
-        return send_file(mem, as_attachment=True, attachment_filename=f'{study_id}_{dataset}_download.sh', mimetype='text/plain')
+def study_script(study_id, files, script_name):
+    """Returns a download script for a study: one curl line per (url, file name) pair"""
+    script = f'# Download script for study {study_id}\n# Please note that the server has a download limit, to prevent abuse. If the HTTP code 503 is returned, the server is rate-limited and it will provide an indication of when you can retry.\n'
+    script += ''.join(f'curl -w "HTTP code: %{{response_code}}" {url} > {file_name}\n' for url, file_name in files)
+
+    return send_file(BytesIO(script.encode('utf-8')), as_attachment=True, attachment_filename=script_name, mimetype='text/plain')
 
 
 # Convert some frequently occurring accession ids to links
