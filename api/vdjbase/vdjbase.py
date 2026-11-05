@@ -269,6 +269,61 @@ class DownloadStudyScript(Resource):
         return study_script(study_id, files, f'{study_id}_{dataset}_download.sh')
 
 
+@ns.route('/download_study_genotypes/<string:species>/<string:study_name>/<string:dataset>')
+class DownloadStudyGenotypes(Resource):
+    @digby_protected()
+    def get(self, species, study_name, dataset):
+        """Returns a script that downloads the genotype file of each sample in the study"""
+        if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
+            return None, 404
+
+        session = vdjbase_dbs[species][dataset].get_session()
+        return study_file_script(species, dataset, study_name, study_genotype_files(session, study_name), 'genotypes')
+
+
+@ns.route('/download_study_haplotypes/<string:species>/<string:study_name>/<string:dataset>')
+class DownloadStudyHaplotypes(Resource):
+    @digby_protected()
+    def get(self, species, study_name, dataset):
+        """Returns a script that downloads the haplotype files of each sample in the study"""
+        if species not in vdjbase_dbs or dataset not in vdjbase_dbs[species]:
+            return None, 404
+
+        session = vdjbase_dbs[species][dataset].get_session()
+        return study_file_script(species, dataset, study_name, study_haplotype_files(session, study_name), 'haplotypes')
+
+
+def study_genotype_files(session, study_name):
+    return [p[0] for p in session.query(Sample.genotype).join(Study, Sample.study_id == Study.id)
+            .filter(Study.study_name == study_name).order_by(Sample.sample_name).all()]
+
+
+def study_haplotype_files(session, study_name):
+    return [p[0] for p in session.query(HaplotypesFile.file)
+            .join(SamplesHaplotype, SamplesHaplotype.haplotypes_file_id == HaplotypesFile.id)
+            .join(Sample, SamplesHaplotype.samples_id == Sample.id)
+            .join(Study, Sample.study_id == Study.id)
+            .filter(Study.study_name == study_name).order_by(Sample.sample_name, HaplotypesFile.by_gene).all()]
+
+
+def existing_sample_files(species, dataset, paths):
+    """Returns (url, file name) for each sample file path that exists on disk"""
+    files = []
+    for path in paths:
+        if path:
+            path = path.replace('samples/', '', 1)
+            if isfile(os.path.join(VDJBASE_SAMPLE_PATH, species, dataset, path)):
+                files.append((app.config['BACKEND_LINK'] + '/'.join(['static/study_data/VDJbase/samples', species, dataset, path]), os.path.basename(path)))
+    return files
+
+
+def study_file_script(species, dataset, study_name, paths, kind):
+    files = existing_sample_files(species, dataset, paths)
+    if not files:
+        return None, 404
+    return study_script(study_name, files, f'{study_name}_{dataset}_{kind}_download.sh')
+
+
 def study_script(study_id, files, script_name):
     """Returns a download script for a study: one curl line per (url, file name) pair"""
     script = f'# Download script for study {study_id}\n# Please note that the server has a download limit, to prevent abuse. If the HTTP code 503 is returned, the server is rate-limited and it will provide an indication of when you can retry.\n'
