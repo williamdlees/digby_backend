@@ -77,6 +77,20 @@ class StudyScriptTests(unittest.TestCase):
         self.assertEqual(len(lines), sum(1 for r in recs.values() if r['study_id'] == study_id))
         self.assertTrue(all(line.startswith(CURL + 'https://madc.vdjbase.org/airr/v1/rearrangement/') for line in lines))
 
+    def test_dataset_info_fields(self):
+        resp = self.get(f'dataset_info/{SPECIES}/{DATASET}')
+        self.assertEqual(resp.status_code, 200)
+        studies = resp.get_json()['studies']
+        for study in studies:
+            for kind in ('genotypes', 'haplotypes'):
+                path = study[kind]
+                if path:
+                    self.assertEqual(path, f'/repseq/download_study_{kind}/{SPECIES}/{study["study_name"]}/{DATASET}')
+                    self.assertEqual(self.get(path[len('/repseq/'):]).status_code, 200, path)
+                else:
+                    self.assertEqual(self.get(f'download_study_{kind}/{SPECIES}/{study["study_name"]}/{DATASET}').status_code, 404)
+        self.assertTrue(any(s['genotypes'] for s in studies))
+
     def test_unknown_returns_404(self):
         for kind in ('script', 'genotypes', 'haplotypes'):
             self.assertEqual(self.get(f'download_study_{kind}/Nope/{self.study}/{DATASET}').status_code, 404)

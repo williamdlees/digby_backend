@@ -242,6 +242,13 @@ class DataSetInfoAPI(Resource):
             if study_id and study_id in madc_studies:
                 row['repertoires'] = '/repseq/download_study_script/' + species + '/' + study_id + '/' + dataset
 
+            row['genotypes'] = ''
+            if any(existing_sample_files(species, dataset, [f]) for f in study_genotype_files(session, row['study_name'])):
+                row['genotypes'] = '/repseq/download_study_genotypes/' + species + '/' + row['study_name'] + '/' + dataset
+            row['haplotypes'] = ''
+            if any(existing_sample_files(species, dataset, [f]) for f in study_haplotype_files(session, row['study_name'])):
+                row['haplotypes'] = '/repseq/download_study_haplotypes/' + species + '/' + row['study_name'] + '/' + dataset
+
             row['study_id'] = link_convert(row['study_id'])
             row['pub_ids'] = link_convert(row['pub_ids'])
             stats['studies'].append(row)
